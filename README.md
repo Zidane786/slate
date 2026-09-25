@@ -151,5 +151,5 @@ Run the tests with `python3 -m pytest -q` (or `uv run --with pytest python -m py
 Try the plugin locally with `claude --plugin-dir plugins/slate`, and check the manifests with
 `claude plugin validate .`.
 
-See [CHANGELOG.md](CHANGELOG.md) and the design spec in
+See [plugins/slate/CHANGELOG.md](plugins/slate/CHANGELOG.md) and the design spec in
 [docs/specs/2026-09-26-slate-design.md](docs/specs/2026-09-26-slate-design.md).

@@ -31,10 +31,9 @@ hand-edit `kanban/tickets.json`; `board.py` migrates it.
   local edits to them are not kept). `kanban/tickets.json` migrated by additive steps only
   (new fields with defaults, new statuses appended; nothing deleted or renamed).
   `SLATE.md`: version line and any new sections; every value you set is kept.
-- The CHANGELOG entries between the two versions: read the first of these that exists —
-  `ROOT/../../CHANGELOG.md` (running from a checkout of the Slate repo) or
-  `~/.claude/plugins/marketplaces/slate/CHANGELOG.md` (the marketplace clone) — else point to
-  https://github.com/Zidane786/slate/blob/main/CHANGELOG.md.
+- The CHANGELOG entries between the two versions: read `ROOT/CHANGELOG.md` (it ships with the
+  plugin); if it is somehow missing, point to
+  https://github.com/Zidane786/slate/blob/main/plugins/slate/CHANGELOG.md.
 - Ask: "Upgrade from <board> to <plugin> now?" Continue only on yes.
 
 ## Step 2: replace and migrate
