@@ -1,0 +1,28 @@
+{
+  "description": "Slate: one-line board status at session start; block direct edits to kanban/tickets.json.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" 2>/dev/null; [ -f kanban/board.py ] && python3 kanban/board.py next --brief --against \"${CLAUDE_PLUGIN_ROOT}\" || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_tickets.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

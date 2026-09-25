@@ -1,0 +1,16 @@
+{
+  "name": "slate",
+  "owner": {
+    "name": "Zidane786"
+  },
+  "metadata": {
+    "description": "Slate: plan ideas into plain-language tickets on a local kanban board, then build them one by one with Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "slate",
+      "source": "./plugins/slate",
+      "description": "Brainstorm ideas into plain-language tickets on a local kanban board, then build them one by one with tests, review and user testing."
+    }
+  ]
+}

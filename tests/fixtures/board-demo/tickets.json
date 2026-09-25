@@ -1,0 +1,567 @@
+{
+  "meta": {
+    "project": "Acme",
+    "prefix": "ACME",
+    "repo_url": "https://github.com/acme/acme-app",
+    "slate_version": "0.1.0",
+    "schema_version": 1,
+    "generated": "2026-09-26",
+    "statuses": [
+      "draft",
+      "backlog",
+      "ready",
+      "in_progress",
+      "review",
+      "user_testing",
+      "done"
+    ],
+    "areas": [
+      "backend",
+      "frontend",
+      "infra"
+    ],
+    "priorities": [
+      "P0",
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "user_test_areas": [
+      "frontend",
+      "ui"
+    ]
+  },
+  "phases": [
+    {
+      "id": "P1",
+      "name": "Link arrives",
+      "goal": "Someone who forgot their password can ask for help and gets an email with a reset link.",
+      "demo": "Type your email on the login page and a reset email shows up in the test inbox."
+    },
+    {
+      "id": "P2",
+      "name": "Password changes",
+      "goal": "The link in the email lets you pick a new password and log in with it.",
+      "demo": "Click the link, choose a new password, and log in with it straight away."
+    },
+    {
+      "id": "P3",
+      "name": "Safe",
+      "goal": "Reset links can't be misused, and there is a record of every change.",
+      "demo": "An old or already-used link is refused; asking for many links in a row is slowed down."
+    }
+  ],
+  "tickets": [
+    {
+      "id": "ACME-001",
+      "title": "Email sending wired up for the app",
+      "phase": "P1",
+      "areas": [
+        "infra"
+      ],
+      "priority": "P0",
+      "rank": 1,
+      "status": "done",
+      "depends_on": [],
+      "unlocks": [
+        "ACME-002",
+        "ACME-003"
+      ],
+      "description": "Set up the email service so the app can send messages.\n\n- Use the company's existing email account.\n- In development, emails go to a test inbox instead of real people.\n- Keep the sending details out of the code.",
+      "acceptance": [
+        "The app can send an email in development and it lands in the test inbox",
+        "The sending details are not stored in the code"
+      ],
+      "test_scenarios": [
+        "Sending a message in development puts it in the test inbox",
+        "A missing sending setting stops the app with a clear message"
+      ],
+      "estimate": "0.5d",
+      "labels": [
+        "email"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-20",
+          "status": "review",
+          "note": "Email set up with the test inbox for development. Checked by sending three test messages."
+        },
+        {
+          "date": "2026-09-21",
+          "status": "done",
+          "note": "Review clean. Sending details live in the settings file that is not committed."
+        }
+      ]
+    },
+    {
+      "id": "ACME-002",
+      "title": "People can ask for a password reset link",
+      "summary": "Anyone who forgot their password can type their email on the login page and get a reset link by email, instead of having to contact support.",
+      "story": "Priya hasn't logged in for months and her password doesn't work. She clicks **Forgot password?**, types her email, and a minute later there's an email from Acme with a button to reset it.",
+      "visual": "```\n Priya (on the login page)        Acme app                               Priya's inbox\n  │                                │                                       │\n  │  clicks \"Forgot password?\" ──▶ │                                       │\n  │  types priya@example.com ────▶ │── makes a one-time link (30 minutes) ─▶│  \"Reset your Acme password\"\n  │  ◀── \"Check your email\" ────── │                                       │\n  │                                │                                       │\n  │  opens the email, clicks the link ─────────────────────────────────────┘\n  │  ─────────────────────────────▶│  checks the link is fresh and unused\n  │  ◀── \"Choose a new password\" ──│\n```\n\nThe same message is shown whether or not the email belongs to an account, so nobody can use\nthis page to find out who has an Acme account.",
+      "description": "Adds a **Forgot password?** link under the login form. It opens a small page with one box for an email address and a *Send link* button.\n\n### What's in\n- The page, the button, and the email with the link.\n- The link works for 30 minutes.\n\n### What's out\n- Choosing the new password (that is ACME-004).\n- Limits on how often you can ask (that is ACME-008).",
+      "acceptance": [
+        "The login page has a 'Forgot password?' link",
+        "After sending, the page says 'Check your email' whatever address was typed",
+        "An email with a reset link arrives for a known address",
+        "No email is sent for an address with no account"
+      ],
+      "test_scenarios": [
+        "When a known email is submitted, then one reset email is sent to it",
+        "When an unknown email is submitted, then no email is sent and the same message is shown",
+        "When the email box is empty, then the page asks for an email and sends nothing"
+      ],
+      "user_tests": [
+        {
+          "title": "Reset with a known email",
+          "setup": "Open the app at http://localhost:3000 and log out if you are logged in.",
+          "steps": [
+            "Click 'Forgot password?' under the login form",
+            "Type priya@example.com",
+            "Click 'Send link'"
+          ],
+          "expect": "You see 'Check your email', and a reset email for Priya appears in the test inbox.",
+          "required": true
+        }
+      ],
+      "technical": "- New route `POST /password-reset` and page `/forgot-password`.\n- Tokens are random, stored hashed, expire after 30 minutes.\n- Response time is padded so known and unknown emails look the same.",
+      "plan_doc": "docs/plans/2026-09-19-password-reset.md",
+      "phase": "P1",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P0",
+      "rank": 2,
+      "status": "done",
+      "depends_on": [
+        "ACME-001"
+      ],
+      "unlocks": [
+        "ACME-004",
+        "ACME-005",
+        "ACME-007",
+        "ACME-008"
+      ],
+      "estimate": "1d",
+      "labels": [
+        "reset"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-22",
+          "status": "review",
+          "note": "Built the page, the email and the link. All 3 automated tests pass. Tried it by hand with priya@example.com."
+        },
+        {
+          "date": "2026-09-23",
+          "status": "user_testing",
+          "note": "Review clean. To try it: run `npm run dev`, then open http://localhost:3000."
+        },
+        {
+          "date": "2026-09-23",
+          "status": "done",
+          "note": "You tried it and it passed. Nothing left over."
+        }
+      ],
+      "user_checks": {
+        "0": {
+          "result": "pass",
+          "date": "2026-09-23",
+          "note": "Email arrived within a few seconds."
+        }
+      },
+      "commits": [
+        {
+          "sha": "3f9c2a71b0d84e5f6a1c9e2b7d4038a5c6e1f902",
+          "date": "2026-09-21",
+          "message": "Add forgot-password page and reset request endpoint",
+          "branch": "feat/password-reset-email"
+        },
+        {
+          "sha": "a41e07d9c3b25f8e1d6a0b9c7e4f2a3d5b8c1e60",
+          "date": "2026-09-22",
+          "message": "Send the reset email with a one-time link",
+          "branch": "feat/password-reset-email"
+        }
+      ],
+      "pr": {
+        "url": "https://github.com/acme/acme-app/pull/42",
+        "number": 42,
+        "title": "Password reset: request a link by email",
+        "state": "merged"
+      }
+    },
+    {
+      "id": "ACME-003",
+      "title": "The reset email is clear and easy to trust",
+      "summary": "The reset email looks like it really comes from Acme and says in plain words what to do, so people aren't worried it's a scam.",
+      "story": "Sam gets the email on his phone. It has the Acme logo, says who asked for it and when, and has one big 'Choose a new password' button. He knows it's real and taps the button.",
+      "visual": "```\n┌──────────────────────────────────────────┐\n│  [Acme logo]                             │\n│                                          │\n│  Hi Sam,                                 │\n│  Someone asked to reset your password    │\n│  at 10:42 today.                         │\n│                                          │\n│      [ Choose a new password ]           │\n│                                          │\n│  Didn't ask? You can ignore this email.  │\n│  The link stops working in 30 minutes.   │\n└──────────────────────────────────────────┘\n```",
+      "description": "Designs the email people get after asking for a reset.\n\n> Most people decide in two seconds whether an email is real. The logo, their name and one clear button do most of the work.\n\nIt must read well on a phone and in dark mode email apps.",
+      "acceptance": [
+        "The email shows the Acme logo and the person's first name",
+        "It says when the reset was asked for",
+        "There is exactly one button, and it opens the reset page",
+        "It says what to do if you didn't ask for it"
+      ],
+      "test_scenarios": [
+        "When the email is created for Sam, then it contains his first name and the time of the request",
+        "When the email is created, then it has exactly one link and it points to the reset page"
+      ],
+      "user_tests": [
+        {
+          "title": "The email looks right on a computer",
+          "setup": "Ask for a reset for sam@example.com on http://localhost:3000/forgot-password.",
+          "steps": [
+            "Open the test inbox at http://localhost:8025",
+            "Open the newest email to Sam"
+          ],
+          "expect": "You see the logo, 'Hi Sam', the time you asked, and one 'Choose a new password' button.",
+          "required": true
+        },
+        {
+          "title": "The email looks right on a phone",
+          "setup": "Same email as the first test.",
+          "steps": [
+            "In the test inbox, switch the preview to 'Mobile'",
+            "Scroll through the whole email"
+          ],
+          "expect": "Nothing is cut off, the text is easy to read, and the button is big enough to tap.",
+          "required": true
+        }
+      ],
+      "technical": "Template in `emails/reset.html` with a plain-text version. Inline styles only; tested in the dark-mode preview of the test inbox.",
+      "plan_doc": "docs/plans/2026-09-19-password-reset.md",
+      "phase": "P1",
+      "areas": [
+        "frontend"
+      ],
+      "priority": "P1",
+      "rank": 3,
+      "status": "user_testing",
+      "depends_on": [
+        "ACME-001"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "reset",
+        "email"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-24",
+          "status": "review",
+          "note": "Email designed with logo, name, time and one button. Both automated tests pass."
+        },
+        {
+          "date": "2026-09-25",
+          "status": "user_testing",
+          "note": "Review clean. To try it: `npm run dev`, ask for a reset for sam@example.com, then open the test inbox at http://localhost:8025."
+        }
+      ],
+      "user_checks": {
+        "0": {
+          "result": "pass",
+          "date": "2026-09-25",
+          "note": ""
+        }
+      },
+      "commits": [
+        {
+          "sha": "c7d2e9f4a1b83c6d0e5f7a2b9c4d1e8f3a6b0c25",
+          "date": "2026-09-24",
+          "message": "Design the reset email (logo, name, one button)",
+          "branch": "feat/reset-email-design"
+        }
+      ],
+      "pr": {
+        "url": "https://github.com/acme/acme-app/pull/47",
+        "number": 47,
+        "title": "Reset email design",
+        "state": "draft"
+      }
+    },
+    {
+      "id": "ACME-004",
+      "title": "The reset link lets you choose a new password",
+      "summary": "Clicking the link in the email opens a page where you type a new password twice and save it.",
+      "story": "Priya taps the button in the email. A page opens that says 'Choose a new password for priya@example.com'. She types it twice, clicks Save, and sees 'Your password has been changed'.",
+      "visual": "```\n email button ──▶ link checked ──▶ fresh? ──yes──▶ 'Choose a new password' page ──▶ saved\n                                    │\n                                    └──no───▶ 'This link has expired' + 'Send a new link'\n```",
+      "description": "The page opened by the link in the reset email.\n\n| What you do | What you see |\n|---|---|\n| Open a fresh link | 'Choose a new password for *your email*' |\n| Type two passwords that don't match | 'The two passwords don't match' |\n| Save a good password | 'Your password has been changed' |\n| Open a link older than 30 minutes | 'This link has expired' and a button to send a new one |\n\n> Open question: should saving also log you in? That is split out as ACME-006 so this ticket stays small.",
+      "acceptance": [
+        "A fresh link opens the page and shows the account's email",
+        "Saving a new password changes it; the old one stops working",
+        "Mismatched passwords are caught before saving",
+        "An expired link shows a friendly message and a way to get a new one"
+      ],
+      "test_scenarios": [
+        "When a fresh link is opened, then the page shows the account's email",
+        "When a new password is saved, then logging in with the old password fails",
+        "When the two passwords differ, then nothing is saved and a message is shown",
+        "When a link older than 30 minutes is opened, then the expired message is shown"
+      ],
+      "user_tests": [
+        {
+          "title": "Change your password with the link",
+          "setup": "Ask for a reset for priya@example.com and open the email in the test inbox.",
+          "steps": [
+            "Click 'Choose a new password'",
+            "Type 'Sunny-Garden-42' in both boxes",
+            "Click 'Save'",
+            "Log in with the new password"
+          ],
+          "expect": "You see 'Your password has been changed' and you can log in with Sunny-Garden-42.",
+          "required": true
+        }
+      ],
+      "technical": "- Page `/reset/:token`; `POST /reset/:token` sets the password.\n- Token lookup by hash, single use, checked against `expires_at`.\n- Risk: the old password must stop working immediately, including sessions on other devices.",
+      "plan_doc": "docs/plans/2026-09-19-password-reset.md",
+      "phase": "P2",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P0",
+      "rank": 4,
+      "status": "in_progress",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [
+        "ACME-006",
+        "ACME-009"
+      ],
+      "estimate": "1d",
+      "labels": [
+        "reset"
+      ],
+      "handoff": []
+    },
+    {
+      "id": "ACME-005",
+      "title": "Clear advice when a new password is too weak",
+      "summary": "While you type a new password, the page tells you in plain words if it's too easy to guess and how to make it better.",
+      "story": "Leo types 'password1'. Under the box a short line turns orange: 'Too easy to guess. Try three random words.' He types 'river-lamp-cactus' and it turns green.",
+      "description": "A small helper under the new-password box.\n\n- It updates as you type.\n- It never blocks you for silly reasons (no \"must contain a symbol\" rules).\n- It does block the 1,000 most common passwords.",
+      "acceptance": [
+        "The helper appears under the new-password box and updates as you type",
+        "Common passwords like 'password1' are refused with a clear reason",
+        "A long password of random words is accepted"
+      ],
+      "test_scenarios": [
+        "When 'password1' is typed, then the helper says it is too easy to guess",
+        "When 'river-lamp-cactus' is typed, then the helper says it is good",
+        "When a common password is submitted anyway, then it is refused"
+      ],
+      "user_tests": [
+        {
+          "title": "Weak and strong passwords",
+          "setup": "Open a fresh reset link for leo@example.com.",
+          "steps": [
+            "Type 'password1' in the new-password box",
+            "Clear it and type 'river-lamp-cactus'"
+          ],
+          "expect": "The first shows an orange 'Too easy to guess' line; the second shows a green 'Good password' line.",
+          "required": true
+        }
+      ],
+      "phase": "P2",
+      "areas": [
+        "frontend"
+      ],
+      "priority": "P2",
+      "rank": 5,
+      "status": "review",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [
+        "ACME-006"
+      ],
+      "estimate": "0.5d",
+      "labels": [
+        "reset",
+        "ux"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-26",
+          "status": "review",
+          "note": "Helper built with the common-password list. Three automated tests pass. Review running now."
+        }
+      ]
+    },
+    {
+      "id": "ACME-006",
+      "title": "You're logged in right after changing your password",
+      "summary": "After saving a new password you land in the app already logged in, instead of having to type it again straight away.",
+      "story": "Priya saves her new password and, instead of the login page, sees her Acme dashboard with a small note: 'Password changed. You're logged in.'",
+      "description": "Once the new password is saved, log the person in and take them to their dashboard with a short confirmation note.",
+      "acceptance": [
+        "After saving, you see your dashboard, not the login page",
+        "A note says the password was changed",
+        "You are logged out on every other device"
+      ],
+      "test_scenarios": [
+        "When a new password is saved, then the person is logged in and sent to the dashboard",
+        "When a new password is saved, then sessions on other devices end"
+      ],
+      "user_tests": [
+        {
+          "title": "Land on the dashboard",
+          "setup": "Open a fresh reset link for priya@example.com.",
+          "steps": [
+            "Save a new password"
+          ],
+          "expect": "You see the dashboard and the note 'Password changed. You're logged in.'",
+          "required": true
+        }
+      ],
+      "phase": "P2",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P1",
+      "rank": 6,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-004",
+        "ACME-005"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "reset"
+      ]
+    },
+    {
+      "id": "ACME-007",
+      "title": "Old or already-used links stop working",
+      "summary": "A reset link works once and only for 30 minutes, so an old email in someone's inbox can't be used to take over the account.",
+      "story": "Months later, someone finds an old Acme reset email in Priya's inbox and clicks it. The page says the link has expired; nothing changes.",
+      "description": "Makes sure each link is used at most once and never after 30 minutes.\n\nAsking for a new link also cancels any older links for the same account.",
+      "acceptance": [
+        "A link can be used once; the second time it says it has already been used",
+        "A link older than 30 minutes says it has expired",
+        "Asking for a new link cancels the older ones"
+      ],
+      "test_scenarios": [
+        "When a link is used a second time, then it is refused",
+        "When a link is 31 minutes old, then it is refused",
+        "When a new link is asked for, then the previous link for that account is refused"
+      ],
+      "user_tests": [
+        {
+          "title": "Use a link twice",
+          "setup": "Ask for a reset for priya@example.com.",
+          "steps": [
+            "Use the link to set a new password",
+            "Click the same link in the email again"
+          ],
+          "expect": "The second time you see 'This link has already been used'.",
+          "required": false
+        }
+      ],
+      "technical": "Mark the token `used_at` in the same transaction as the password change; invalidate older tokens on issue.",
+      "phase": "P3",
+      "areas": [
+        "backend"
+      ],
+      "priority": "P0",
+      "rank": 7,
+      "status": "ready",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "security"
+      ]
+    },
+    {
+      "id": "ACME-008",
+      "title": "Too many reset requests in a row are slowed down",
+      "summary": "If someone asks for lots of reset emails very quickly, the app waits before sending more, so nobody's inbox gets flooded.",
+      "story": "A prankster types Sam's email into the reset page twenty times. Sam gets one email; the prankster sees 'Please wait a few minutes before trying again'.",
+      "description": "At most 3 reset emails per address per hour, and at most 20 requests per hour from one network address. The message shown never reveals whether the email has an account.",
+      "acceptance": [
+        "A 4th request for the same email within an hour sends no email",
+        "The person asking sees 'Please wait a few minutes before trying again'",
+        "Limits reset after an hour"
+      ],
+      "test_scenarios": [
+        "When 4 requests for one email arrive within an hour, then only 3 emails are sent",
+        "When 21 requests come from one network address within an hour, then the 21st is refused"
+      ],
+      "technical": "Counters in Redis with a 1-hour expiry; config keys `RESET_PER_EMAIL`, `RESET_PER_IP`.",
+      "phase": "P3",
+      "areas": [
+        "backend",
+        "infra"
+      ],
+      "priority": "P1",
+      "rank": 8,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "security"
+      ]
+    },
+    {
+      "id": "ACME-009",
+      "title": "A record of every password change",
+      "summary": "Every password reset is written down with when it happened, so support can answer 'did I change my password?' questions.",
+      "story": "Sam writes to support: 'Did someone change my password last week?' Maya in support looks it up and sees one reset on Tuesday at 10:42, from Sam's usual city.",
+      "description": "Store date, time, account and rough location for every password change made through a reset link. Support can see the list for one account.",
+      "acceptance": [
+        "Each password change through a reset link adds one entry",
+        "Support can see the entries for one account, newest first"
+      ],
+      "test_scenarios": [
+        "When a password is changed through a link, then one entry is added for that account",
+        "When support opens an account, then its entries are listed newest first"
+      ],
+      "phase": "P3",
+      "areas": [
+        "backend"
+      ],
+      "priority": "P2",
+      "rank": 9,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-004"
+      ],
+      "unlocks": [],
+      "estimate": "1d",
+      "labels": [
+        "support"
+      ]
+    },
+    {
+      "id": "ACME-010",
+      "title": "Tell people by email when their password changed",
+      "summary": "After a password change, send a short 'your password was changed' email so people notice if it wasn't them.",
+      "phase": "P3",
+      "areas": [
+        "backend"
+      ],
+      "priority": "P2",
+      "rank": 10,
+      "status": "draft",
+      "depends_on": [],
+      "unlocks": [],
+      "labels": [
+        "security",
+        "email"
+      ]
+    }
+  ]
+}

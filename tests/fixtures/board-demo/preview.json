@@ -1,0 +1,97 @@
+{
+  "preview": true,
+  "phases": [
+    {
+      "id": "P4",
+      "name": "Help from support",
+      "goal": "Support staff can help people who can't reach their email.",
+      "demo": "Maya in support sends a reset link on someone's behalf from the support screen."
+    }
+  ],
+  "tickets": [
+    {
+      "id": "ACME-011",
+      "title": "Support can send a reset link for someone",
+      "summary": "Support staff can send a reset link to a person's email from the support screen, so people who phone in get help quickly.",
+      "story": "Sam phones Acme because he can't find the reset page. Maya opens his account, clicks 'Send reset link', and Sam gets the usual email.",
+      "description": "A 'Send reset link' button on the support screen for one account. It sends the same email as the public page.",
+      "acceptance": [
+        "The support screen has a 'Send reset link' button",
+        "Clicking it sends the normal reset email to the account's address"
+      ],
+      "test_scenarios": [
+        "When support clicks 'Send reset link', then one reset email goes to the account's address"
+      ],
+      "user_tests": [
+        {
+          "title": "Send a link from the support screen",
+          "setup": "Log in as maya@acme.test (support) at http://localhost:3000/support.",
+          "steps": [
+            "Search for sam@example.com",
+            "Click 'Send reset link'"
+          ],
+          "expect": "A reset email for Sam appears in the test inbox.",
+          "required": true
+        }
+      ],
+      "phase": "P4",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P2",
+      "rank": 11,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [
+        "ACME-012"
+      ],
+      "estimate": "0.5d",
+      "labels": [
+        "support"
+      ]
+    },
+    {
+      "id": "ACME-012",
+      "title": "Support sees when a link was sent for someone",
+      "summary": "The support screen shows when a reset link was last sent and by whom, so two people don't send one at the same time.",
+      "story": "Maya is about to send Sam a link and sees 'Sent 2 minutes ago by Joe'. She tells Sam to check his inbox instead.",
+      "description": "Show the last reset link sent for an account, with the time and who sent it (the person or a support member).",
+      "acceptance": [
+        "The support screen shows the time of the last reset link and who sent it"
+      ],
+      "test_scenarios": [
+        "When a link was sent by support 2 minutes ago, then the screen says 'Sent 2 minutes ago by <name>'"
+      ],
+      "user_tests": [
+        {
+          "title": "See the last link sent",
+          "setup": "Send a reset link for sam@example.com from the support screen.",
+          "steps": [
+            "Reload Sam's account on the support screen"
+          ],
+          "expect": "You see 'Sent a moment ago by Maya'.",
+          "required": true
+        }
+      ],
+      "phase": "P4",
+      "areas": [
+        "frontend"
+      ],
+      "priority": "P3",
+      "rank": 12,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-011",
+        "ACME-009"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "support"
+      ]
+    }
+  ]
+}

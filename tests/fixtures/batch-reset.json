@@ -1,0 +1,48 @@
+{
+  "phases": [
+    { "id": "P3", "name": "Safe", "goal": "Old links stop working", "demo": "An expired link is rejected" }
+  ],
+  "tickets": [
+    {
+      "key": "reset-request",
+      "title": "People can ask for a password reset link",
+      "summary": "Someone who forgot their password can ask for a reset email.",
+      "story": "Priya forgets her password, clicks 'Forgot password' and gets an email.",
+      "visual": "```\nUser -> App: forgot password\nApp -> Email: send link\n```",
+      "description": "A 'Forgot password' link on the login page opens a form for the email.",
+      "acceptance": ["The login page has a 'Forgot password' link", "A reset email arrives"],
+      "test_scenarios": ["When a known email is submitted, then one reset email is queued"],
+      "user_tests": [
+        {
+          "title": "Reset with a known email",
+          "setup": "Open the app at http://localhost:3000.",
+          "steps": ["Click 'Forgot password'", "Type priya@example.com", "Click 'Send link'"],
+          "expect": "You see 'Check your email'.",
+          "required": true
+        }
+      ],
+      "technical": "New route POST /reset.",
+      "plan_doc": "docs/plans/2026-09-26-reset.md",
+      "phase": "P1",
+      "areas": ["frontend", "backend"],
+      "priority": "P1",
+      "depends_on": ["ACME-001"],
+      "estimate": "1d"
+    },
+    {
+      "key": "set-password",
+      "title": "People can set a new password from the link",
+      "summary": "The link in the email opens a page to choose a new password.",
+      "story": "Priya clicks the link, types a new password and is logged in.",
+      "description": "The link is valid for 30 minutes.",
+      "acceptance": ["The link opens a new-password page"],
+      "test_scenarios": ["When a valid link is used, then the password changes"],
+      "technical": "Token table.",
+      "phase": "P3",
+      "areas": ["backend"],
+      "priority": "P1",
+      "depends_on": ["reset-request"],
+      "estimate": "1d"
+    }
+  ]
+}
