@@ -1,6 +1,6 @@
 # Slate: design spec
 
-Date: 2026-09-26 · Status: draft for review · Origin: generalised from the Forge build kit
+Date: 2026-09-26 · Status: approved 2026-09-26 · Origin: generalised from the Forge build kit
 (`forge/kanban/` + `forge/.claude/skills/forge-*`).
 
 ## 1. What Slate is
@@ -40,6 +40,8 @@ project's repo.
 | 5 | Skills only, no `.claude/commands/`. Skills are slash commands and can bundle files. | Current Claude Code format. |
 | 6 | Slate's project context lives in **`SLATE.md`** at the repo root, written by `/slate:init`, never in the plugin. `CLAUDE.md` / `AGENTS.md` belong to the agent harness: Slate reads them for anything `SLATE.md` doesn't say, creates them only if missing, and never edits existing ones. | Slate's settings stay in one file Slate owns; the harness files stay yours. |
 | 7 | Every ticket change (create, edit, rerank, status, user test) goes through `kanban/board.py`. Nobody hand-edits `tickets.json`; a plugin hook blocks Claude's Edit/Write on it. | Validation on every write; the board can't be broken. |
+| 13 | **Human in the loop.** `/slate:work` builds one ticket per request: the one named, or the suggested next one after the user says yes. It stops after closing it and continues only on an explicit ask ("keep going", "next 3"). It never starts other tickets while waiting for a user test. | The user decides what gets built and when. |
+| 14 | Tickets record their commits and PR (`commits`, `pr` fields) via `board.py link`; `/slate:work` links every commit and the draft PR it opens. The board shows them under "Code changes". `set ID done` refuses without a linked commit (verified in git), and without a PR when the repo has a remote; `--no-code "why"` / `--no-pr "why"` are the recorded escape hatches. | Anyone reading a card can jump to the code that did it, and nothing is "done" without code to show for it. |
 | 12 | Every Slate-owned file carries its version (`board.py`, `index.html`, `SLATE.md`, `tickets.json` meta). Each skill compares it with the plugin's version first and offers `/slate:upgrade` when the project is behind. | Copied files can't silently fall out of date. |
 | 8 | Folder name is always `kanban/` at the repo root. | One fixed place for skills; Forge already uses it. |
 | 9 | Tickets are written for a non-technical reader first; technical detail is kept in its own collapsed section. | The user must be able to read and understand every card. |
@@ -163,7 +165,14 @@ as warnings, not errors.
 - Anything with an `areas` value listed in `meta.user_test_areas` (default `["frontend",
   "ui"]`) must have at least one `user_tests` entry marked `required`. `check` errors otherwise.
 
-### 4.3 User tests
+### 4.3 Draft tickets
+
+A ticket can be saved as a **draft**: it is on the board (Draft column) so the idea isn't
+lost, but it isn't finished and `/slate:work` never picks it. A draft needs only a title,
+summary and phase. Moving it out of Draft runs every check and lists what's still missing.
+Only other drafts may depend on a draft. Finish one with `/slate:plan <ID>` or `promote`.
+
+### 4.4 User tests
 
 ```json
 "user_tests": [
@@ -177,7 +186,7 @@ as warnings, not errors.
 ]
 ```
 
-### 4.4 How a ticket looks on the board (drawer order)
+### 4.5 How a ticket looks on the board (drawer order)
 
 ```
 ┌ ACME-014 · People can reset a forgotten password ───────── Phase 1 · P1 · 1d ┐
@@ -206,14 +215,14 @@ filters, drawer, overlay, export). Change only:
 2. `localStorage` keys from `meta.prefix` (`slate.<prefix>.overlay.v1`), so projects on the
    same origin don't share local state.
 3. No id-format assumption; any `<PREFIX>-NNN`.
-4. Drawer renders the new fields in the order of 4.4; `technical` collapsed; `handoff` shown
+4. Drawer renders the new fields in the order of 4.5; `technical` collapsed; `handoff` shown
    as a timeline; `user_tests` with pass/fail.
 5. Markdown renderer also handles tables, blockquotes and `###` headings; fenced blocks stay
    monospace and scroll sideways so ASCII pictures never wrap.
-6. New default status column **User testing** (see 7.3). Columns still come from
+6. New default status columns **Draft** (saved, not ready to work) and **User testing** (see 7.3). Columns still come from
    `meta.statuses`.
-7. **Draft preview:** if `kanban/draft.json` exists, its tickets show with a dashed border and
-   a "draft" tag in the right columns and rank positions. Drafts are never exported or saved.
+7. **Preview:** if `kanban/preview.json` exists, its tickets show with a dashed border and
+   a "preview" tag in the right columns and rank positions. Preview tickets are never exported or saved.
 8. Card badge "needs you" when a ticket is in User testing.
 
 ## 6. The script (`kanban/board.py`)
@@ -227,7 +236,7 @@ are printed.
 
 | Command | Does |
 |---|---|
-| `init --project "Acme" --prefix ACME [--areas …]` | Create `tickets.json` with meta (default statuses `backlog ready in_progress review user_testing done`). Refuses if it exists. |
+| `init --project "Acme" --prefix ACME [--areas …]` | Create `tickets.json` with meta (default statuses `draft backlog ready in_progress review user_testing done`). Refuses if it exists. |
 | `next` / `next --brief` | Resume `in_progress` / `review` / `user_testing` first, else the lowest-rank ready ticket. |
 | `list [N]` | Next N ready tickets in rank order. |
 | `show ID` | Full ticket, plain layout, including handoff and user-check results. |
@@ -235,18 +244,21 @@ are printed.
 | `check` | Validate everything (6.2). Exit 1 on errors. |
 | `version` | Print the board's Slate version, schema version and whether `tickets.json` matches. |
 | `new --title "…" --summary "…" --phase P1 [--after ID] [--depends ID,…] …` | Create one ticket from flags; opens nothing, writes nothing invalid. Good for quick asks. |
-| `add --file draft.json [--dry-run] [--after ID]` | Add many tickets from a draft (6.3). `--dry-run` writes `kanban/draft.json` for the board preview and prints the result. |
-| `draft-check --file draft.json` | Validate a draft on its own (fields, writing rules, keys) before previewing. |
+| `add --file batch.json [--dry-run] [--after ID] [--as-draft]` | Add many tickets from a batch file (6.3); `--as-draft` saves them as drafts. `--dry-run` writes `kanban/preview.json` for the board preview and prints the result. |
+| `batch-check --file batch.json` | Validate a batch file on its own (fields, writing rules, keys) before previewing. |
 | `set ID STATUS [--handoff "…"]` | Change status; handoff note required for `review`, `user_testing`, `done`. |
 | `edit ID field=value …` / `edit ID --file patch.json` | Change fields. Cannot change `id`. |
 | `rerank ID --after OTHER` | Move a ticket; renumbers only what must move; keeps ranks above deps. |
+| `new … --draft` / `promote ID` | Save a ticket as a draft; promote it to backlog once complete (full checks run then). |
 | `add-phase --id P3 --name "…" --goal "…" --demo "…"` | Add a phase. |
 | `usertest ID INDEX pass\|fail [--note "…"]` | Record a user test result. |
-| `discard-draft` | Delete `kanban/draft.json`. |
+| `link ID [--commit SHA\|HEAD …] [--pr URL] [--pr-state draft\|open\|merged\|closed]` | Record commits (sha, subject, branch, date from git) and the PR on a ticket. Idempotent. |
+| `set-meta key=value` | Change allowed meta keys (`project`, `repo_url`, `areas`, `user_test_areas`). |
+| `discard-preview` | Delete `kanban/preview.json`. |
 | `upgrade --from <plugin assets dir>` | See 6.4. Replaces `index.html`, `board.py`, `README.md`; migrates `tickets.json` only by additive schema steps; updates versions. |
 
-**The draft file is the only JSON Claude writes by hand**, and it lives outside `tickets.json`
-(in the scratch area or `kanban/draft.json`). It never becomes ticket data except through
+**The batch file is the only JSON Claude writes by hand**, and it lives outside `tickets.json`
+(in the scratch area or `kanban/preview.json`). It never becomes ticket data except through
 `board.py add`, which validates it.
 
 ### 6.2 Validation (runs on every write and in `check`)
@@ -266,9 +278,9 @@ Errors (block the write):
 Warnings: missing `visual` on a multi-step flow, missing `technical`, legacy fields, very long
 titles.
 
-### 6.3 Draft format for `add`
+### 6.3 Batch file format for `add`
 
-Claude writes drafts with short keys instead of ids, so it never has to guess numbers:
+Claude writes a batch file with short keys instead of ids, so it never has to guess numbers:
 
 ```json
 {
@@ -282,7 +294,7 @@ Claude writes drafts with short keys instead of ids, so it never has to guess nu
 
 `board.py` assigns the next free ids, resolves keys (and existing ids) in `depends_on`, places
 ranks after dependencies (or after `--after`), fills `unlocks`, validates the whole board, and
-writes. `--dry-run` shows the resulting ids and ranks and writes `draft.json` for the preview.
+writes. `--dry-run` shows the resulting ids and ranks and writes `preview.json` for the preview.
 
 ### 6.4 Versions and upgrading copied files
 
@@ -383,6 +395,13 @@ branch `slate/<id>-<slug>` · draft PRs only, never merge.
 `SLATE.md` points to `CLAUDE.md` / `AGENTS.md` / docs instead of copying them, so nothing is
 said twice.
 
+**`SLATE.md` is living context.** Besides the settings above it has "What this project is",
+"Decisions" and "Learned along the way". Every skill reads it first; `/slate:plan` adds
+project-wide decisions from a brainstorm, and `/slate:work` adds one dated line when a ticket
+taught something the next one needs (a decision, a gotcha, a corrected command). The pointer
+line init offers for existing `CLAUDE.md` / `AGENTS.md` reads: "Planning, tickets and more
+project context: read SLATE.md (kept up to date as work goes on)".
+
 ### 7.2 `/slate:plan [idea]` — brainstorm into tickets
 
 **Conversation rules:**
@@ -402,8 +421,9 @@ said twice.
  ② Flow       how it works, as a picture; technical view on request
  ③ Phases     what you can demo after each phase (vertical slices)
  ④ Cards      plain ticket cards: summary, done-when, tests, try-it-yourself
- ⑤ Preview    board.py add --dry-run → draft.json → you look at the board
- ⑥ Write      on "looks good": board.py add → check; save docs/plans/<date>-<topic>.md
+ ⑤ Preview    board.py add --dry-run → preview.json → you look at the board
+ ⑥ Write      ask: save as ready tickets / save as drafts / discard
+              → board.py add | add --as-draft | discard-preview; save docs/plans/<date>-<topic>.md
 ```
 
 Example of ② and ③ as the user sees them:
@@ -424,8 +444,8 @@ Example of ② and ③ as the user sees them:
 Also handles small asks ("add a ticket for X"): skips ① to ③ when the idea is already clear,
 still shows the card and the preview before writing.
 
-Changes during preview ("move 016 before 015", "split 014") go through `rerank` / `edit` on
-the draft, then refresh the preview.
+Changes during preview ("move 016 before 015", "split 014") go through an edited batch file,
+then `add --dry-run` again to refresh the preview.
 
 ### 7.3 `/slate:work [ID]` — the build loop
 
@@ -439,7 +459,7 @@ Same order as Forge's §4, generic:
                     (only if the ticket has required user tests; else review ─▶ done)
 ```
 
-1. **Pick:** `$ARGUMENTS` or `board.py next`; stop and explain if dependencies aren't done.
+1. **Pick:** `$ARGUMENTS`, or show `board.py next` and ask "Start <ID>?"; stop and explain if dependencies aren't done.
    `set ID in_progress`. Read the ticket, its plan doc, the docs map entries and the code.
 2. **Implement** on branch `slate/<id>-<slug>` (pattern overridable in `SLATE.md`).
    Tests from `test_scenarios` first. Stay in scope; note adjacent work in the handoff.
@@ -451,10 +471,12 @@ Same order as Forge's §4, generic:
 5. **User testing** (only when the ticket has required user tests): `set ID user_testing
    --handoff "…how to start the app…"`, then print each user test in plain steps and ask the
    user to try it. Record answers with `usertest`. A fail goes back to step 2 with the user's
-   note. While waiting, Claude may pick other ready tickets that don't depend on this one.
-6. **Commit, push, draft PR** when a remote exists; commit locally otherwise. Never merge.
+   note. While waiting, Claude waits; it doesn't start other tickets.
+6. **Update SLATE.md, commit, push, draft PR** when a remote exists; commit locally otherwise.
+   Record each commit (`link --commit HEAD`) and the PR (`link --pr URL`) on the ticket. Never merge.
 7. **Close:** `set ID done --handoff "built; decisions; verified; follow-ups"`, `check`,
-   report, and go to the next ticket if asked to keep going.
+   report (next ticket as a suggestion only) and **stop**; continue only if the user explicitly
+   asked for more in this request.
 
 ### 7.4 `/slate:review [ID]`
 
@@ -498,10 +520,10 @@ refreshes `SLATE.md`'s version line, shows the diff. Only when typed
 
 ## 10. Testing Slate itself
 
-- `pytest` for `board.py`: every command, every validation rule, draft key resolution, rank
+- `pytest` for `board.py`: every command, every validation rule, batch key resolution, draft status rules, rank
   placement, atomic write, stable formatting, legacy ticket loading.
 - Board: a fixture `tickets.json` covering every field, opened in a browser (Playwright) to
-  check the drawer order, collapsed technical notes, user-test buttons, draft preview, and
+  check the drawer order, collapsed technical notes, user-test buttons, preview, Draft column, and
   per-prefix storage keys.
 - Skills: run `/slate:init` and `/slate:plan` on two fixture repos (a Python one and a Node
   one) and check the files produced.

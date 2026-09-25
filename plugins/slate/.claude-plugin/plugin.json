@@ -1,0 +1,18 @@
+{
+  "name": "slate",
+  "version": "0.1.0",
+  "description": "Brainstorm ideas into plain-language tickets on a local kanban board, then build them one by one with tests, review and user testing.",
+  "author": {
+    "name": "Zidane786"
+  },
+  "homepage": "https://github.com/Zidane786/slate",
+  "repository": "https://github.com/Zidane786/slate",
+  "keywords": [
+    "kanban",
+    "planning",
+    "tickets",
+    "workflow",
+    "review",
+    "user-testing"
+  ]
+}

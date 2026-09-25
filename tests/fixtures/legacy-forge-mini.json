@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "project": "Forge",
+    "generated": "2026-09-08",
+    "statuses": ["backlog", "ready", "in_progress", "review", "done"],
+    "areas": ["backend", "frontend", "infra"],
+    "priorities": ["P0", "P1", "P2", "P3"]
+  },
+  "phases": [
+    { "id": "P0", "name": "Skeleton", "goal": "Repo and settings", "demo": "forge hello works" }
+  ],
+  "tickets": [
+    {
+      "id": "FORGE-001",
+      "title": "Repo scaffold",
+      "phase": "P0",
+      "areas": ["backend"],
+      "priority": "P0",
+      "rank": 1,
+      "status": "done",
+      "depends_on": [],
+      "description": "Goal: a runnable skeleton.",
+      "acceptance": ["uv sync works"],
+      "test_scenarios": ["Given a clean checkout, when uv sync runs, then it succeeds"],
+      "estimate": "0.5d",
+      "labels": ["scaffold"],
+      "unlocks": ["FORGE-002"],
+      "handoff": [{ "date": "2026-09-09", "status": "done", "note": "Scaffold built." }]
+    },
+    {
+      "id": "FORGE-002",
+      "title": "Kanban page lists apps",
+      "phase": "P0",
+      "areas": ["frontend"],
+      "priority": "P1",
+      "rank": 2,
+      "status": "review",
+      "depends_on": ["FORGE-001"],
+      "description": "An Apps page.",
+      "acceptance": ["The page lists apps"],
+      "test_scenarios": ["Given two apps, when the page loads, then both show"],
+      "estimate": "1d",
+      "labels": [],
+      "unlocks": []
+    }
+  ]
+}
