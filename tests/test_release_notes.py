@@ -49,3 +49,22 @@ def test_every_version_section_uses_the_standard_headings() -> None:
 def test_unknown_version_fails_with_a_fix() -> None:
     r = run("9.9.9")
     assert r.returncode == 1 and "fix:" in r.stderr
+
+
+def test_version_is_the_same_everywhere() -> None:
+    """A release bumps every copy of the version; a half-done bump would ship mixed files."""
+    version = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))["version"]
+    board = (REPO / "plugins/slate/assets/board/board.py").read_text(encoding="utf-8")
+    page = (REPO / "plugins/slate/assets/board/index.html").read_text(encoding="utf-8")
+    template = (REPO / "plugins/slate/templates/SLATE.md").read_text(encoding="utf-8")
+    assert f'SLATE_VERSION = "{version}"' in board
+    assert f"# Slate board v{version} " in board
+    assert f'<meta name="slate-version" content="{version}"' in page
+    assert f'var SLATE_VERSION = "{version}";' in page
+    assert f">Slate v{version}</footer>" in page
+    assert template.startswith(f"<!-- slate v{version} ")
+
+
+def test_no_unreleased_section() -> None:
+    assert not re.search(r"^## Unreleased", CHANGELOG.read_text(encoding="utf-8"), re.M | re.I), \
+        "every merge to main is a release: name the section after the new version"

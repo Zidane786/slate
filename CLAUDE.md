@@ -104,6 +104,14 @@ Every feature, fix or behaviour change updates **all** that apply, before it's c
 
 ## 6. Releasing a version
 
+**Every PR that changes `plugins/**` is a release.** CI (`scripts/check_version_bump.py`) fails
+unless it bumps the version above `main`'s and adds that version's CHANGELOG section; there is no
+"Unreleased" section. Claude Code only updates installed plugins when the version changes, so an
+unversioned change would never reach users. Docs-only PRs outside `plugins/` need no bump.
+Each CHANGELOG section lists **only** what changed since the previous version; a released
+version's section is frozen (the same CI check fails if it changes). New changes go under the
+new version.
+
 1. Bump the version in **all** of: `plugins/slate/.claude-plugin/plugin.json`,
    `board.py` (`SLATE_VERSION`, header line), `index.html` (`slate-version` meta),
    `templates/SLATE.md` (first line), and `SCHEMA_VERSION` + `migrate` if the schema changed.

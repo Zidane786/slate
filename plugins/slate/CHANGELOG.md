@@ -4,7 +4,8 @@ All notable changes to Slate. Versions follow the plugin's `plugin.json`; the bo
 version is noted when it changes. Each release lists **Highlights**, then **Added**, **Changed**,
 **Fixed**, **Security**, **Removed** and **Upgrade notes** (a section is left out when it has
 nothing). Merging a version bump into `main` publishes a GitHub Release with that version's
-section.
+section. Each section lists only what changed since the previous version, and a released
+section is never edited afterwards (CI enforces both).
 
 ## 0.2.1 — 2026-09-26
 
