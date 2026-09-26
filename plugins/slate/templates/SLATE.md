@@ -1,4 +1,4 @@
-<!-- slate v0.2.1 · written by /slate:init, safe to edit values -->
+<!-- slate v0.2.2 · written by /slate:init, safe to edit values -->
 # Slate: how we plan and build in {{PROJECT}}
 
 > This is the project's living context for Slate. Every Slate command reads it first, and

@@ -45,7 +45,7 @@ port — `ssh -L 8088:localhost:8088 you@host` — and open http://localhost:808
 Opened straight from disk (`file://`), the browser blocks loading `./tickets.json`: the page
 shows a file picker; choose `tickets.json` (and `preview.json` to see a preview).
 
-The footer shows the board's Slate version (`Slate v0.2.1`) and the version recorded in
+The footer shows the board's Slate version (`Slate v0.2.2`) and the version recorded in
 `tickets.json`. The page also has `<meta name="slate-version">` for scripts.
 
 **Live refresh.** When the page is served (not opened with the file picker), it re-reads
@@ -251,8 +251,8 @@ with `unlock-write` (only when it is older than 60 s or its process is gone).
 | `claim ID [--as NAME] [--take-over "why"]` / `release ID [--as NAME] [--take-over "why"]` | Mark a ticket as yours / remove the claim (see "Who is on what") |
 | `unlock --reason "…" [--minutes 5]` / `lock` | Ask for one hand edit of `tickets.json` (see "Unlock") / cancel an active unlock or a pending request |
 | `unlock-write` | Remove a stale write lock (older than 60 s, or its process is gone) |
-| `add-status NAME --after STATUS\|--first --like ROLE_OR_STATUS [--label "…"] [--note required\|optional]` | Add a status (column) that follows a role's rules (see "Statuses"); `--note` defaults to the `--like` state's setting |
-| `rename-status OLD NEW` / `edit-status NAME [label=…] [role=…] [from=a,b] [note=required\|optional]` | Rename a status (its tickets move with it) / change its label, role, path rule, or whether moving into it needs a note for the ticket's history |
+| `add-status NAME --after STATUS\|--first --like ROLE_OR_STATUS [--label "…"] [--note required\|optional] [--deps A,B]` | Add a status (column) that follows a role's rules (see "Statuses"); `--note` defaults to the `--like` state's setting, `--deps` to its role's dependency rule |
+| `rename-status OLD NEW` / `edit-status NAME [label=…] [role=…] [from=a,b] [note=required\|optional] [deps=a,b\|none]` | Rename a status (its tickets move with it) / change its label, role, path rule, whether moving into it needs a note for the ticket's history, or where dependencies must be first (`deps=` back to the default) |
 | `reorder-statuses S S …` / `remove-status NAME [--move-to OTHER]` | Column order (every status once) / remove a status |
 | `set-meta workflow=strict\|free` | Path rules preset: forward moves follow backlog → in progress → review → user testing → waiting for merge → done / no rules |
 | `remove ID[,ID…] --reason "…" [--detach] [--force-done "why"]` / `restore ID` | Archive tickets in `meta.removed` (not deleted; ids are never reused) / bring one back |
@@ -326,7 +326,9 @@ at the start. A trailing `/` or `.git` is dropped.
 
 `set ID in_progress|review|user_testing --ignore-deps "reason"` lets a ticket move on while
 something it needs is still open (for example stacked PRs). The note gets
-`(deps open: <IDs> — <reason>)` added. merge_ready and done always need every dependency done.
+`(deps open: <IDs> — <reason>)` added. merge_ready and done never take `--ignore-deps`: done
+needs every dependency done, merge_ready every dependency in merge_ready or done (see
+"Dependency rules").
 
 ### Several tickets at once
 
@@ -423,6 +425,20 @@ others don't. `add-status … --note required|optional` (default: as the `--like
 `edit-status NAME note=required|optional` (built-in statuses too) change it. While path rules
 exist, moving back always needs a note.
 
+**Dependency rules.** Each status also says where a ticket's dependencies must be before the ticket
+may move into it (`meta.status_deps`: `{status: [statuses or roles]}`; a dependency counts when its
+status name or its role is listed). Defaults by role: `in_progress`, `review`, `user_testing` and
+`done` need every dependency `done`; `merge_ready` accepts dependencies in `merge_ready` or `done`
+(so tickets that ship in the same pull request can all wait for the merge together); `draft`,
+`backlog`, `ready` and statuses without a role have no check. `edit-status NAME deps=a,b` sets one
+(each an existing status or a role), `deps=none` turns the check off, `deps=` goes back to the
+default; `add-status … --deps a,b` too. `set`, the board page, `check` (for tickets already in a
+merge_ready or done status) and `/api/allowed` all use the same rule; refusals read
+`can't move to Waiting for merge until these are in Waiting for merge or Done: ACME-011 (review)`.
+`rename-status` and `remove-status` keep the references in step (a role name stays, since it still
+matches). `export --json --statuses`, `/api/info` and `workflow --markdown` show each status's rule.
+Ready tickets (`next`) are still `backlog`/`ready` ones with every dependency `done`.
+
 board.py refuses a status change that would leave no status with the `done` role, or none with
 `backlog`/`ready`. Without a `draft` status, `new --draft` refuses (with the `add-status` fix).
 Without `merge_ready`, `done` simply doesn't pass through it; without `user_testing`, `usertest`
@@ -452,6 +468,11 @@ claimed by someone else and show `on: <name>`; `status` lists every claim. Movin
 someone else claimed is refused with an `ask the user:` line; with their OK add
 `--take-over "why"` (the reason goes into the handoff note). `done` is not blocked by a claim
 (it needs the merged PR anyway). `claim ID` / `release ID` set or clear a claim by hand.
+The board page's API takes an optional `"as"` (the page's name; `GET /api/allowed?id=…&as=…` too).
+Moves, promote, claim and release check claims with it like `--as`, so a ticket claimed from the
+page as `maya` is only moved or released by requests acting as `maya`. User test results, ticks and
+notes are never claim-gated (the user tests from the page while an agent's branch holds the claim);
+history entries written from the page carry `"via": "board page"` and, when given, `"as"`.
 
 ## Doctor
 
@@ -543,7 +564,7 @@ error: ACME-014 commits: has no commits linked, so it can't be done
 {
   "meta": {
     "project": "Acme", "prefix": "ACME", "repo_url": "https://github.com/acme/app (optional)",
-    "slate_version": "0.2.1", "schema_version": 2,
+    "slate_version": "0.2.2", "schema_version": 2,
     "generated": "2026-09-26",
     "statuses": ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"],
     "areas": ["backend", "frontend", "infra"],
@@ -585,7 +606,7 @@ error: ACME-014 commits: has no commits linked, so it can't be done
 `meta.check_quiet_optional`, `meta.unlock_log`, `phases[].unscheduled`, and
 `tickets[].item_checks` (keys `acceptance:N` / `test:N`, written only by `check-item`). The
 order of `phases` is the display order. Also optional in schema 2: `meta.status_roles`,
-`meta.status_labels`, `meta.status_from` (see "Statuses"), `meta.removed` (archived tickets:
+`meta.status_labels`, `meta.status_from`, `meta.status_note`, `meta.status_deps` (see "Statuses"), `meta.removed` (archived tickets:
 `{"ticket": {…}, "removed": "YYYY-MM-DD", "reason": "…"}`), `tickets[].claimed_by`
 (written by `set`, `claim`, `release`) and the `meta.unlock_log` entries' `event` (`requested`,
 `activated`, `used`, `expired`, `refused`, `locked`). The unlock files (`kanban/.slate-unlock.json`

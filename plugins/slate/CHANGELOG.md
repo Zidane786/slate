@@ -7,6 +7,47 @@ nothing). Merging a version bump into `main` publishes a GitHub Release with tha
 section. Each section lists only what changed since the previous version, and a released
 section is never edited afterwards (CI enforces both).
 
+## 0.2.2 — 2026-09-27
+
+Board schema **2** (unchanged).
+
+### Highlights
+
+- **Per-state dependency rule:** say which states a ticket's dependencies must be in before a
+  ticket can move into each state. By default, tickets in the same PR no longer block each other
+  on the way to **Waiting for merge**.
+- The live board page now acts as **you** everywhere, so a ticket you took from the page can be
+  moved, ticked and noted by you.
+
+### Added
+
+- `edit-status NAME deps=a,b` (and `add-status … --deps a,b`): the states — or roles — a ticket's
+  dependencies must be in before a ticket may move into NAME. `deps=none` turns the check off for
+  that state; `deps=` goes back to the default. Defaults: In progress, Review and User testing
+  need dependencies Done (`--ignore-deps "why"` still overrides); **Waiting for merge accepts
+  dependencies in Waiting for merge or Done**; Done needs them Done. `check`, the board page's
+  allowed moves, `export --json --statuses`, `/api/info` and `workflow --markdown` all follow the
+  same rule.
+
+### Fixed
+
+- **Board page acted as the git branch, not you:** "Take" claimed a ticket with your name, but
+  moves, ticks, user tests and notes were sent without it, so the server refused your own move
+  ("being worked on by <name>, not by <branch>"). Every write from the page — and the check of
+  which moves are allowed — now carries the same saved name. Moving, promoting and releasing
+  check who's on the ticket; ticks, user tests and notes stay open to anyone (they record
+  evidence, as on the command line), so you can test a ticket an agent's branch is working on.
+- **Tickets in the same PR deadlocked before Waiting for merge:** moving to Waiting for merge
+  required every dependency to be Done, but a fix ticket in the same PR is only Done after the
+  merge. Waiting for merge now accepts dependencies in Waiting for merge or Done; Done still
+  needs them Done.
+
+### Upgrade notes
+
+`/slate:upgrade` replaces the board files (0.2.1 → 0.2.2) and, with your OK, regenerates the
+`## Workflow` section of `SLATE.md` (it gains a "Dependencies must be in" column). The new
+dependency defaults apply automatically, and existing boards stay valid.
+
 ## 0.2.1 — 2026-09-26
 
 Board schema **2** (unchanged).
