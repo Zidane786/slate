@@ -264,7 +264,9 @@ Commit all of it. Teammates without the plugin can still open the board and run
 
 ### Sharing with your team
 
-`/slate:init` can add this to the project's `.claude/settings.json` (committed):
+`/slate:init` (and `/slate:upgrade` for existing projects) adds this to the **project's**
+`.claude/settings.json` — the one in the repo, never your personal `~/.claude/settings.json` —
+merging with what's there. Commit it:
 
 ```json
 {
@@ -280,7 +282,10 @@ Commit all of it. Teammates without the plugin can still open the board and run
   command, because Slate's marketplace entry is a relative path. The first time they see
   "Plugins changed. Run /reload-plugins to activate."
 - **`autoUpdate: true`** keeps Slate updated for everyone (third-party marketplaces don't
-  auto-update otherwise). Leave it out to update by hand.
+  auto-update otherwise).
+- **If your `.gitignore` excludes `.claude/settings.json`,** Slate still writes it but leaves
+  `.gitignore` alone and tells you: teammates only get Slate automatically once the file is
+  committed. `doctor` shows the same note.
 - **Not covered:** `claude -p` scripts and cloud sessions never show the trust prompt; install
   there with `claude plugin install slate@slate`.
 

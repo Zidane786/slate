@@ -134,11 +134,7 @@ recommendation) as option (a). Skip any question whose answer you already know. 
     Pass/Fail, moving cards) save to the board. (a) auto — start it when Slate commands run
     (b) off — I'll open it myself". Then the port: "(a) 8088 (b) another port" (propose another
     if the app uses 8088). Over SSH it is reached with `ssh -L <port>:localhost:<port> <host>`.
-14. Slate updates: (a) for the team — add Slate to the project's `.claude/settings.json` with
-    auto-update on (teammates who trust the repo get it and it keeps itself updated) (b) just for
-    me — turn on auto-update in my own `~/.claude/settings.json` (c) no, I'll update by hand.
-    See step 6.
-15. Does this project need its own extra command (a project-level skill), for example an
+14. Does this project need its own extra command (a project-level skill), for example an
     end-to-end test that needs special setup? (a) no (default) (b) yes, describe it.
 
 In refresh mode ask 8–13 only when `SLATE.md` doesn't answer them yet.
@@ -236,18 +232,12 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
       'Planning, tickets and more project context: read SLATE.md (kept up to date as work goes on)' — so agents that only read CLAUDE.md find it?
       (yes/no)". Append only that line, only on yes. Skip the question if the line is already there.
 - [ ] Same two rules for **AGENTS.md** with `ROOT/templates/AGENTS.md`.
-- [ ] **Just for me (only if the user chose 3.14 b).** Show the exact change first, naming the
-      file `~/.claude/settings.json`, then merge only this entry (keep every other key; merge
-      objects, never replace them; create the file if missing):
-
-  ```json
-  { "extraKnownMarketplaces": { "slate": { "source": { "source": "github", "repo": "Zidane786/slate" }, "autoUpdate": true } } }
-  ```
-
-  This is the same setting as `/plugin` → **Marketplaces** → **slate** → **Enable auto-update**
-  (there is no CLI command for it). It applies to you in every project.
-- [ ] **For the team (only if the user chose 3.14 a).** Create or merge into
-      `.claude/settings.json` (keep every existing key; merge objects, don't replace them):
+- [ ] **Team settings (always; no question).** So everyone who clones the repo gets Slate, make
+      sure the **project's** `.claude/settings.json` (in the repo, committed) contains the entry
+      below. **Always the project settings file — never the user's `~/.claude/settings.json`**
+      (Slate never edits user settings). Create the file if
+      missing; if it exists, merge (keep every existing key; merge objects, never replace them;
+      leave it alone if the entry is already there). Tell the user what you added.
 
   ```json
   {
@@ -263,14 +253,17 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   }
   ```
 
-  When a teammate opens the repo and accepts Claude Code's folder-trust prompt, Claude Code adds
+  When someone clones the repo and accepts Claude Code's folder-trust prompt, Claude Code adds
   the Slate marketplace in the background and loads the plugin (Slate's marketplace entry is a
-  relative path, so no separate install is needed); the first time they see "Plugins changed.
-  Run /reload-plugins to activate." `autoUpdate: true` keeps Slate updated for everyone (ask the
-  user; leave it out if they prefer updating by hand). This doesn't apply to `claude -p` or cloud
-  sessions, which never show the trust prompt — there, install with
-  `claude plugin install slate@slate`.
-- [ ] **Project skill (only if the user said yes in step 3.15).** Create
+  relative path, so no install command is needed); the first time they see "Plugins changed.
+  Run /reload-plugins to activate." `autoUpdate` keeps Slate updated. (`claude -p` and cloud
+  sessions never show the trust prompt; there, install with `claude plugin install slate@slate`.)
+
+  **If `.claude/settings.json` is ignored by git** (`git check-ignore -q .claude/settings.json`
+  succeeds): still write the entry, but **don't edit `.gitignore`**. Tell the user: "Your
+  `.gitignore` excludes `.claude/settings.json`, so people who clone this repo won't get Slate
+  automatically. If you want them to, commit that file (remove it from `.gitignore`)."
+- [ ] **Project skill (only if the user said yes in step 3.14).** Create
       `.claude/skills/<name>/SKILL.md` with frontmatter `name` and `description` and the exact
       steps of that one extra command, and add it to `SLATE.md` under "Commands". Nothing else.
 

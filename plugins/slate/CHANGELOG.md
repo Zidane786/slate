@@ -10,10 +10,14 @@ section.
 
 ### Added
 
-- `/slate:init` (and `/slate:upgrade`, once) can turn on Slate's auto-update: for the team (the
-  project's `.claude/settings.json`, `"autoUpdate": true`) or just for you (your
-  `~/.claude/settings.json`), always asking first. Same setting as `/plugin` → Marketplaces →
-  Enable auto-update.
+- **Everyone who clones a Slate project gets Slate:** `/slate:init` (and `/slate:upgrade` for
+  existing projects) always adds Slate to the **project's** `.claude/settings.json` (in the repo;
+  never your user settings) — the `slate`
+  marketplace with `"autoUpdate": true` and `slate@slate` enabled — merging with existing
+  settings. After the folder-trust prompt, Claude Code loads Slate and keeps it updated. If
+  `.claude/settings.json` is ignored by git, Slate says so and leaves `.gitignore` alone.
+- `doctor` reports `team-settings-missing` (setup), and notes `team-settings-ignored` without
+  counting it as a problem.
 - When the project's board is newer than your plugin (a teammate upgraded), Slate offers to run
   `claude plugin marketplace update slate` and `claude plugin update slate@slate` for you, then
   asks you to `/reload-plugins`.

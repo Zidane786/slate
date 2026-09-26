@@ -70,12 +70,16 @@ activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses i
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
 one edit. If the user declines, stop. Copilot CLI support: planned.
 
-## Step 2b: offer auto-update (once)
+## Step 2b: team settings (always)
 
-If `~/.claude/plugins/known_marketplaces.json` shows the `slate` marketplace without
-`"autoUpdate": true`, and no settings file sets it, offer the same choice as `/slate:init`
-question 14 (team / just for me / no) and apply it the same way. Skip if the user said no before
-(a `Decisions` line in `SLATE.md` records it).
+Run `python3 kanban/board.py doctor --json`. If it reports `team-settings-missing`, add Slate to
+the **project's** `.claude/settings.json` (in the repo — never the user's `~/.claude/settings.json`)
+exactly as `/slate:init` does (read
+`ROOT/skills/init/SKILL.md`, "Team settings"): merge the `extraKnownMarketplaces.slate` entry
+(with `"autoUpdate": true`) and `"enabledPlugins": {"slate@slate": true}`, keep every other key,
+and tell the user what you added. If doctor's notes include `team-settings-ignored`, don't touch
+`.gitignore`; just tell the user people who clone the repo won't get Slate automatically until
+`.claude/settings.json` is committed.
 
 ## Step 3: run each version's upgrade steps
 

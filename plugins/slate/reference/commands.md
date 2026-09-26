@@ -373,7 +373,7 @@ versions, SLATE.md sections).
   `board-unreadable`.
 - kind **`setup`** (→ `/slate:upgrade`, or run the fix): `schema-outdated`,
   `board-files-outdated`, `plugin-outdated` (update the plugin instead), `plugin-unreadable`,
-  `python-cmd-missing`, `slate-md-missing`, `slate-md-sections`, `slate-md-workflow-stale`
+  `python-cmd-missing`, `slate-md-missing`, `slate-md-sections`, `slate-md-workflow-stale`, `team-settings-missing` (plus the note `team-settings-ignored`, not counted as a problem)
   (SLATE.md's `## Workflow` doesn't match the board; regenerate with
   `workflow --markdown`, with the user's OK), `merge-driver-missing`, `gitignore-missing`,
   `repo-url-missing`, `write-lock-stale` (fix: `unlock-write`), `unlock-active` (fix: `lock`).

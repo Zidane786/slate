@@ -292,3 +292,36 @@ def test_invoking_python_heuristics(monkeypatch: pytest.MonkeyPatch, exe: str, o
     assert mod.invoking_python(os_name=os_name, executable=exe, which=fake_which) == want
     monkeypatch.setenv("SLATE_PYTHON", "py -3")
     assert mod.invoking_python(os_name=os_name, executable=exe, which=fake_which) == "py -3"
+
+
+def test_doctor_team_settings_missing_and_ignored(tmp_path: Path) -> None:
+    import json as _json
+    import shutil as _sh
+    import subprocess as _sp
+    import sys as _sys
+    from conftest import BOARD_SRC, base_doc as demo_doc
+    k = tmp_path / "kanban"
+    k.mkdir()
+    _sh.copy2(BOARD_SRC, k / "board.py")
+    (k / "tickets.json").write_text(_json.dumps(demo_doc(), indent=2) + "\n", encoding="utf-8")
+
+    def doctor() -> dict:
+        r = _sp.run([_sys.executable, str(k / "board.py"), "doctor", "--json"], capture_output=True, text=True,
+                    encoding="utf-8", errors="replace", cwd=str(tmp_path))
+        return _json.loads(r.stdout)
+
+    codes = {p["code"] for p in doctor()["problems"]}
+    assert "team-settings-missing" in codes
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "settings.json").write_text(_json.dumps(
+        {"extraKnownMarketplaces": {"slate": {"source": {"source": "github", "repo": "Zidane786/slate"}}},
+         "enabledPlugins": {"slate@slate": True}, "other": 1}), encoding="utf-8")
+    d = doctor()
+    assert "team-settings-missing" not in {p["code"] for p in d["problems"]}
+    # ignored by git: reported as a note (not a problem), and .gitignore is left alone
+    _sp.run(["git", "init", "-q"], cwd=str(tmp_path), check=True)
+    (tmp_path / ".gitignore").write_text(".claude/settings.json\n", encoding="utf-8")
+    d = doctor()
+    assert "team-settings-ignored" in {p["code"] for p in d["notes"]}
+    assert "team-settings-ignored" not in {p["code"] for p in d["problems"]}
+    assert (tmp_path / ".gitignore").read_text(encoding="utf-8") == ".claude/settings.json\n"

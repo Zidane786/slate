@@ -71,7 +71,7 @@ runs `/slate:sync <this branch or path>` from the main checkout).
       - kind **`setup`** — belongs to `/slate:upgrade` (or `/slate:init`): `schema-outdated`,
         `board-files-outdated`, `plugin-outdated` (update the plugin instead),
         `plugin-unreadable`, `python-cmd-missing`, `slate-md-missing`, `slate-md-sections`,
-        `slate-md-workflow-stale`, `merge-driver-missing`, `gitignore-missing`,
+        `slate-md-workflow-stale`, `team-settings-missing`, `merge-driver-missing`, `gitignore-missing`,
         `repo-url-missing`. List them and offer `/slate:upgrade`; don't fix them here unless the
         user asks (the `fix` line says how). Two setup codes are handled right here:
         `write-lock-stale` → `python3 kanban/board.py unlock-write` (after saying so; only a
