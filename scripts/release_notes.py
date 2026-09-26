@@ -26,22 +26,44 @@ claude plugin marketplace add Zidane786/slate
 claude plugin install slate@slate
 ```
 
-(or inside Claude Code: `/plugin marketplace add Zidane786/slate`, then
-`/plugin install slate@slate`). Restart Claude Code, then run `/slate:init` in the project.
+Or inside Claude Code:
+
+```
+/plugin marketplace add Zidane786/slate
+/plugin install slate@slate
+```
+
+Then run `/slate:init` in the project.
 """
 
 UPGRADE_HEAD = """### Upgrade (existing projects)
 
-1. Update the plugin, in a terminal:
+**Easiest — turn on auto-update once:** in Claude Code run `/plugin`, open the **Marketplaces**
+tab, select **slate**, choose **Enable auto-update**. Slate then updates itself when a session
+starts (third-party marketplaces have auto-update off by default).
 
-   ```
-   claude plugin marketplace update slate
-   claude plugin update slate@slate
-   ```
+**Or update by hand:**
 
-   (or inside Claude Code: `/plugin marketplace update slate`).
-2. Restart Claude Code.
-3. In each project, run `/slate:upgrade`.
+In a terminal:
+
+```
+claude plugin marketplace update slate
+claude plugin update slate@slate
+```
+
+Or inside Claude Code:
+
+```
+/plugin marketplace update slate
+```
+
+then `/plugin` → **Installed** tab → **slate** → **Update now**. (Updating the marketplace only
+refreshes the list of versions; the plugin update installs the new one.)
+
+**Then:**
+
+1. Run `/reload-plugins` (or restart Claude Code) to load the new version.
+2. In each project, run `/slate:upgrade`.
 """
 
 

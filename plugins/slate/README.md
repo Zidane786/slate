@@ -7,14 +7,23 @@ it moves to Done only after you say the PR is merged.
 
 ## Install and update
 
+Install, in a terminal:
+
 ```
-claude plugin marketplace add Zidane786/slate     # install (first time)
+claude plugin marketplace add Zidane786/slate
 claude plugin install slate@slate
-claude plugin marketplace update slate            # update to a new version
+```
+
+Update: turn on auto-update once (`/plugin` → **Marketplaces** → **slate** → **Enable
+auto-update**), or by hand:
+
+```
+claude plugin marketplace update slate
 claude plugin update slate@slate
 ```
 
-Restart Claude Code, then `/slate:init` in a new project or `/slate:upgrade` in an existing one.
+Then `/reload-plugins` (or restart), and `/slate:init` in a new project or `/slate:upgrade` in
+an existing one.
 What changed: https://github.com/Zidane786/slate/releases
 
 | Command | What it does |
