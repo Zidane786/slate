@@ -33,9 +33,7 @@ Check, in this order, and take the first branch that matches:
    `python3 kanban/board.py version --against "<ROOT>"`:
    - `behind` → follow the `/slate:upgrade` procedure (read `ROOT/skills/upgrade/SKILL.md` and
      do all its steps, including the "What's new" and upgrades/ steps), then continue at step 1 below in *refresh mode*.
-   - `ahead` → tell the user a teammate upgraded the board and they should update the plugin
-     (`claude plugin marketplace update slate` then `claude plugin update slate@slate`, and
-     restart Claude Code). Stop.
+   - `ahead` → a teammate upgraded the board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
    - `same` → continue at step 1 in *refresh mode*.
    In refresh mode you re-detect values and compare them to `SLATE.md`; for every value that
    differs, show old vs new and ask before changing it. Never run `board.py init` again and
@@ -136,8 +134,7 @@ recommendation) as option (a). Skip any question whose answer you already know. 
     Pass/Fail, moving cards) save to the board. (a) auto — start it when Slate commands run
     (b) off — I'll open it myself". Then the port: "(a) 8088 (b) another port" (propose another
     if the app uses 8088). Over SSH it is reached with `ssh -L <port>:localhost:<port> <host>`.
-14. Enable the plugin for teammates in `.claude/settings.json`? (a) yes (b) no. See step 6.
-15. Does this project need its own extra command (a project-level skill), for example an
+14. Does this project need its own extra command (a project-level skill), for example an
     end-to-end test that needs special setup? (a) no (default) (b) yes, describe it.
 
 In refresh mode ask 8–13 only when `SLATE.md` doesn't answer them yet.
@@ -235,14 +232,19 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
       'Planning, tickets and more project context: read SLATE.md (kept up to date as work goes on)' — so agents that only read CLAUDE.md find it?
       (yes/no)". Append only that line, only on yes. Skip the question if the line is already there.
 - [ ] Same two rules for **AGENTS.md** with `ROOT/templates/AGENTS.md`.
-- [ ] **Settings (only if the user said yes in step 3.14).** Create or merge into
-      `.claude/settings.json` (keep every existing key; merge objects, don't replace them):
+- [ ] **Team settings (always; no question).** So everyone who clones the repo gets Slate, make
+      sure the **project's** `.claude/settings.json` (in the repo, committed) contains the entry
+      below. **Always the project settings file — never the user's `~/.claude/settings.json`**
+      (Slate never edits user settings). Create the file if
+      missing; if it exists, merge (keep every existing key; merge objects, never replace them;
+      leave it alone if the entry is already there). Tell the user what you added.
 
   ```json
   {
     "extraKnownMarketplaces": {
       "slate": {
-        "source": { "source": "github", "repo": "Zidane786/slate" }
+        "source": { "source": "github", "repo": "Zidane786/slate" },
+        "autoUpdate": true
       }
     },
     "enabledPlugins": {
@@ -251,8 +253,17 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   }
   ```
 
-  Teammates who trust the repo are then offered the Slate marketplace and plugin.
-- [ ] **Project skill (only if the user said yes in step 3.15).** Create
+  When someone clones the repo and accepts Claude Code's folder-trust prompt, Claude Code adds
+  the Slate marketplace in the background and loads the plugin (Slate's marketplace entry is a
+  relative path, so no install command is needed); the first time they see "Plugins changed.
+  Run /reload-plugins to activate." `autoUpdate` keeps Slate updated. (`claude -p` and cloud
+  sessions never show the trust prompt; there, install with `claude plugin install slate@slate`.)
+
+  **If `.claude/settings.json` is ignored by git** (`git check-ignore -q .claude/settings.json`
+  succeeds): still write the entry, but **don't edit `.gitignore`**. Tell the user: "Your
+  `.gitignore` excludes `.claude/settings.json`, so people who clone this repo won't get Slate
+  automatically. If you want them to, commit that file (remove it from `.gitignore`)."
+- [ ] **Project skill (only if the user said yes in step 3.14).** Create
       `.claude/skills/<name>/SKILL.md` with frontmatter `name` and `description` and the exact
       steps of that one extra command, and add it to `SLATE.md` under "Commands". Nothing else.
 

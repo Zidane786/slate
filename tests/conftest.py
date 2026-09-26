@@ -39,6 +39,12 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 FORGE_BOARD = REPO.parent / "forge" / "kanban" / "tickets.json"
 
 
+TEAM_SETTINGS = {
+    "extraKnownMarketplaces": {"slate": {"source": {"source": "github", "repo": "Zidane786/slate"}, "autoUpdate": True}},
+    "enabledPlugins": {"slate@slate": True},
+}
+
+
 def full_ticket(n: int, prefix: str = "ACME", **over: Any) -> Dict[str, Any]:
     """A complete, strictly valid ticket (backend, so no user test needed)."""
     t: Dict[str, Any] = {
@@ -106,6 +112,10 @@ class Board:
         self.script = self.dir / "board.py"
         self.tickets = self.dir / "tickets.json"
         self.preview = self.dir / "preview.json"
+        # a set-up project commits Slate's team settings (what /slate:init writes); tests of the
+        # doctor check remove it
+        (root / ".claude").mkdir(exist_ok=True)
+        (root / ".claude" / "settings.json").write_text(json.dumps(TEAM_SETTINGS, indent=2) + "\n", encoding="utf-8")
 
     def run(self, *args: str, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
         return subprocess.run(

@@ -1850,8 +1850,9 @@ def next_brief(a: argparse.Namespace) -> int:
             parts.append("board newer than plugin, update the Slate plugin")
         try:  # the SessionStart line also carries doctor's findings (local checks only, no network)
             probs = [p for p in doctor_problems(a.against, doc)
-                     if p["code"] not in ("board-unreadable", "board-errors", "board-files-outdated", "plugin-outdated",
-                                          "schema-outdated")]  # already said above
+                     if not p.get("info") and
+                     p["code"] not in ("board-unreadable", "board-errors", "board-files-outdated", "plugin-outdated",
+                                       "schema-outdated")]  # already said above
             if probs:
                 parts.append(doctor_brief(probs, prefix=""))
         except Exception:
@@ -4517,6 +4518,29 @@ def web_url(remote: str) -> Optional[str]:
     return f"{m.group(1)}://{m.group(2)}" if m else None
 
 
+def team_settings_problem(project: Path) -> Optional[str]:
+    """None when the project's committed .claude/settings.json makes Claude Code load Slate for
+    everyone who clones it (slate marketplace declared + slate@slate enabled); else what's missing."""
+    path = project / ".claude" / "settings.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    except (OSError, ValueError):
+        return ".claude/settings.json isn't valid JSON"
+    if not isinstance(data, dict):
+        return ".claude/settings.json isn't a JSON object"
+    missing = []
+    mk = data.get("extraKnownMarketplaces")
+    if not (isinstance(mk, dict) and isinstance(mk.get("slate"), dict)):
+        missing.append("extraKnownMarketplaces.slate")
+    ep = data.get("enabledPlugins")
+    if not (isinstance(ep, dict) and ep.get("slate@slate") is True):
+        missing.append('enabledPlugins."slate@slate"')
+    if not missing:
+        return None
+    return (".claude/settings.json doesn't load Slate for people who clone this repo (missing "
+            + " and ".join(missing) + ")")
+
+
 def doctor_problems(against: Optional[str], doc: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """Project health, local checks only. kind: setup (fixed by /slate:upgrade or a command), tickets
     (board content: errors, behind the default branch) or state (write lock, unlock)."""
@@ -4542,6 +4566,16 @@ def doctor_problems(against: Optional[str], doc: Optional[Dict[str, Any]] = None
         elif sv > SCHEMA_VERSION:
             add("plugin-outdated", "setup", NEWER_MSG, [NEWER_FIX], ahead=True)
     slate_md = HERE.parent / "SLATE.md"
+    team = team_settings_problem(HERE.parent)
+    if team:
+        add("team-settings-missing", "setup", team,
+            ["/slate:upgrade   (adds Slate to .claude/settings.json so everyone who clones the repo gets it)"])
+    elif (HERE.parent / ".claude" / "settings.json").is_file() and \
+            git(["check-ignore", "-q", ".claude/settings.json"], HERE.parent) is not None:
+        add("team-settings-ignored", "setup", ".claude/settings.json is ignored by git, so people who clone this "
+                                    "repo won't get Slate automatically",
+            [ASK + "commit .claude/settings.json (remove it from .gitignore) so teammates get Slate? Slate never "
+                   "edits .gitignore for this"], info=True)
     if against:
         try:
             plugin = plugin_version(against)
@@ -4643,14 +4677,20 @@ def doctor_brief(probs: Sequence[Dict[str, Any]], prefix: str = "Slate: ") -> st
 
 
 def cmd_doctor(a: argparse.Namespace) -> int:
-    probs = doctor_problems(a.against)
+    found = doctor_problems(a.against)
+    notes = [p for p in found if p.get("info")]      # things to know, not problems (e.g. settings ignored by git)
+    probs = [p for p in found if not p.get("info")]
     if a.json:
-        print(json.dumps({"ok": not probs, "problems": probs}, indent=2, ensure_ascii=False))
+        print(json.dumps({"ok": not probs, "problems": probs, "notes": notes}, indent=2, ensure_ascii=False))
     elif a.brief:
         print(doctor_brief(probs))
     else:
         for p in probs:
             print(f"problem ({p['kind']}): {p['message']}")
+            for ln in fix_lines(p["fix"]):
+                print(ln)
+        for p in notes:
+            print(f"note: {p['message']}")
             for ln in fix_lines(p["fix"]):
                 print(ln)
         n = len(probs)
@@ -5753,7 +5793,7 @@ def api_info(token: str, cache: Dict[str, Any]) -> Dict[str, Any]:
     now = time.monotonic()
     if cache.get("at") is None or now - cache["at"] > DOCTOR_CACHE_SECONDS or cache.get("doc") != doc:
         try:
-            probs = doctor_problems(None, doc)
+            probs = [p for p in doctor_problems(None, doc) if not p.get("info")]
         except Exception as e:  # never break the page over a health check
             probs = [{"code": "doctor-failed", "kind": "setup", "message": str(e), "fix": [f"{CMD} doctor"]}]
         cache.update(at=now, doc=copy.deepcopy(doc), issues=[

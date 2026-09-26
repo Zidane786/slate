@@ -5,6 +5,70 @@ a time with tests, review, your own check and the commit/PR recorded on the tick
 in charge: Claude builds one ticket per request, parks it in **Waiting for merge**, and stops;
 it moves to Done only after you say the PR is merged.
 
+## Install
+
+In a terminal:
+
+```
+claude plugin marketplace add Zidane786/slate
+claude plugin install slate@slate
+```
+
+Or inside Claude Code:
+
+```
+/plugin marketplace add Zidane786/slate
+/plugin install slate@slate
+```
+
+Then, inside your project:
+
+```
+/slate:init
+```
+
+## Update
+
+**Easiest — turn on auto-update once.** Inside Claude Code run:
+
+```
+/plugin
+```
+
+then open the **Marketplaces** tab → **slate** → **Enable auto-update**. Slate then updates itself
+when a session starts (third-party marketplaces have auto-update off by default).
+
+**Or update by hand.** In a terminal:
+
+```
+claude plugin marketplace update slate
+claude plugin update slate@slate
+```
+
+Or inside Claude Code:
+
+```
+/plugin marketplace update slate
+/plugin
+```
+
+and in `/plugin` open the **Installed** tab → **slate** → **Update now**. (Updating the
+marketplace only refreshes the list of versions; the plugin update installs the new one.)
+
+**Then** load the new version (or restart Claude Code):
+
+```
+/reload-plugins
+```
+
+and in each project run:
+
+```
+/slate:upgrade
+```
+
+What changed in each version: https://github.com/Zidane786/slate/releases
+
 | Command | What it does |
 |---|---|
 | `/slate:init` | Set Slate up in this repo: `kanban/` board + `SLATE.md` (project context, workflow, Python command, board server) |

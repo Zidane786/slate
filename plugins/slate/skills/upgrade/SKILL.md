@@ -29,9 +29,8 @@ the project already set.
    version (**OLD**) and the plugin version (**NEW**):
    - `same` → "Already on Slate <version>." Still run `python3 kanban/board.py doctor --against
      "<ROOT>"`; if it lists `setup` problems, offer to fix them (step 4). Otherwise stop.
-   - `ahead` → "This board is newer than your plugin (<board> vs <plugin>). Update the plugin
-     instead: `claude plugin marketplace update slate`, `claude plugin update slate@slate`,
-     restart." Stop — never downgrade.
+   - `ahead` → the board is newer than the plugin (<board> vs <plugin>) — never downgrade;
+     offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
    - `behind` → continue.
 4. `git status --short kanban/ SLATE.md`: if those files have uncommitted changes, say so and
    ask whether to continue (the upgrade replaces the Slate-owned files).
@@ -70,6 +69,17 @@ Manual, Accept edits and Auto mode Claude Code shows its approval card and the u
 activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses it, and the user
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
 one edit. If the user declines, stop. Copilot CLI support: planned.
+
+## Step 2b: team settings (always)
+
+Run `python3 kanban/board.py doctor --json`. If it reports `team-settings-missing`, add Slate to
+the **project's** `.claude/settings.json` (in the repo — never the user's `~/.claude/settings.json`)
+exactly as `/slate:init` does (read
+`ROOT/skills/init/SKILL.md`, "Team settings"): merge the `extraKnownMarketplaces.slate` entry
+(with `"autoUpdate": true`) and `"enabledPlugins": {"slate@slate": true}`, keep every other key,
+and tell the user what you added. If doctor's notes include `team-settings-ignored`, don't touch
+`.gitignore`; just tell the user people who clone the repo won't get Slate automatically until
+`.claude/settings.json` is committed.
 
 ## Step 3: run each version's upgrade steps
 

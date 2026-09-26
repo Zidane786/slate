@@ -36,6 +36,8 @@ plugins/slate/                        the installed plugin (only this folder shi
   CHANGELOG.md  README.md
 tests/                                pytest suite (+ fixtures/board-demo for the UI)
 .github/workflows/test.yml            CI: Windows/macOS/Linux × Python 3.9/3.13
+.github/workflows/release.yml         publishes vX.Y.Z releases from the CHANGELOG on merge
+scripts/release_notes.py              prints a version's release notes from the CHANGELOG
 TEST.md                               hands-on test guide for any machine
 docs/                                 specs, build plans, archive
 ```
@@ -100,13 +102,20 @@ Every feature, fix or behaviour change updates **all** that apply, before it's c
 1. Bump the version in **all** of: `plugins/slate/.claude-plugin/plugin.json`,
    `board.py` (`SLATE_VERSION`, header line), `index.html` (`slate-version` meta),
    `templates/SLATE.md` (first line), and `SCHEMA_VERSION` + `migrate` if the schema changed.
-2. Finish `CHANGELOG.md` and `upgrades/<version>.md` (What's new first, then steps).
+2. Finish `CHANGELOG.md` and `upgrades/<version>.md` (What's new first, then steps). The
+   CHANGELOG section for the version is `## X.Y.Z — YYYY-MM-DD` with the headings **Highlights**,
+   **Added**, **Changed**, **Fixed**, **Security**, **Removed**, **Upgrade notes** (leave out
+   empty ones). `tests/test_release_notes.py` enforces this; preview the notes with
+   `python3 scripts/release_notes.py`.
 3. Full suite on 3.13 and 3.9, `claude plugin validate --strict`, `TEST.md` levels 3–4 on at
    least one machine, CI green on all three OSes.
 4. Branch `feat/<version>`, draft PR with summary, verification and follow-ups; merge only when
    the user says so. Default branch is `main`, protected by a ruleset: no direct pushes (PR
    required), all 6 CI checks must pass, no force-push or deletion, no bypass. Merged branches are
    deleted automatically.
+5. **Releases are automatic:** when a merge to `main` carries a new version in `plugin.json`,
+   `.github/workflows/release.yml` tags `vX.Y.Z` and publishes a GitHub Release with that
+   CHANGELOG section. Don't create release tags by hand (tags `v*` are protected).
 
 ## 7. Commits
 
