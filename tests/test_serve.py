@@ -52,7 +52,7 @@ def demo_doc() -> Dict[str, Any]:
 
 
 def free_port() -> int:
-    for _ in range(50):
+    for _ in range(500):
         s = socket.socket()
         s.bind(("127.0.0.1", 0))
         p = s.getsockname()[1]

@@ -287,11 +287,8 @@ def test_invoking_python_heuristics(monkeypatch: pytest.MonkeyPatch, exe: str, o
                                     want: str) -> None:
     mod = load_board_module()
     monkeypatch.delenv("SLATE_PYTHON", raising=False)
-    monkeypatch.setattr(mod.sys, "executable", exe)
-    monkeypatch.setattr(mod.os, "name", os_name)
-    monkeypatch.setattr(mod.shutil, "which", lambda name: f"/bin/{name}" if name in which else None)
-    if os_name == "nt":
-        monkeypatch.setattr(mod, "Path", __import__("pathlib").PureWindowsPath)
-    assert mod.invoking_python() == want
+    # no global monkeypatching of os.name / sys.executable: that breaks pytest itself on Windows
+    fake_which = lambda name: f"/bin/{name}" if name in which else None  # noqa: E731
+    assert mod.invoking_python(os_name=os_name, executable=exe, which=fake_which) == want
     monkeypatch.setenv("SLATE_PYTHON", "py -3")
-    assert mod.invoking_python() == "py -3"
+    assert mod.invoking_python(os_name=os_name, executable=exe, which=fake_which) == "py -3"

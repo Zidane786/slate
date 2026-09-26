@@ -129,25 +129,29 @@ NEWER_FIX = (ASK + "kanban/tickets.json was written by a newer Slate; can you up
              "Until then the board is read-only.")
 
 
-def invoking_python() -> str:
+def invoking_python(os_name: Optional[str] = None, executable: Optional[str] = None,
+                    which: Any = None) -> str:
     """How to start the Python that runs this board.py, as a command a person would type: python3,
     python or py -3 (sys.executable basename heuristics), else its quoted path. SLATE_PYTHON (set by
     hooks/run.sh to the command it picked) wins."""
     env = os.environ.get("SLATE_PYTHON", "").strip()
     if env:
         return env
-    exe = sys.executable or ""
-    base = Path(exe).name.lower()
+    exe = (sys.executable if executable is None else executable) or ""
+    os_name = os.name if os_name is None else os_name
+    which = which or shutil.which
+    # basename by hand: works for both / and \ paths whatever OS the tests run on
+    base = re.split(r"[\\/]", exe)[-1].lower()
     if base.endswith(".exe"):
         base = base[:-4]
-    if os.name == "nt":
+    if os_name == "nt":
         if base.startswith("python"):
-            return "python" if shutil.which("python") else ("py -3" if shutil.which("py") else f'"{exe}"')
-        return "py -3" if shutil.which("py") else (f'"{exe}"' if exe else "python")
+            return "python" if which("python") else ("py -3" if which("py") else f'"{exe}"')
+        return "py -3" if which("py") else (f'"{exe}"' if exe else "python")
     if re.match(r"^python3(\.\d+)?[a-z]?$", base):
         return "python3"
     if base == "python":
-        return "python3" if shutil.which("python3") else "python"
+        return "python3" if which("python3") else "python"
     return shlex.quote(exe) if exe else "python3"
 
 
@@ -6165,6 +6169,8 @@ def serve_ensure(a: argparse.Namespace) -> int:
             if p in tried:
                 continue
             kind, info = probe(url_for(host, p), timeout=1.0)
+            if kind == "busy":  # slow machines: give a real web server time to answer before judging
+                kind, info = probe(url_for(host, p), timeout=4.0)
             if kind == "slate" and same_board(info):
                 print(f"Slate board page (live): {url_for(host, p)}   (already running, pid {info.get('pid', '?')})")
                 return open_url(a, url_for(host, p))

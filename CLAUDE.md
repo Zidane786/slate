@@ -104,7 +104,9 @@ Every feature, fix or behaviour change updates **all** that apply, before it's c
 3. Full suite on 3.13 and 3.9, `claude plugin validate --strict`, `TEST.md` levels 3–4 on at
    least one machine, CI green on all three OSes.
 4. Branch `feat/<version>`, draft PR with summary, verification and follow-ups; merge only when
-   the user says so. Default branch is `main`.
+   the user says so. Default branch is `main`, protected by a ruleset: no direct pushes (PR
+   required), all 6 CI checks must pass, no force-push or deletion, no bypass. Merged branches are
+   deleted automatically.
 
 ## 7. Commits
 
