@@ -266,7 +266,7 @@ def bash_kanban_dirs(command: str, cwd: object) -> list[str]:
 
 
 def ask_json(minutes: str, reason: str, copilot: bool) -> str:
-    text = (f"Slate: allow unlocking kanban/tickets.json for direct edits for {minutes} minutes? "
+    text = (f"Slate: allow ONE direct edit to kanban/tickets.json (within {minutes} minutes)? "
             f"Reason: {reason}")
     if copilot:
         return json.dumps({"permissionDecision": "ask", "permissionDecisionReason": text})

@@ -5551,6 +5551,17 @@ def url_for(host: str, port: int) -> str:
     return f"http://[{h}]:{port}/" if ":" in h else f"http://{h}:{port}/"
 
 
+def speaks_http(host: str, port: int, timeout: float = 3.0) -> bool:
+    """Does something on host:port answer a plain HTTP request? (Raw socket, no proxies.)"""
+    try:
+        with socket.create_connection((host if host not in ("", "0.0.0.0", "::") else "127.0.0.1", port),
+                                      timeout=timeout) as s:
+            s.sendall(b"HEAD / HTTP/1.0\r\nHost: localhost\r\n\r\n")
+            return s.recv(16).startswith(b"HTTP/")
+    except OSError:
+        return False
+
+
 def probe(url: str, timeout: float = 1.5) -> Tuple[str, Optional[Dict[str, Any]]]:
     """What answers at url: ("slate", info) a Slate board server, ("http", None) some other web server,
     ("busy", None) something that isn't HTTP (or too slow), ("none", None) nothing listening."""
@@ -6170,7 +6181,13 @@ def serve_ensure(a: argparse.Namespace) -> int:
                 continue
             kind, info = probe(url_for(host, p), timeout=1.0)
             if kind == "busy":  # slow machines: give a real web server time to answer before judging
-                kind, info = probe(url_for(host, p), timeout=4.0)
+                for _retry in range(3):
+                    time.sleep(0.5)
+                    kind, info = probe(url_for(host, p), timeout=3.0)
+                    if kind != "busy":
+                        break
+                if kind == "busy" and speaks_http(host, p):
+                    kind = "http"
             if kind == "slate" and same_board(info):
                 print(f"Slate board page (live): {url_for(host, p)}   (already running, pid {info.get('pid', '?')})")
                 return open_url(a, url_for(host, p))

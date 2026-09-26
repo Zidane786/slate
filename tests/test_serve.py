@@ -12,6 +12,7 @@ import json
 import os
 import signal
 import socket
+import urllib.request
 import subprocess
 import sys
 import threading
@@ -516,6 +517,15 @@ def test_ensure_next_to_a_foreign_server(board: Board, cleanup: List[int], tmp_p
                                cwd=str(other), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         assert wait_for(lambda: not port_free(port))
+
+        def answers() -> bool:
+            try:
+                with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+                        f"http://127.0.0.1:{port}/", timeout=2) as resp:
+                    return resp.status == 200
+            except Exception:
+                return False
+        assert wait_for(answers)
         r = board.ok("serve", "--ensure", "--port", str(port))
         rec = runtime(board)
         assert rec["port"] != port

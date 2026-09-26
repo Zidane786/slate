@@ -359,7 +359,7 @@ def test_board_py_unlock_forces_permission_prompt(tmp_path: Path, command: str, 
     assert hso["hookEventName"] == "PreToolUse"
     assert hso["permissionDecision"] == "ask"
     assert hso["permissionDecisionReason"] == (
-        f"Slate: allow unlocking kanban/tickets.json for direct edits for {minutes} minutes? Reason: {reason}")
+        f"Slate: allow ONE direct edit to kanban/tickets.json (within {minutes} minutes)? Reason: {reason}")
 
 
 def test_python_list_form_unlock_still_asks(tmp_path: Path) -> None:
@@ -374,8 +374,8 @@ def test_copilot_style_unlock_gets_flat_ask(tmp_path: Path) -> None:
                        "toolArgs": json.dumps({"command": "python3 kanban/board.py unlock --reason merge"})})
     out = _ask(run_guard(body, cwd=tmp_path))
     assert out == {"permissionDecision": "ask",
-                   "permissionDecisionReason": "Slate: allow unlocking kanban/tickets.json for direct edits "
-                                               "for 5 minutes? Reason: merge"}
+                   "permissionDecisionReason": "Slate: allow ONE direct edit to kanban/tickets.json "
+                                               "(within 5 minutes)? Reason: merge"}
 
 
 def test_copilot_style_write_is_blocked(tmp_path: Path) -> None:
