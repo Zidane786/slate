@@ -23,8 +23,14 @@ claude plugin marketplace add Zidane786/slate
 claude plugin install slate@slate
 ```
 
-(or inside Claude Code: `/plugin marketplace add Zidane786/slate`, then `/plugin install slate@slate`).
-Restart Claude Code, then inside any repo:
+Or inside Claude Code:
+
+```
+/plugin marketplace add Zidane786/slate
+/plugin install slate@slate
+```
+
+Then, inside your project:
 
 ```
 /slate:init
@@ -32,13 +38,16 @@ Restart Claude Code, then inside any repo:
 
 ## Update to a new version
 
-**Easiest — turn on auto-update once:** in Claude Code run `/plugin`, open the **Marketplaces**
-tab, select **slate**, choose **Enable auto-update**. Slate then updates itself when a session
-starts (third-party marketplaces have auto-update off by default).
+**Easiest — turn on auto-update once.** Inside Claude Code run:
 
-**Or update by hand:**
+```
+/plugin
+```
 
-In a terminal:
+then open the **Marketplaces** tab → **slate** → **Enable auto-update**. Slate then updates itself
+when a session starts (third-party marketplaces have auto-update off by default).
+
+**Or update by hand.** In a terminal:
 
 ```
 claude plugin marketplace update slate
@@ -49,15 +58,23 @@ Or inside Claude Code:
 
 ```
 /plugin marketplace update slate
+/plugin
 ```
 
-then `/plugin` → **Installed** tab → **slate** → **Update now**. (Updating the marketplace only
-refreshes the list of versions; the plugin update installs the new one.)
+and in `/plugin` open the **Installed** tab → **slate** → **Update now**. (Updating the
+marketplace only refreshes the list of versions; the plugin update installs the new one.)
 
-**Then:**
+**Then** load the new version (or restart Claude Code):
 
-1. Run `/reload-plugins` (or restart Claude Code) to load the new version.
-2. In each project, run `/slate:upgrade`.
+```
+/reload-plugins
+```
+
+and in each project run:
+
+```
+/slate:upgrade
+```
 
 What `/slate:upgrade` does: the board is copied into each project, so each copy carries its
 version (`board.py version`, the board footer, `SLATE.md`'s first line, `tickets.json` meta).
