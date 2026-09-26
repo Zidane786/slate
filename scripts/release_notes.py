@@ -120,7 +120,7 @@ def section(version: str) -> str:
 def main(argv: list) -> int:
     for s in (sys.stdout, sys.stderr):
         try:
-            s.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+            s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
         except Exception:
             pass
     if argv[:1] == ["--version"]:

@@ -38,6 +38,11 @@ def sections(text: str) -> dict:
 
 
 def main(argv: list) -> int:
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles default to cp1252 ("→" would crash)
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
     if not argv:
         print("usage: check_version_bump.py BASE_REF", file=sys.stderr)
         return 2
