@@ -1,0 +1,45 @@
+"""The release workflow publishes the CHANGELOG section of plugin.json's version: keep them in step."""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+SCRIPT = REPO / "scripts" / "release_notes.py"
+PLUGIN_JSON = REPO / "plugins" / "slate" / ".claude-plugin" / "plugin.json"
+CHANGELOG = REPO / "plugins" / "slate" / "CHANGELOG.md"
+KNOWN = {"Highlights", "Added", "Changed", "Fixed", "Security", "Removed", "Deprecated", "Upgrade notes"}
+
+
+def run(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", timeout=30)
+
+
+def test_plugin_version_has_a_changelog_section() -> None:
+    version = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))["version"]
+    r = run()
+    assert r.returncode == 0, r.stderr
+    assert "### Highlights" in r.stdout and "### Install / update" in r.stdout
+    assert run("--version").stdout.strip() == version
+
+
+def test_every_version_section_uses_the_standard_headings() -> None:
+    text = CHANGELOG.read_text(encoding="utf-8")
+    versions = re.findall(r"^## (\d+\.\d+\.\d+) — \d{4}-\d{2}-\d{2}$", text, re.M)
+    assert versions, "no '## X.Y.Z — YYYY-MM-DD' headings"
+    for v in versions:
+        body = run(v).stdout
+        heads = re.findall(r"^### (.+?)\s*$", body, re.M)
+        unknown = [h for h in heads if h not in KNOWN | {"Install / update"}]
+        assert not unknown, f"{v}: unknown section(s) {unknown}"
+        assert "Highlights" in heads and ("Added" in heads or "Changed" in heads or "Fixed" in heads), v
+
+
+def test_unknown_version_fails_with_a_fix() -> None:
+    r = run("9.9.9")
+    assert r.returncode == 1 and "fix:" in r.stderr
