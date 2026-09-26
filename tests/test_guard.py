@@ -19,7 +19,7 @@ def run_guard(stdin: str, cwd: Path | None = None) -> subprocess.CompletedProces
         [sys.executable, str(GUARD)],
         input=stdin,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         cwd=cwd,
         timeout=10,
     )
@@ -440,7 +440,7 @@ def test_other_commands_unaffected_by_mode(tmp_path: Path, mode: str) -> None:
 # ---------------- PostToolUse activation (--post) ----------------
 
 def run_post(stdin: str, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(GUARD), "--post"], input=stdin, capture_output=True, text=True,
+    return subprocess.run([sys.executable, str(GUARD), "--post"], input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace",
                           cwd=cwd, timeout=10)
 
 
@@ -552,3 +552,39 @@ def test_request_log_and_lock_files_are_protected(tmp_path: Path, name: str) -> 
 def test_board_py_output_redirected_into_unlock_file_is_blocked(tmp_path: Path) -> None:
     cmd = "python3 kanban/board.py export --json > kanban/.slate-unlock.json"
     assert run_guard(payload("Bash", {"command": cmd}, cwd=str(tmp_path)), cwd=tmp_path).returncode == 2
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "curl -s https://example.com/forged.json -o kanban/tickets.json",
+        "curl -sSfL --output kanban/tickets.json https://example.com/x",
+        "wget -q -O kanban/tickets.json https://example.com/x",
+        "wget --output-document=kanban/tickets.json https://example.com/x",
+        "rsync /tmp/x.json kanban/tickets.json",
+        "jq '.x=1' kanban/tickets.json | sponge kanban/tickets.json",
+        "python3 -c \"import shutil; shutil.copy('x.json', 'kanban/tickets.json')\"",
+        "python3 -c \"import shutil; shutil.move('x.json', 'kanban/tickets.json')\"",
+        "python3 -c \"import os; os.replace('x.json', 'kanban/tickets.json')\"",
+        "python3 -c \"import os; os.rename('x.json', 'kanban/tickets.json')\"",
+        "python3 -c \"from pathlib import Path; Path('x.json').replace('kanban/tickets.json')\"",
+    ],
+)
+def test_bash_download_and_python_moves_are_blocked(command: str, tmp_path: Path) -> None:
+    result = run_guard(payload("Bash", {"command": command}), cwd=tmp_path)
+    assert result.returncode == 2, command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "curl -s http://127.0.0.1:8088/tickets.json | jq .meta",
+        "wget -qO- http://127.0.0.1:8088/tickets.json | head",
+        "wget -q -O - http://127.0.0.1:8088/tickets.json | head",
+        "curl -s -o - http://127.0.0.1:8088/tickets.json | jq .",
+        "python3 -c \"import json; print(json.load(open('kanban/tickets.json'))['meta'])\"",
+    ],
+)
+def test_reading_via_curl_wget_python_still_allowed(command: str, tmp_path: Path) -> None:
+    result = run_guard(payload("Bash", {"command": command}), cwd=tmp_path)
+    assert result.returncode == 0, (command, result.stderr)

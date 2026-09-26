@@ -41,7 +41,7 @@ def make_repo(board: Board) -> None:
 def run_env(board: Board, env: Dict[str, str], *args: str) -> subprocess.CompletedProcess:
     e = dict(os.environ)
     e.update(env)
-    return subprocess.run([sys.executable, str(board.script), *args], capture_output=True, text=True,
+    return subprocess.run([sys.executable, str(board.script), *args], capture_output=True, text=True, encoding="utf-8", errors="replace",
                           cwd=str(board.root), env=e, timeout=60)
 
 
@@ -266,7 +266,7 @@ def test_merge_driver_defaults_to_the_invoking_python(board: Board) -> None:
     driver = git(board.root, "config", "--get", "merge.slate.driver").stdout.strip()
     assert driver == "py -3 kanban/board.py merge-driver %O %A %B"
     env = {k: v for k, v in os.environ.items() if k != "SLATE_PYTHON"}
-    r = subprocess.run([sys.executable, str(board.script), "install-merge-driver"], capture_output=True, text=True,
+    r = subprocess.run([sys.executable, str(board.script), "install-merge-driver"], capture_output=True, text=True, encoding="utf-8", errors="replace",
                        cwd=str(board.root), env=env, timeout=60)
     assert r.returncode == 0, r.stderr
     driver = git(board.root, "config", "--get", "merge.slate.driver").stdout.strip()

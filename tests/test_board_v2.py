@@ -31,7 +31,7 @@ def has_fix(stderr: str) -> bool:
 def git(cwd: Path, *args: str) -> str:
     r = subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
                         "-c", "commit.gpgsign=false", *args],
-                       cwd=str(cwd), capture_output=True, text=True, check=True)
+                       cwd=str(cwd), capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
     return r.stdout.strip()
 
 

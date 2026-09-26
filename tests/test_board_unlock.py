@@ -59,7 +59,7 @@ def iso(delta_minutes: float = 0) -> str:
 
 def guard(payload: Dict[str, Any], *args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(GUARD), *args], input=json.dumps(payload),
-                          capture_output=True, text=True, timeout=10)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
 
 
 def post(root: Path, command: str = "python3 kanban/board.py unlock --reason 'fix merge'",

@@ -84,7 +84,7 @@ def runtime(board: Board) -> Optional[Dict[str, Any]]:
 
 def pid_alive(pid: int) -> bool:
     if os.name == "nt":
-        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
         return str(pid) in out
     try:
         os.kill(pid, 0)
@@ -95,7 +95,7 @@ def pid_alive(pid: int) -> bool:
             return "zombie" not in f.read()
     except OSError:
         pass
-    r = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True)
+    r = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return bool(r.stdout.strip()) and not r.stdout.strip().startswith("Z")
 
 
@@ -143,7 +143,7 @@ class Live:
         self.port = free_port()
         self.proc = subprocess.Popen([sys.executable, str(board.script), "serve", "--port", str(self.port),
                                       "--strict-port", "--idle-exit", "0", *extra],
-                                     cwd=str(board.root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                                     cwd=str(board.root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
         ok = wait_for(lambda: (runtime(board) or {}).get("pid") == self.proc.pid and self._answers())
         if not ok:
             self.stop()
@@ -460,14 +460,15 @@ def test_non_loopback_host_warns_loudly(board: Board) -> None:
     port = free_port()
     proc = subprocess.Popen([sys.executable, str(board.script), "serve", "--host", "0.0.0.0", "--port", str(port),
                              "--strict-port", "--idle-exit", "0"], cwd=str(board.root),
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
     try:
         assert wait_for(lambda: (runtime(board) or {}).get("pid") == proc.pid)
     finally:
         proc.terminate()
         out = proc.communicate(timeout=10)[0]
     assert "WARNING" in out and "CHANGE TICKETS" in out
-    assert runtime(board) is None  # removed on a clean exit
+    if os.name != "nt":  # Windows' terminate() is a hard kill, so no clean-exit cleanup happens there
+        assert runtime(board) is None  # removed on a clean exit
 
 
 # --------------------------------------------------------------------------- --ensure / --status / --stop
@@ -673,3 +674,16 @@ def test_port_defaults_to_slate_md_board_port(board: Board, cleanup: List[int]) 
     (board.root / "SLATE.md").write_text(f"# x\nBoard server: auto\nBoard port: {port}\n", encoding="utf-8")
     r = board.ok("serve", "--ensure")
     assert runtime(board)["port"] == port and f"http://127.0.0.1:{port}/" in r.stdout
+
+
+def test_missing_preview_answers_none_not_404(board: Board, cleanup: List[int]) -> None:
+    board.write(demo_doc())
+    port = free_port()
+    board.ok("serve", "--ensure", "--port", str(port), "--strict-port")
+    rec = runtime(board)
+    cleanup.append(rec["pid"])
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+            f"http://127.0.0.1:{rec['port']}/preview.json", timeout=5) as resp:
+        assert resp.status == 200
+        assert json.loads(resp.read().decode("utf-8")) == {"preview": False}
+    board.ok("serve", "--stop")

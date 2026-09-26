@@ -37,7 +37,7 @@ def _run(hooks: Path, args: List[str], env_path: str, stdin: str = "") -> subpro
     env["PATH"] = env_path
     return subprocess.run(
         [str(SH), str(hooks / "run.sh"), *args],
-        input=stdin, capture_output=True, text=True, env=env, cwd=str(hooks.parent.parent), timeout=60,
+        input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, cwd=str(hooks.parent.parent), timeout=60,
     )
 
 
@@ -187,7 +187,7 @@ def _project(tmp_path: Path) -> Path:
 def _run_hook(hooks: Path, args: List[str], cwd: Path, env_extra: Dict[str, str], stdin: str = "") -> subprocess.CompletedProcess:
     env = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT", "SLATE_PYTHON")}
     env.update(env_extra)
-    return subprocess.run([str(SH), str(hooks / "run.sh"), *args], input=stdin, capture_output=True, text=True,
+    return subprocess.run([str(SH), str(hooks / "run.sh"), *args], input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace",
                           env=env, cwd=str(cwd), timeout=60)
 
 

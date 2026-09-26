@@ -1003,7 +1003,7 @@ SHA40 = "3f9c2a71b0d84e5f6a1c9e2b7d4038a5c6e1f902"
 def git(cwd: Path, *args: str) -> str:
     r = subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
                         "-c", "commit.gpgsign=false", *args],
-                       cwd=str(cwd), capture_output=True, text=True, check=True)
+                       cwd=str(cwd), capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
     return r.stdout.strip()
 
 
@@ -1433,7 +1433,7 @@ def test_empty_required_string_is_an_error(tmp_path):
     from pathlib import Path as _P
     k = tmp_path / "kanban"; k.mkdir()
     shutil.copy(_P(__file__).resolve().parents[1] / "plugins/slate/assets/board/board.py", k / "board.py")
-    run = lambda *a: subprocess.run([_sys.executable, str(k / "board.py"), *a], capture_output=True, text=True, cwd=tmp_path)
+    run = lambda *a: subprocess.run([_sys.executable, str(k / "board.py"), *a], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=tmp_path)
     assert run("init", "--project", "Acme", "--prefix", "ACME").returncode == 0
     assert run("add-phase", "--id", "P1", "--name", "One", "--goal", "g", "--demo", "d").returncode == 0
     assert run("new", "--title", "T", "--summary", "s", "--story", "st", "--description", "d", "--phase", "P1",

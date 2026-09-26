@@ -6015,6 +6015,10 @@ def make_server(host: str, port: int, token: str, idle_seconds: float) -> Any:
             if not self.touch():
                 return
             parsed = urllib.parse.urlsplit(self.path)
+            if parsed.path == "/preview.json" and not PREVIEW.exists():
+                # no preview: answer "none" instead of a 404 the page's polling would log every 5 s
+                self.send_json(200, {"preview": False})
+                return
             if not parsed.path.startswith("/api/"):
                 super().do_GET()
                 return

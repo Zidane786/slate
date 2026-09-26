@@ -22,6 +22,17 @@ import pytest
 import os as _os
 _os.environ.setdefault("SLATE_PYTHON", "python3")
 
+
+def _write_text_lf(self: Path, data: str, encoding: Optional[str] = None, errors: Optional[str] = None,
+                   newline: Optional[str] = None) -> int:
+    """Tests write files with \n on every OS (Windows text mode would write \r\n, while board.py
+    always writes \n, so byte-for-byte comparisons would fail for the wrong reason)."""
+    with open(self, "w", encoding=encoding, errors=errors, newline="\n" if newline is None else newline) as f:
+        return f.write(data)
+
+
+Path.write_text = _write_text_lf  # type: ignore[method-assign]
+
 REPO = Path(__file__).resolve().parents[1]
 BOARD_SRC = REPO / "plugins" / "slate" / "assets" / "board" / "board.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -99,7 +110,7 @@ class Board:
     def run(self, *args: str, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, str(self.script), *args],
-            capture_output=True, text=True, cwd=str(cwd or self.root), timeout=60,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(cwd or self.root), timeout=60,
         )
 
     def ok(self, *args: str, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
@@ -113,7 +124,7 @@ class Board:
         return r
 
     def write(self, doc: Any) -> None:
-        self.tickets.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.tickets.write_bytes((json.dumps(doc, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
 
     def load(self) -> Dict[str, Any]:
         return json.loads(self.tickets.read_text(encoding="utf-8"))

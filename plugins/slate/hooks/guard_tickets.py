@@ -75,7 +75,12 @@ PROTECTED_RE = re.compile(r"\.slate-unlock[\w.-]*\.json|\.slate-write\.lock", re
 UNLOCK_FILE_RE = PROTECTED_RE
 WRITE_RE = re.compile(
     r"(>|\btee\b|\bsed\s+(-[a-z]*\s+)*-[a-z]*i|\bperl\s+-[a-z]*i|\bcp\b|\bmv\b|\brm\b|"
-    r"\btruncate\b|\bdd\b|\binstall\b|\bln\b|write_text|write_bytes|\.write\(|json\.dump)",
+    r"\btruncate\b|\bdd\b|\binstall\b|\bln\b|write_text|write_bytes|\.write\(|json\.dump|"
+    # downloads and sync tools that write a file: curl -o/-O/--output, wget -O/--output-document,
+    # rsync, sponge; Python file moves/copies that don't use the words above
+    r"\bcurl\b[^|;&]*\s(-[a-z]*[oO](?!-)(?!\s*-(?:\s|$))|--output\b(?!\s*-(?:\s|$)))|\bwget\b[^|;&]*\s(-[a-z]*O(?!-)(?!\s*-(?:\s|$))|--output-document(?!=-))|"
+    r"\brsync\b|\bsponge\b|\bshutil\.(copy\w*|move)\(|\bos\.(replace|rename|renames|link|symlink)\(|"
+    r"\.(replace|rename|symlink_to|hardlink_to|touch)\()",
     re.IGNORECASE,
 )
 # open(...) is a write only with a mode that contains w, a, x or +: open(p, "w"),

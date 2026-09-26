@@ -489,7 +489,7 @@ def test_concurrent_writes_all_land(board: Board) -> None:
     procs = [subprocess.Popen([sys.executable, str(board.script), "new", "--title", f"Parallel {i}", "--summary", "s",
                                "--phase", "P1", "--story", "s", "--description", "d", "--acceptance", "a",
                                "--test", "When a, then b", "--areas", "backend"],
-                              cwd=str(board.root), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                              cwd=str(board.root), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
              for i in range(4)]
     results = [p.communicate(timeout=60) + (p.returncode,) for p in procs]
     assert all(code == 0 for _, _, code in results), results
