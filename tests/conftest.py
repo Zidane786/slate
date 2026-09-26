@@ -16,6 +16,12 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+# Fix lines print the Python command that ran board.py ("python" on Windows, "python3" elsewhere).
+# Pin it so expected messages are the same on every OS; tests of the detection itself pass
+# explicit arguments to invoking_python() or clear this variable.
+import os as _os
+_os.environ.setdefault("SLATE_PYTHON", "python3")
+
 REPO = Path(__file__).resolve().parents[1]
 BOARD_SRC = REPO / "plugins" / "slate" / "assets" / "board" / "board.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"

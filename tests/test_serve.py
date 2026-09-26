@@ -513,7 +513,15 @@ def test_ensure_next_to_a_foreign_server(board: Board, cleanup: List[int], tmp_p
     port = free_port()
     other = tmp_path / "other"
     other.mkdir()
-    foreign = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+    # a plain web server that is not Slate. Not `python -m http.server`: its server_bind() does a
+    # reverse-DNS lookup (socket.getfqdn) that hangs for a long time on GitHub's macOS runners.
+    code = ("import http.server, socketserver, sys\n"
+            "class S(http.server.ThreadingHTTPServer):\n"
+            "    def server_bind(self):\n"
+            "        socketserver.TCPServer.server_bind(self)\n"
+            "        self.server_name, self.server_port = 'localhost', self.server_address[1]\n"
+            "S(('127.0.0.1', int(sys.argv[1])), http.server.SimpleHTTPRequestHandler).serve_forever()\n")
+    foreign = subprocess.Popen([sys.executable, "-c", code, str(port)],
                                cwd=str(other), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         assert wait_for(lambda: not port_free(port))
@@ -545,8 +553,10 @@ def test_ensure_takes_the_next_free_port(board: Board, cleanup: List[int]) -> No
     try:
         r = board.ok("serve", "--ensure", "--port", str(port))
         rec = runtime(board)
-        assert rec["port"] == port + 1
-        assert f"Port {port} is taken; using {port + 1}" in r.stdout and rec["url"] in r.stdout
+        # test ports sit in the OS's ephemeral range, so a neighbour can be briefly in use by our own
+        # probe connections; the contract is "a later free port, and say so"
+        assert port < rec["port"] <= port + 5
+        assert f"Port {port} is taken; using {rec['port']}" in r.stdout and rec["url"] in r.stdout
     finally:
         holder.close()
 

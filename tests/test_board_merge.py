@@ -330,7 +330,7 @@ def test_install_merge_driver_is_idempotent(board: Board) -> None:
     board.ok("install-merge-driver", "--python", "python3")
     board.ok("install-merge-driver", "--python", "python3")
     attrs = (board.root / ".gitattributes").read_text(encoding="utf-8")
-    assert attrs == "*.png binary\nkanban/tickets.json merge=slate\n"
+    assert attrs == "*.png binary\nkanban/tickets.json merge=slate text eol=lf\n"
     assert git(board.root, "config", "merge.slate.driver").stdout.strip() == \
         "python3 kanban/board.py merge-driver %O %A %B"
     assert git(board.root, "config", "merge.slate.name").stdout.strip() == "Slate board merge"

@@ -4436,11 +4436,20 @@ def cmd_install_merge_driver(a: argparse.Namespace) -> int:
     text = attrs.read_text(encoding="utf-8") if attrs.exists() else ""
     have = any(ln.split()[:1] == [rel_t] and "merge=slate" in ln.split() for ln in text.splitlines())
     if not have:
-        text = text + ("\n" if text and not text.endswith("\n") else "") + f"{rel_t} merge=slate\n"
+        # eol=lf: board.py always writes \n; without it Windows checkouts (autocrlf) show the whole
+        # file as changed after every write
+        text = text + ("\n" if text and not text.endswith("\n") else "") + f"{rel_t} merge=slate text eol=lf\n"
         atomic_write(attrs, text)
-        print(f"Added to .gitattributes: {rel_t} merge=slate   (commit this)")
+        print(f"Added to .gitattributes: {rel_t} merge=slate text eol=lf   (commit this)")
     else:
-        print(f".gitattributes already has: {rel_t} merge=slate")
+        lines = text.splitlines()
+        new = [ln if not (ln.split()[:1] == [rel_t] and "merge=slate" in ln.split() and "eol=lf" not in ln.split())
+               else ln.rstrip() + " text eol=lf" for ln in lines]
+        if new != lines:  # 0.2.0 adds eol=lf to lines written by older versions
+            atomic_write(attrs, "\n".join(new) + "\n")
+            print(f"Updated .gitattributes: {rel_t} merge=slate text eol=lf   (commit this)")
+        else:
+            print(f".gitattributes already has: {rel_t} merge=slate")
     driver = f"{py} {shlex.quote(rel_b)} merge-driver %O %A %B"
     for key, value in (("merge.slate.name", "Slate board merge"), ("merge.slate.driver", driver)):
         if git(["config", key, value], root) is None:
@@ -5551,6 +5560,21 @@ def url_for(host: str, port: int) -> str:
     return f"http://[{h}]:{port}/" if ":" in h else f"http://{h}:{port}/"
 
 
+def can_bind(host: str, port: int) -> bool:
+    """Is host:port free right now? Binding is instant everywhere (a refused connect can take
+    ~2 s on Windows, which made free ports look busy)."""
+    s = socket.socket(socket.AF_INET6 if ":" in (host or "") else socket.AF_INET)
+    try:
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)  # type: ignore[attr-defined]
+        s.bind((host or "127.0.0.1", port))
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+
 def speaks_http(host: str, port: int, timeout: float = 3.0) -> bool:
     """Does something on host:port answer a plain HTTP request? (Raw socket, no proxies.)"""
     try:
@@ -6068,7 +6092,7 @@ def serve_foreground(a: argparse.Namespace) -> int:
     srv = None
     skipped: List[int] = []
     for p in port_candidates(a.port, a.strict_port):
-        if probe(url_for(host, p), timeout=0.5)[0] != "none":
+        if not can_bind(host, p):
             skipped.append(p)
             continue
         try:
@@ -6179,6 +6203,9 @@ def serve_ensure(a: argparse.Namespace) -> int:
         for p in port_candidates(a.port, a.strict_port):
             if p in tried:
                 continue
+            if can_bind(host, p):
+                chosen = p
+                break
             kind, info = probe(url_for(host, p), timeout=1.0)
             if kind == "busy":  # slow machines: give a real web server time to answer before judging
                 for _retry in range(3):
