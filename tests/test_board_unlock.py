@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 
 import pytest
 
-from conftest import Board, base_doc, full_ticket
+from conftest import VERSION, Board, base_doc, full_ticket
 
 GUARD = Path(__file__).resolve().parents[1] / "plugins" / "slate" / "hooks" / "guard_tickets.py"
 V2 = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
@@ -22,7 +22,7 @@ V2 = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "mer
 @pytest.fixture
 def b(board: Board) -> Board:
     d = base_doc([full_ticket(1), full_ticket(2)])
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2)})
     board.write(d)
     return board
 

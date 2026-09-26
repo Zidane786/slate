@@ -46,7 +46,9 @@ docs/                                 specs, build plans, archive
 
 - **Standard library only**, Python **3.9+**, in everything that ships (board.py, hooks). No
   pip dependencies. `index.html` loads nothing from the internet.
-- **Works on Windows, macOS, Linux, over SSH and in tmux.** UTF-8 + `\n` for every file write,
+- **Works on Windows, macOS, Linux, over SSH and in tmux.** Every Python entry point (board.py,
+  hooks, scripts) reconfigures stdout/stderr to UTF-8; every text read/write and subprocess call
+  names `encoding="utf-8"` (`tests/test_portability.py` enforces both). UTF-8 + `\n` for every file write,
   pathlib, no `shell=True`, no POSIX-only calls without a Windows path. Hooks go through
   `hooks/run.sh` (finds python3 / python / py -3).
 - **`board.py` is the only thing that changes `tickets.json`.** Every write validates the whole
@@ -77,6 +79,11 @@ claude plugin validate --strict plugins/slate
   `tests/test_index_static.py` plus a real-browser check (Playwright) against
   `tests/fixtures/board-demo`, in live (`board.py serve`) and view-only mode.
 - Live-test skills in a throwaway repo: `claude --plugin-dir plugins/slate`.
+- **CI (`.github/workflows/test.yml`)** runs on every PR and push to `main`, but the full suite
+  runs only when one of these changed: `plugins/**`, `tests/**`, `scripts/**`,
+  `.github/workflows/**`, `.claude-plugin/**`, `.gitattributes`. Docs-only changes (README, TEST.md,
+  CLAUDE.md, AGENTS.md, SECURITY.md, `docs/**`) pass in seconds with "no code changed". A manual
+  run always runs everything. Keep this list and the workflow's list in step.
 - `tests/test_docs_consistency.py` fails if a skill/doc mentions a command that doesn't exist,
   or a skill doesn't link the reference — keep it green.
 
@@ -98,6 +105,14 @@ Every feature, fix or behaviour change updates **all** that apply, before it's c
 - [ ] **This file and `AGENTS.md`** if the rules, layout or workflow changed.
 
 ## 6. Releasing a version
+
+**Every PR that changes `plugins/**` is a release.** CI (`scripts/check_version_bump.py`) fails
+unless it bumps the version above `main`'s and adds that version's CHANGELOG section; there is no
+"Unreleased" section. Claude Code only updates installed plugins when the version changes, so an
+unversioned change would never reach users. Docs-only PRs outside `plugins/` need no bump.
+Each CHANGELOG section lists **only** what changed since the previous version; a released
+version's section is frozen (the same CI check fails if it changes). New changes go under the
+new version.
 
 1. Bump the version in **all** of: `plugins/slate/.claude-plugin/plugin.json`,
    `board.py` (`SLATE_VERSION`, header line), `index.html` (`slate-version` meta),

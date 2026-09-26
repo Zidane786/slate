@@ -17,14 +17,14 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from conftest import USER_TEST, Board, base_doc, full_ticket
+from conftest import VERSION, USER_TEST, Board, base_doc, full_ticket
 
 V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
 
 
 def v2_doc(tickets: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     d = base_doc(tickets)
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2_STATUSES)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2_STATUSES)})
     return d
 
 
@@ -645,7 +645,7 @@ def test_doctor_state_and_slate_md(board: Board, tmp_path: Path) -> None:
     write_lock(board, os.getpid(), age=300)
     root = tmp_path / "plugin"
     (root / ".claude-plugin").mkdir(parents=True)
-    (root / ".claude-plugin" / "plugin.json").write_text('{"version": "0.2.0"}', encoding="utf-8")
+    (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": VERSION}), encoding="utf-8")
     (root / "templates").mkdir()
     (root / "templates" / "SLATE.md").write_text("# x\n## Commands\n## Board of record\n", encoding="utf-8")
     c = codes(board, "--against", str(root))
@@ -664,7 +664,7 @@ def test_next_brief_carries_doctor_findings(board: Board, tmp_path: Path) -> Non
     make_repo(board)
     root = tmp_path / "plugin"
     (root / ".claude-plugin").mkdir(parents=True)
-    (root / ".claude-plugin" / "plugin.json").write_text('{"version": "0.2.0"}', encoding="utf-8")
+    (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": VERSION}), encoding="utf-8")
     out = board.ok("next", "--brief", "--against", str(root)).stdout.strip()
     assert out.endswith("· 2 setup issues — run /slate:upgrade")
     assert "setup issue" not in board.ok("next", "--brief").stdout  # only with --against (SessionStart)

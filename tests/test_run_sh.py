@@ -17,6 +17,8 @@ from typing import Dict, List
 
 import pytest
 
+from conftest import VERSION
+
 REPO = Path(__file__).resolve().parents[1]
 RUN_SH = REPO / "plugins" / "slate" / "hooks" / "run.sh"
 SH = shutil.which("sh")
@@ -176,7 +178,7 @@ def _project(tmp_path: Path) -> Path:
     (proj / "kanban").mkdir(parents=True)
     shutil.copy(BOARD_SRC, proj / "kanban" / "board.py")
     (proj / "kanban" / "tickets.json").write_text(_json.dumps({
-        "meta": {"project": "Acme", "prefix": "ACME", "slate_version": "0.2.0", "schema_version": 2,
+        "meta": {"project": "Acme", "prefix": "ACME", "slate_version": VERSION, "schema_version": 2,
                  "generated": "2026-09-26", "statuses": ["draft", "backlog", "ready", "in_progress", "review",
                                                          "user_testing", "merge_ready", "done"],
                  "areas": ["backend"], "priorities": ["P0", "P1", "P2", "P3"], "user_test_areas": ["ui"]},
@@ -199,10 +201,10 @@ def test_session_start_through_run_sh(tmp_path: Path) -> None:
     if "no Python 3.9+" in r.stderr:
         pytest.skip("no python3/python/py -3 on PATH for sh")
     assert r.returncode == 0, r.stderr
-    assert r.stdout.startswith("Slate 0.2.0: ") and "no tickets yet" in r.stdout
+    assert r.stdout.startswith(f"Slate {VERSION}: ") and "no tickets yet" in r.stdout
     # without CLAUDE_PROJECT_DIR the current directory is the project
     r = _run_hook(hooks, ["session_start.py"], proj, {"CLAUDE_PLUGIN_ROOT": str(PLUGIN)})
-    assert r.stdout.startswith("Slate 0.2.0: ")
+    assert r.stdout.startswith(f"Slate {VERSION}: ")
 
 
 def test_session_start_includes_the_live_board_url(tmp_path: Path) -> None:
@@ -212,7 +214,7 @@ def test_session_start_includes_the_live_board_url(tmp_path: Path) -> None:
     (proj / "kanban" / ".slate-serve.json").write_text(_json.dumps({
         "pid": os.getpid(), "host": "127.0.0.1", "port": 8123, "url": "http://127.0.0.1:8123/",
         "started": "2026-09-26T10:00:00Z", "board_path": str((proj / "kanban" / "tickets.json").resolve()),
-        "slate_version": "0.2.0"}), encoding="utf-8")
+        "slate_version": VERSION}), encoding="utf-8")
     r = _run_hook(hooks, ["session_start.py"], proj, {"CLAUDE_PROJECT_DIR": str(proj), "CLAUDE_PLUGIN_ROOT": str(PLUGIN)})
     if "no Python 3.9+" in r.stderr:
         pytest.skip("no python3/python/py -3 on PATH for sh")

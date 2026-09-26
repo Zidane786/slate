@@ -23,7 +23,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import pytest
 
-from conftest import USER_TEST, Board, base_doc, full_ticket
+from conftest import VERSION, USER_TEST, Board, base_doc, full_ticket
 
 V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
 
@@ -33,7 +33,7 @@ V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testi
 
 def v2_doc(tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
     d = base_doc(tickets)
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2_STATUSES)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2_STATUSES)})
     return d
 
 
@@ -202,7 +202,7 @@ def cleanup(board: Board) -> Iterator[List[int]]:
 def test_info_reports_board_token_statuses_and_health(live: Live, board: Board) -> None:
     code, info, _ = live.get("/api/info")
     assert code == 200
-    assert info["slate"] is True and info["version"] == "0.2.0"
+    assert info["slate"] is True and info["version"] == VERSION
     assert os.path.normcase(info["board_path"]) == os.path.normcase(str(board.tickets.resolve()))
     assert isinstance(info["token"], str) and len(info["token"]) >= 20
     assert info["workflow"] == "free"
@@ -482,7 +482,7 @@ def test_ensure_starts_once_then_reuses(board: Board, cleanup: List[int]) -> Non
     assert rec is not None
     assert set(rec) == {"pid", "host", "port", "url", "started", "board_path", "slate_version"}
     assert rec["port"] == port and rec["host"] == "127.0.0.1" and rec["url"] == f"http://127.0.0.1:{port}/"
-    assert rec["slate_version"] == "0.2.0" and os.path.normcase(rec["board_path"]) == os.path.normcase(str(board.tickets.resolve()))
+    assert rec["slate_version"] == VERSION and os.path.normcase(rec["board_path"]) == os.path.normcase(str(board.tickets.resolve()))
     assert rec["url"] in r.stdout and "background" in r.stdout
     assert (board.dir / ".slate-serve.log").exists()
     r2 = board.ok("serve", "--ensure", "--port", str(port))
@@ -500,7 +500,7 @@ def test_ensure_cleans_up_a_stale_runtime_file(board: Board, cleanup: List[int])
     port = free_port()
     (board.dir / ".slate-serve.json").write_text(json.dumps({
         "pid": dead.pid, "host": "127.0.0.1", "port": port, "url": f"http://127.0.0.1:{port}/",
-        "started": "2026-01-01T00:00:00Z", "board_path": str(board.tickets.resolve()), "slate_version": "0.2.0"}),
+        "started": "2026-01-01T00:00:00Z", "board_path": str(board.tickets.resolve()), "slate_version": VERSION}),
         encoding="utf-8")
     assert "stale" in board.ok("serve", "--status").stdout
     r = board.ok("serve", "--ensure", "--port", str(port))

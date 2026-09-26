@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from conftest import FIXTURES, USER_TEST, Board, base_doc, full_ticket
+from conftest import VERSION, FIXTURES, USER_TEST, Board, base_doc, full_ticket
 
 V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
 PR = "https://github.com/acme/app/pull/7"
@@ -20,7 +20,7 @@ PR = "https://github.com/acme/app/pull/7"
 
 def v2_doc(tickets: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     d = base_doc(tickets)
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2_STATUSES)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2_STATUSES)})
     return d
 
 
@@ -70,7 +70,7 @@ def new_args(title: str = "A new ticket", *extra: str) -> List[str]:
 def test_init_is_schema_2(board: Board) -> None:
     board.ok("init", "--project", "Acme", "--prefix", "ACME")
     m = board.load()["meta"]
-    assert m["schema_version"] == 2 and m["slate_version"] == "0.2.0" and m["statuses"] == V2_STATUSES
+    assert m["schema_version"] == 2 and m["slate_version"] == VERSION and m["statuses"] == V2_STATUSES
 
 
 def test_migrate_1_to_2_inserts_merge_ready_and_is_idempotent(seeded: Board) -> None:
@@ -688,7 +688,7 @@ def test_next_waiting_for_merge_section(merging: Board) -> None:
     j = json.loads(merging.ok("next", "--json").stdout)
     assert [t["id"] for t in j["merge_ready"]] == ["ACME-001"] and [t["id"] for t in j["open"]] == ["ACME-002"]
     assert merging.ok("next", "--brief").stdout.strip() == \
-        "Slate 0.2.0: ACME-002 in review · 1 waiting for merge · next ready ACME-003"
+        f"Slate {VERSION}: ACME-002 in review · 1 waiting for merge · next ready ACME-003"
 
 
 def test_status_waiting_for_merge(merging: Board) -> None:

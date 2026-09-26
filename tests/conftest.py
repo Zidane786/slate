@@ -36,6 +36,12 @@ Path.write_text = _write_text_lf  # type: ignore[method-assign]
 REPO = Path(__file__).resolve().parents[1]
 BOARD_SRC = REPO / "plugins" / "slate" / "assets" / "board" / "board.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+# the board's own version, so tests never hard-code it (a release only bumps board.py)
+import re as _re
+VERSION = _re.search(r'^SLATE_VERSION = "([^"]+)"', BOARD_SRC.read_text(encoding="utf-8"), _re.M).group(1)
+_maj, _min, _pat = (int(x) for x in VERSION.split("."))
+NEWER = f"{_maj}.{_min + 1}.0"  # a plugin version newer than the board
+
 FORGE_BOARD = REPO.parent / "forge" / "kanban" / "tickets.json"
 
 
