@@ -448,8 +448,13 @@ def main(stdin_text: str) -> int:
 
 
 if __name__ == "__main__":
+    for _s in (sys.stdout, sys.stderr):  # Windows consoles/pipes default to cp1252; hooks speak UTF-8
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
     try:
-        data = sys.stdin.read()
+        data = sys.stdin.buffer.read().decode("utf-8", "replace")
     except Exception:
         sys.exit(0)
     sys.exit(main_post(data) if "--post" in sys.argv[1:] else main(data))

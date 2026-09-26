@@ -35,6 +35,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    for _s in (sys.stdout, sys.stderr):  # Windows consoles/pipes default to cp1252; hooks speak UTF-8
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
     try:
         sys.exit(main())
     except Exception:  # a status line must never break the session
