@@ -17,23 +17,58 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_JSON = ROOT / "plugins" / "slate" / ".claude-plugin" / "plugin.json"
 CHANGELOG = ROOT / "plugins" / "slate" / "CHANGELOG.md"
 
-FOOTER = """
----
+INSTALL = """### Install (new project)
 
-### Install / update
+In a terminal:
 
 ```
-/plugin marketplace add Zidane786/slate      # first time
-/plugin install slate@slate
-/plugin marketplace update slate             # later updates, then restart Claude Code
+claude plugin marketplace add Zidane786/slate
+claude plugin install slate@slate
 ```
 
-Then run `/slate:init` in a new project, or `/slate:upgrade` in an existing one.
+(or inside Claude Code: `/plugin marketplace add Zidane786/slate`, then
+`/plugin install slate@slate`). Restart Claude Code, then run `/slate:init` in the project.
+"""
+
+UPGRADE_HEAD = """### Upgrade (existing projects)
+
+1. Update the plugin, in a terminal:
+
+   ```
+   claude plugin marketplace update slate
+   claude plugin update slate@slate
+   ```
+
+   (or inside Claude Code: `/plugin marketplace update slate`).
+2. Restart Claude Code.
+3. In each project, run `/slate:upgrade`.
 """
 
 
 def plugin_version() -> str:
     return json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))["version"]
+
+
+def split_upgrade(body: str) -> "tuple[str, str]":
+    """Take the '### Upgrade notes' section out of a version's body: (rest, upgrade notes)."""
+    m = re.search(r"^### Upgrade notes\s*$\n(.*?)(?=^### |\Z)", body, re.S | re.M)
+    if not m:
+        return body.strip(), ""
+    return (body[:m.start()] + body[m.end():]).strip(), m.group(1).strip()
+
+
+def notes(version: str) -> str:
+    """Release notes: Install and Upgrade first (with this version's upgrade notes), then the rest."""
+    rest, upgrade = split_upgrade(section(version))
+    intro, _, sections = rest.partition("### ")
+    parts = [intro.strip()] if intro.strip() else []
+    parts.append(INSTALL.strip())
+    parts.append(UPGRADE_HEAD.strip() + ("\n\n**What `/slate:upgrade` does for " + version + ":**\n\n"
+                                          + upgrade if upgrade else ""))
+    parts.append("---")
+    if sections:
+        parts.append("### " + sections.strip())
+    return "\n\n".join(parts) + "\n"
 
 
 def section(version: str) -> str:
@@ -55,7 +90,7 @@ def main(argv: list) -> int:
         print(plugin_version())
         return 0
     version = argv[0] if argv else plugin_version()
-    print(section(version) + "\n" + FOOTER)
+    print(notes(version), end="")
     return 0
 
 

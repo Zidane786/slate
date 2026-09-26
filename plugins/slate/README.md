@@ -5,6 +5,18 @@ a time with tests, review, your own check and the commit/PR recorded on the tick
 in charge: Claude builds one ticket per request, parks it in **Waiting for merge**, and stops;
 it moves to Done only after you say the PR is merged.
 
+## Install and update
+
+```
+claude plugin marketplace add Zidane786/slate     # install (first time)
+claude plugin install slate@slate
+claude plugin marketplace update slate            # update to a new version
+claude plugin update slate@slate
+```
+
+Restart Claude Code, then `/slate:init` in a new project or `/slate:upgrade` in an existing one.
+What changed: https://github.com/Zidane786/slate/releases
+
 | Command | What it does |
 |---|---|
 | `/slate:init` | Set Slate up in this repo: `kanban/` board + `SLATE.md` (project context, workflow, Python command, board server) |

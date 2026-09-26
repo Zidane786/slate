@@ -16,18 +16,49 @@ Jira. Anyone on the team can open the board in a browser, even without the plugi
 
 ## Install
 
-In Claude Code:
+In a terminal:
 
 ```
-/plugin marketplace add Zidane786/slate
-/plugin install slate@slate
+claude plugin marketplace add Zidane786/slate
+claude plugin install slate@slate
 ```
 
-Then, inside any repo:
+(or inside Claude Code: `/plugin marketplace add Zidane786/slate`, then `/plugin install slate@slate`).
+Restart Claude Code, then inside any repo:
 
 ```
 /slate:init
 ```
+
+## Update to a new version
+
+1. Update the plugin, in a terminal:
+
+   ```
+   claude plugin marketplace update slate
+   claude plugin update slate@slate
+   ```
+
+   (or inside Claude Code: `/plugin marketplace update slate`).
+2. Restart Claude Code.
+3. In each project, run `/slate:upgrade`.
+
+What `/slate:upgrade` does: the board is copied into each project, so each copy carries its
+version (`board.py version`, the board footer, `SLATE.md`'s first line, `tickets.json` meta).
+It first shows **what's new** in plain words for every version in between, then replaces
+`kanban/index.html`, `board.py` and `README.md`, migrates `tickets.json` by adding only (never
+deletes or renames your data), runs that version's setup steps (asking before each: merge driver,
+`.gitignore`, board server, columns and workflow rules), adds a dated line to `SLATE.md`'s
+"Slate updates", runs `doctor` until healthy, and shows the diff for you to commit.
+
+- Every Slate command compares the project's board with the plugin and offers `/slate:upgrade`
+  when the board is older.
+- **Board newer than your plugin** (a teammate upgraded first): run step 1 and restart; until
+  then Slate only reads the board.
+- Agents pick up new commands as soon as the plugin updates: the skills and the command reference
+  (`plugins/slate/reference/commands.md`) ship inside the plugin.
+- What changed in each version: [Releases](https://github.com/Zidane786/slate/releases) (also in
+  [plugins/slate/CHANGELOG.md](plugins/slate/CHANGELOG.md)).
 
 ## The seven commands
 
@@ -211,25 +242,6 @@ when they trust the repo:
   "enabledPlugins": { "slate@slate": true }
 }
 ```
-
-## Upgrading
-
-The board is copied into each project, so each copy carries its version (`board.py version`,
-the board footer, `SLATE.md`'s first line, `tickets.json` meta). Every Slate command compares
-it with the plugin:
-
-- **Board older than plugin:** Slate offers `/slate:upgrade`. It first shows **what's new** in
-  plain words for every version in between, then replaces `kanban/index.html`, `board.py` and
-  `README.md`, migrates `tickets.json` by adding only (never deletes or renames your data), runs
-  that version's setup steps (asking before each: merge driver, `.gitignore`, board server,
-  columns and workflow rules), adds a dated line to `SLATE.md`'s "Slate updates", runs `doctor`
-  until healthy, and shows the diff for you to commit.
-- **Board newer than plugin** (a teammate upgraded): update your plugin —
-  `claude plugin marketplace update slate`, then `claude plugin update slate@slate`, and restart.
-  Until then Slate only reads the board.
-
-Agents pick up new commands as soon as the plugin updates: the skills and the command reference
-(`plugins/slate/reference/commands.md`) ship inside the plugin.
 
 ## FAQ
 

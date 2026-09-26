@@ -24,7 +24,11 @@ def test_plugin_version_has_a_changelog_section() -> None:
     version = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))["version"]
     r = run()
     assert r.returncode == 0, r.stderr
-    assert "### Highlights" in r.stdout and "### Install / update" in r.stdout
+    out = r.stdout
+    assert "### Highlights" in out
+    # install and upgrade come first, before the change sections, and appear once
+    assert out.index("### Install (new project)") < out.index("### Upgrade (existing projects)") < out.index("### Highlights")
+    assert out.count("claude plugin marketplace update slate") == 1 and "### Upgrade notes" not in out
     assert run("--version").stdout.strip() == version
 
 
@@ -35,7 +39,7 @@ def test_every_version_section_uses_the_standard_headings() -> None:
     for v in versions:
         body = run(v).stdout
         heads = re.findall(r"^### (.+?)\s*$", body, re.M)
-        unknown = [h for h in heads if h not in KNOWN | {"Install / update"}]
+        unknown = [h for h in heads if h not in KNOWN | {"Install (new project)", "Upgrade (existing projects)"}]
         assert not unknown, f"{v}: unknown section(s) {unknown}"
         assert "Highlights" in heads and ("Added" in heads or "Changed" in heads or "Fixed" in heads), v
 

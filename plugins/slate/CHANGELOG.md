@@ -185,14 +185,21 @@ tickets, stacked PRs, parallel agents and git worktrees.
 
 ### Upgrade notes
 
-- Run `/plugin marketplace update slate`, restart Claude Code, then `/slate:upgrade` in each
-  project. It migrates the board to schema 2 (adds the `merge_ready` status), installs the merge
-  driver, adds `.gitignore` lines, adds new `SLATE.md` sections, and asks before anything else.
-- Every clone runs `install-merge-driver` once (git config isn't committed; `.gitattributes`
-  is). `/slate:init` and `/slate:upgrade` do it for you.
-- Open the board with `python3 kanban/board.py serve` (live mode). The old
-  `python3 -m http.server` still works as view-only.
-- Copilot CLI support is planned, not included.
+`/slate:upgrade` shows "What's new", then asks before each step:
+
+- migrates the board to schema 2 (adds the Waiting for merge status; nothing is removed);
+- installs the merge driver (every clone runs this once; `.gitattributes` is committed, the git
+  config isn't);
+- adds the new `.gitignore` lines (`kanban/.slate-unlock*.json`, `kanban/.slate-write.lock`,
+  `kanban/.slate-serve.json`, `kanban/.slate-serve.log`);
+- adds the new `SLATE.md` sections (`## Workflow`, `## Slate updates`, `Python:`, `Board server:`,
+  `Board port:`);
+- offers custom columns and workflow rules (default: keep as is), a `BACKLOG` phase and the repo
+  address;
+- runs `doctor` until it reports no problems.
+
+After upgrading, open the board with `python3 kanban/board.py serve` (live mode); the old
+`python3 -m http.server` still works as view-only. Copilot CLI support is planned, not included.
 
 ## 0.1.0 — 2026-09-26
 
@@ -233,5 +240,4 @@ First release. Board schema **1**.
 
 ### Upgrade notes
 
-- New install: `/plugin marketplace add Zidane786/slate`, `/plugin install slate@slate`, then
-  `/slate:init` in a project.
+First release — nothing to upgrade from.
