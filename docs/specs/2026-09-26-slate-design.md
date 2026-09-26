@@ -33,7 +33,7 @@ project's repo.
 
 | # | Decision | Why |
 |---|---|---|
-| 1 | Name **Slate**; plugin, marketplace and repo all `slate` (`github.com/Zidane786/slate`). Commands `/slate:init`, `/slate:plan`, `/slate:work`, `/slate:review`, `/slate:status`, `/slate:upgrade`. | Short, neutral, "a clean slate of tickets". |
+| 1 | Name **Slate**; plugin, marketplace and repo all `slate` (`github.com/Zidane786/slate`). Commands `/slate:init`, `/slate:plan`, `/slate:work`, `/slate:review`, `/slate:status`, `/slate:upgrade` (v0.2 adds `/slate:sync`). | Short, neutral, "a clean slate of tickets". |
 | 2 | Own board only (`tickets.json` + `index.html`). No Jira. | Full control over fields and flow; no account needed. |
 | 3 | Delivered as a Claude Code plugin; the repo is its own marketplace (the Plannotator pattern). | One install, versioned updates. |
 | 4 | Installed once at user level; `/slate:init` per project **copies** the board and script into `kanban/`. | Teammates without the plugin can still open the board and run the script. |
@@ -47,12 +47,21 @@ project's repo.
 | 9 | Tickets are written for a non-technical reader first; technical detail is kept in its own collapsed section. | The user must be able to read and understand every card. |
 | 10 | Tickets that change something a person can see or click must be tried by the user before they close. | Tests pass is not the same as "it works for me". |
 | 11 | No project-level skills by default. `init` creates one only for a real extra command the project needs (Forge's seeded-bug E2E is the example). | YAGNI; the generic procedure is in the plugin. |
+| 15 | *(v0.2)* A seventh skill, **`/slate:sync`**, sorts boards out across branches and worktrees (doctor → diff → explain → `sync --dry-run` → yes → `sync`; merge conflicts one at a time; repairs). Commands: `diff`, `sync`, `merge-driver` + `install-merge-driver`, `copy-to`; a board of record with warnings. | Parallel agents and stacked PRs made board copies drift; the user decides every change. |
+| 16 | *(v0.2)* **Live board page:** `board.py serve` serves `kanban/` plus a local JSON API that calls the same code paths as the CLI (never writes JSON itself). 127.0.0.1 by default, per-run token on writes, `via: "board page"` in history. `serve --ensure` starts it once in the background and reuses it; skills run it in step 0 unless `SLATE.md` says `Board server: off`. Any other way of opening the page is view-only with "Copy as board.py commands". | Clicks on the board should count, without a second writer or a hosted service. |
+| 17 | *(v0.2)* **States, roles, rules.** Statuses are configurable (`add-status`, `rename-status`, `edit-status`, `reorder-statuses`, `remove-status`); each has one of the eight built-in roles and every rule keys off the role. Optional path rules (`meta.status_from`, `set-meta workflow=strict|free`); default: no rules. Per state, whether a move into it needs a note for the ticket's history (`--note required|optional` / `note=`; defaults: required for review, user_testing, merge_ready, done; backward moves under rules always). `flow` shows observed transitions to recommend rules; `workflow --markdown` writes SLATE.md's `## Workflow`. Skills speak in roles. | Teams work differently (QA columns, strict review) but the loop and gates must keep working. |
+| 18 | *(v0.2)* **Claims:** `set ID in_progress` claims the ticket for the current git branch (`claimed_by`); others' `next`/`list` skip it; touching it needs `--take-over` with the user's OK. `/slate:work` creates the branch before claiming. | Several agents at once must not pick the same ticket. |
+| 19 | *(v0.2)* **Write lock:** every board write holds `kanban/.slate-write.lock` (O_EXCL, ~10 s wait); `unlock-write` removes only a stale lock. **Repair writes:** a broken board accepts writes that remove errors and add none. | Parallel writers never lose data; a broken board can be fixed with commands. |
+| 20 | *(v0.2)* **`doctor`:** local health checks with a code, a kind (`setup` → `/slate:upgrade`, `tickets` → `/slate:sync`) and fix lines; `--brief` feeds the session-start line. | One place that says what's wrong and which skill fixes it. |
+| 21 | *(v0.2)* **Upgrades explain themselves:** `upgrades/<version>.md` = "What's new" in plain words + idempotent steps; `/slate:upgrade` shows What's new first, runs each version's steps in order, records a line in SLATE.md's `## Slate updates`, runs `doctor` until healthy. `reference/commands.md` lists every command for agents; every skill links it. | Agents learn from the plugin at once; projects learn through a supervised, repeatable upgrade. |
+| 22 | *(v0.2)* **No board action needs a hand edit** (`remove`/`restore`, `unlink`, `usertest … reset`, `note`, bulk `edit`, `set-meta priorities`). The one exception, `unlock`, is approved on the agent tool's own permission card (Manual / Accept edits / Auto) or by a code typed in the user's own terminal (Plan / Bypass / Don't-ask); one unlock = one edit. Copilot CLI support: planned. | The guard stays absolute without dead ends. |
+| 23 | *(v0.2)* **Human in the loop is unchanged:** one ticket per request, `merge_ready` then stop, done only after the user says the PR is merged, never merge, every board-shape change (states, rules, removals, syncs) asked first. | The additions give the user more control, never less. |
 
 ## 3. The pieces at a glance
 
 ```
             ┌──────────────── Slate plugin (installed once, same for everyone) ───────────────┐
-            │  skills: init · plan · work · review · status · upgrade                         │
+            │  skills: init · plan · work · review · status · sync · upgrade                  │
             │  assets/board: index.html · board.py · README.md   templates: SLATE.md …      │
             └───────────────┬─────────────────────────────────────────────────────────────────┘
                             │ /slate:init copies board files, writes SLATE.md
@@ -236,7 +245,7 @@ are printed.
 
 | Command | Does |
 |---|---|
-| `init --project "Acme" --prefix ACME [--areas …]` | Create `tickets.json` with meta (default statuses `draft backlog ready in_progress review user_testing done`). Refuses if it exists. |
+| `init --project "Acme" --prefix ACME [--areas …] [--repo-url URL]` | Create `tickets.json` with meta (default statuses `draft backlog ready in_progress review user_testing merge_ready done`). Refuses if it exists. |
 | `next` / `next --brief` | Resume `in_progress` / `review` / `user_testing` first, else the lowest-rank ready ticket. |
 | `list [N]` | Next N ready tickets in rank order. |
 | `show ID` | Full ticket, plain layout, including handoff and user-check results. |
@@ -246,7 +255,7 @@ are printed.
 | `new --title "…" --summary "…" --phase P1 [--after ID] [--depends ID,…] …` | Create one ticket from flags; opens nothing, writes nothing invalid. Good for quick asks. |
 | `add --file batch.json [--dry-run] [--after ID] [--as-draft]` | Add many tickets from a batch file (6.3); `--as-draft` saves them as drafts. `--dry-run` writes `kanban/preview.json` for the board preview and prints the result. |
 | `batch-check --file batch.json` | Validate a batch file on its own (fields, writing rules, keys) before previewing. |
-| `set ID STATUS [--handoff "…"]` | Change status; handoff note required for `review`, `user_testing`, `done`. |
+| `set ID[,ID…] STATUS [--handoff "…"] [--ignore-deps …] [--no-code …\|--no-pr …] [--as NAME] [--take-over …]` | Change status; handoff note required for the review, user_testing, merge_ready and done roles. Claims on in_progress; path rules; all or nothing for several ids. |
 | `edit ID field=value …` / `edit ID --file patch.json` | Change fields. Cannot change `id`. |
 | `rerank ID --after OTHER` | Move a ticket; renumbers only what must move; keeps ranks above deps. |
 | `new … --draft` / `promote ID` | Save a ticket as a draft; promote it to backlog once complete (full checks run then). |
@@ -256,6 +265,23 @@ are printed.
 | `set-meta key=value` | Change allowed meta keys (`project`, `repo_url`, `areas`, `user_test_areas`). |
 | `discard-preview` | Delete `kanban/preview.json`. |
 | `upgrade --from <plugin assets dir>` | See 6.4. Replaces `index.html`, `board.py`, `README.md`; migrates `tickets.json` only by additive schema steps; updates versions. |
+
+Added in v0.2 (full list with "use it when…" in `plugins/slate/reference/commands.md`, kept in
+step with `board.py --help` by `tests/test_docs_consistency.py`):
+
+| Command | Does |
+|---|---|
+| `export --json [filters] [--drafts] [--removed] [--statuses]`; filters on `list` / `status` | Full tickets for agents (never read tickets.json directly); archived tickets; the status setup. |
+| `edit-phase`, `rename-phase`, `remove-phase [--move-to]`, `reorder-phases`, `add-phase --unscheduled` | Phase housekeeping; unscheduled (someday) phases are skipped by `next` / `list`. |
+| `new --bug --fixes ID,… [--reopen]`, `edit … --rerank`, `edit ID1,ID2 …`, `key+=text` | Bug tickets, reranking after dependency changes, bulk edits, appending text. |
+| `check-item` / `uncheck-item`, `usertest … reset`, `note`, `unlink`, `remove` / `restore` | Per-item ticks with evidence and every correction without a hand edit. |
+| `add-status`, `rename-status`, `edit-status` (`label=`, `role=`, `from=`), `reorder-statuses`, `remove-status`, `set-meta workflow=strict\|free`, `set-meta priorities:=[…]` | States with roles, optional path rules, priorities. |
+| `claim` / `release` (`--as`, `--take-over`), `unlock-write` | Who is on what; stale write lock removal. |
+| `diff`, `sync`, `merge-driver`, `install-merge-driver`, `copy-to` / `export-file` | Branches, worktrees and merges. |
+| `unlock` / `lock` | The supervised one-edit escape hatch (8.1). |
+| `doctor [--json] [--brief] [--against]` | Project health with codes, kinds and fixes. |
+| `serve [--ensure] [--port N] [--strict-port] [--host] [--open] [--status] [--stop] [--idle-exit H]` | The live board page (decision 16). |
+| `flow [--json]`, `workflow --markdown` | Observed status transitions; SLATE.md's `## Workflow` section from the board. |
 
 **The batch file is the only JSON Claude writes by hand**, and it lives outside `tickets.json`
 (in the scratch area or `kanban/preview.json`). It never becomes ticket data except through
@@ -337,6 +363,15 @@ specifics and falls back to `CLAUDE.md` / `AGENTS.md` and the docs for anything 
 doesn't cover (coding conventions, architecture). Every board read and write is a
 `python3 kanban/board.py …` call.
 
+*v0.2 additions for every skill:* the Python command comes from `SLATE.md` ("Python: `…`":
+`python3`, `python` or `py -3`) and `allowed-tools` lists all three forms; every skill links
+`<ROOT>/reference/commands.md`; skills never read `tickets.json` directly (`show` / `export` /
+`list` / `status --json`); they speak in **roles**, looking up status names and labels with
+`export --json --statuses`, so renamed and custom states work; `plan`, `work`, `status` and
+`sync` run `board.py serve --ensure [--port <Board port>]` in step 0 unless `SLATE.md` says
+`Board server: off`, show the link once and give the SSH hint `ssh -L <port>:localhost:<port>
+host`; a board-of-record warning means stop and ask.
+
 ### 7.1 `/slate:init` (only when typed: `disable-model-invocation: true`)
 
 1. Look through the repo: README, CLAUDE.md, AGENTS.md, docs, manifest files
@@ -354,6 +389,16 @@ doesn't cover (coding conventions, architecture). Every board read and write is 
    - **present** → leave it untouched. Offer once (yes/no) to add a single line
      "Planning and build loop: see SLATE.md", so agents that only read `CLAUDE.md` still find it.
 6. Show what it wrote. Suggest `/slate:plan` next.
+
+*v0.2:* init also detects the Python command (`python3` / `python` / `py -3`, 3.9+), reads
+`repo_url` from the git remote (`set-meta repo_url=`), and asks about parallel work and the board
+of record (`SLATE_BOARD_OF_RECORD`), a `BACKLOG` unscheduled phase, who merges PRs, the board
+server (`auto`/`off`) and port, and how the team works — recommending custom states and
+workflow rules (or keeping the defaults: default states, no rules) and showing the path as a
+picture before applying. It runs `install-merge-driver`, adds `kanban/.slate-unlock*.json`,
+`kanban/.slate-write.lock`, `kanban/.slate-serve.json`, `kanban/.slate-serve.log` to
+`.gitignore`, explains unlock once, and writes `SLATE.md` with `Python:`, `Board server:`,
+`Board port:`, a `## Workflow` section (from `workflow --markdown`) and `## Slate updates`.
 
 **Re-running init** in a set-up project becomes an upgrade (6.4) plus a refresh of detected
 values in `SLATE.md` (asks before changing any value you set). It never touches tickets.
@@ -447,6 +492,14 @@ still shows the card and the preview before writing.
 Changes during preview ("move 016 before 015", "split 014") go through an edited batch file,
 then `add --dry-run` again to refresh the preview.
 
+*v0.2:* plan also handles bug tickets (`new --bug --fixes`), someday ideas (unscheduled
+`BACKLOG` phase), notes, bulk edits, priorities (`set-meta priorities`), remove / restore (asks
+first), phase commands, **custom states** ("add a QA column": `add-status --like`, rename,
+relabel, reorder, remove — asks first, shows the columns as a picture) and **workflow rules**
+(`set-meta workflow=strict|free`, `edit-status X from=…`, explained with a picture; `flow` when
+asked what the team really does). After any change to states, rules or phases it regenerates
+`SLATE.md`'s `## Workflow` with `board.py workflow --markdown`, with the user's OK.
+
 ### 7.3 `/slate:work [ID]` — the build loop
 
 Same order as Forge's §4, generic:
@@ -478,21 +531,55 @@ Same order as Forge's §4, generic:
    report (next ticket as a suggestion only) and **stop**; continue only if the user explicitly
    asked for more in this request.
 
+*v0.2 changes to the loop:* after user tests pass and the commit (and PR, with a remote) are
+linked, the ticket goes to `merge_ready` ("Waiting for merge") and work **stops**; `done` only
+after the user says the PR is merged (`link --pr-state merged`) or agrees to `--no-pr`. Items are
+ticked with `check-item` as each test passes. The ticket branch is created **before**
+`set in_progress`, because that claims the ticket for the current branch; another agent's claim
+is never touched (`--take-over` only with the user's OK). Path-rule refusals are followed via the
+printed next step. A busy write lock means wait and retry; `unlock-write` only for a stale lock.
+`note` records "waiting on …"; `unlink` / `usertest reset` fix mistakes; one PR for several
+tickets uses bulk `link`. Unlock: the permission card in Manual / Accept edits / Auto; in Plan /
+Bypass / Don't-ask the user types the code in their own terminal or tmux pane; one unlock = one
+edit.
+
 ### 7.4 `/slate:review [ID]`
 
-Step 4 of work on its own, for re-checks. Doesn't change status.
+Step 4 of work on its own, for re-checks. Doesn't change status. Reads tickets with
+`show --json` / `export --json` and names states by their labels.
 
 ### 7.5 `/slate:status`
 
 Read-only: phase progress, in-flight tickets with the last handoff line, **tickets waiting for
 the user to test** (with their steps), blocked tickets and why, uncommitted work, next ticket.
 Under 200 words. Includes the version line when the board is behind or ahead of the plugin.
+*v0.2:* also waiting-for-merge tickets with their PRs, claims ("on: branch"), state labels,
+unscheduled and archived counts, the workflow mode, doctor's summary (setup → `/slate:upgrade`,
+tickets → `/slate:sync`) and the live board URL.
 
 ### 7.6 `/slate:upgrade`
 
 Runs 6.4: shows what changes, replaces the Slate-owned files, migrates `tickets.json`,
 refreshes `SLATE.md`'s version line, shows the diff. Only when typed
 (`disable-model-invocation: true`); other skills offer it, never run it silently.
+*v0.2:* before changing anything it shows the "What's new" section of every
+`upgrades/<version>.md` between the project's and the plugin's version; after the file upgrade it
+runs each file's steps in order (merge driver, `.gitignore` lines, board server setting,
+`repo_url`, BACKLOG, Python command, SLATE.md sections, and custom states / strict workflow
+recommended from `board.py flow` evidence — applied only on a yes), adds a dated line to
+`SLATE.md`'s `## Slate updates`, runs `doctor` until there are no setup problems, and routes
+`tickets`-kind problems to `/slate:sync`.
+
+### 7.7 `/slate:sync [branch | path]` (added in v0.2)
+
+Sorts boards out across branches and worktrees; the user decides every change. `doctor` first
+(kind `tickets`: `board-behind`, `board-errors`, `board-unreadable` are its job; `setup` problems
+go to `/slate:upgrade`), then `diff` explained in plain words, `sync --dry-run`, a yes, `sync`.
+After a git merge it walks through the merge driver's conflicts one at a time and applies each
+answer with `edit` / `set` / `rerank`. It repairs a broken board with `check`'s fix lines (repair
+writes), explains claims that differ across branches (later claim wins; two branches on one
+ticket → ask), offers `copy-to` only when asked, regenerates `SLATE.md`'s `## Workflow` when a
+sync brought state or rule changes, and uses `unlock` only as the last resort. Never commits.
 
 ## 8. Plugin hooks (`hooks/hooks.json`)
 
@@ -504,6 +591,39 @@ refreshes `SLATE.md`'s version line, shows the diff. Only when typed
    `kanban/tickets.json` with the message "Change tickets through kanban/board.py (new, add,
    edit, set, rerank)". This is what makes "only board.py writes tickets" true for Claude,
    not just a rule in a file.
+
+### 8.1 Unlock: the supervised escape hatch (added in v0.2)
+
+Sometimes `tickets.json` needs a direct fix that no `board.py` command covers (e.g. a broken
+field after a bad merge). Instead of agents working around the guard, Slate has one audited path:
+
+```
+ Claude runs: board.py unlock --reason "fix broken field"   → writes a REQUEST only
+        │
+        ▼  guard PreToolUse hook answers "ask"
+ Claude Code shows its own approval card (human in the loop, works over SSH):
+   "Slate: allow unlocking kanban/tickets.json for ONE edit? Reason: …"  [Yes] [No]
+        │ Yes
+        ▼  guard PostToolUse hook turns the request into a one-time unlock
+ Claude makes ONE direct edit → the guard consumes the unlock → next edit blocked again
+```
+
+- **Human in the loop is Claude Code's built-in permission card.** Slate builds no approval UI
+  of its own.
+- **Tools without hooks, or by preference:** the person runs `board.py unlock` in any real
+  terminal (a second SSH session or tmux pane is fine) and types a random code it shows.
+- **One unlock = one edit**, expiring after `--minutes` (default 5, max 30) if unused.
+- An agent can't unlock by itself: running the command only creates a request, the unlock files
+  can't be written directly (guard), and activation happens only after the card's Yes.
+- Every request, approval, use, refusal and lock is logged in `meta.unlock_log`.
+- Permission modes (the guard reads Claude Code's `permission_mode`): the **card** appears only
+  where a person is there to click it — Manual, Accept edits, Auto. **Plan** refuses ("leave plan
+  mode first"); **Bypass permissions**, **Don't-ask** and `-p` scripts refuse ("nobody to
+  approve"): there the user runs `board.py unlock` in a terminal and types the code. The
+  activation hook re-checks the mode. Only the plain command can activate an unlock.
+- Agent tools: **Claude Code only for now.** Copilot CLI support is planned for later.
+- The rejected desktop pop-up design is archived in
+  `docs/archive/2026-09-26-unlock-popup-design.md`.
 
 ## 9. Error handling
 

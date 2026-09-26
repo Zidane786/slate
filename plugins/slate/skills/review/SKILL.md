@@ -2,13 +2,15 @@
 name: review
 description: Run only the Slate review gate on the current diff against a ticket's scope - bugs, security basics, scope vs acceptance and test scenarios, blast radius, plus the project's extra checks from SLATE.md - then fix confirmed findings. Does not change ticket status. Use for re-checks or when asked to "review ACME-014" or "review my changes".
 argument-hint: "[ticket ID]"
-allowed-tools: Bash(python3 kanban/board.py *)
+allowed-tools: Bash(python3 kanban/board.py *), Bash(python kanban/board.py *), Bash(py -3 kanban/board.py *)
 ---
 
 # /slate:review [ID] — the review gate on its own
 
 This is step 4 of `/slate:work` without the status change. **Do not change any ticket status**
-and never edit `kanban/tickets.json`; `/slate:work` moves tickets.
+and never edit or read `kanban/tickets.json` directly (use `show --json` / `export --json`);
+`/slate:work` moves tickets. Board commands are `python3 kanban/board.py …` (or the Python
+command `SLATE.md` names, e.g. `py -3`); the full list is in `<ROOT>/reference/commands.md`.
 
 ## Step 0: version check and context
 
@@ -26,8 +28,14 @@ and never edit `kanban/tickets.json`; `/slate:work` moves tickets.
 ## Steps
 
 1. **Ticket:** `$ARGUMENTS`, else the open ticket from `python3 kanban/board.py next`
-   (an `in_progress` / `review` / `user_testing` one). `python3 kanban/board.py show <ID>` for
-   its acceptance and test_scenarios. No ticket at all → review against what the user describes.
+   (one in an in_progress-, review- or user_testing-role state; states may be renamed or custom,
+   so check roles and labels with `python3 kanban/board.py export --json --statuses` and name the
+   state by its label when you talk to the user). Get its acceptance and test_scenarios
+   verbatim with `python3 kanban/board.py show <ID> --json`, or several at once with
+   `python3 kanban/board.py export --json --status <state name>` (add `--label bug` etc. to
+   filter), never by reading `kanban/tickets.json` directly. Note which items are already ticked (`item_checks`) and with
+   what evidence; the reviewer should check that evidence holds. No ticket at all → review
+   against what the user describes.
 2. **Diff:** `git diff <default-branch>...HEAD` plus `git diff` and `git diff --cached`.
    No git → list the changed files from the conversation.
 3. **Tests first:** run the lint, type-check and full test commands from `SLATE.md`. Report
@@ -46,4 +54,7 @@ and never edit `kanban/tickets.json`; `/slate:work` moves tickets.
 5. **Verify and fix:** check each finding against the code yourself; fix the confirmed ones,
    re-run step 3, and re-review if a fix was non-trivial.
 6. **Report:** findings fixed · findings dismissed and why · acceptance bullets or test
-   scenarios still not covered · blast-radius notes. Suggest `/slate:work <ID>` to continue.
+   scenarios still not covered · blast-radius notes. Suggest `/slate:work <ID>` to continue
+   (it ticks items with `check-item` and moves the ticket; this skill doesn't). If the ticket is
+   claimed by another branch or agent (`show` says "on: …"), say so: the fixes belong on that
+   branch.
