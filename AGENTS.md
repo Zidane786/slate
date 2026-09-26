@@ -46,7 +46,9 @@ docs/                                 specs, build plans, archive
 
 - **Standard library only**, Python **3.9+**, in everything that ships (board.py, hooks). No
   pip dependencies. `index.html` loads nothing from the internet.
-- **Works on Windows, macOS, Linux, over SSH and in tmux.** UTF-8 + `\n` for every file write,
+- **Works on Windows, macOS, Linux, over SSH and in tmux.** Every Python entry point (board.py,
+  hooks, scripts) reconfigures stdout/stderr to UTF-8; every text read/write and subprocess call
+  names `encoding="utf-8"` (`tests/test_portability.py` enforces both). UTF-8 + `\n` for every file write,
   pathlib, no `shell=True`, no POSIX-only calls without a Windows path. Hooks go through
   `hooks/run.sh` (finds python3 / python / py -3).
 - **`board.py` is the only thing that changes `tickets.json`.** Every write validates the whole
