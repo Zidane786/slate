@@ -40,9 +40,7 @@ refusal follow the same `error:` / `fix:` / `ask the user:` shape.
    - `behind` → "This project's board is Slate <board>, the plugin is <plugin>. Upgrade now
      with `/slate:upgrade`?" Ask once. The branch/merge commands below need board 0.2.0 or
      newer: if the board is older, stop here and suggest the upgrade.
-   - `ahead` → "A teammate upgraded this board; update your Slate plugin
-     (`claude plugin marketplace update slate`, `claude plugin update slate@slate`, restart)."
-     Stop: this skill writes to the board.
+   - `ahead` → a teammate upgraded this board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
 5. **Board server.** Unless `SLATE.md` says `Board server: off`:
    `python3 kanban/board.py serve --ensure --port <Board port, default 8088>`; show the URL once
    (over SSH: `ssh -L <port>:localhost:<port> <host>`). If `serve` isn't in `--help` (an older board), skip.

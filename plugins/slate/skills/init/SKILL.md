@@ -33,9 +33,7 @@ Check, in this order, and take the first branch that matches:
    `python3 kanban/board.py version --against "<ROOT>"`:
    - `behind` → follow the `/slate:upgrade` procedure (read `ROOT/skills/upgrade/SKILL.md` and
      do all its steps, including the "What's new" and upgrades/ steps), then continue at step 1 below in *refresh mode*.
-   - `ahead` → tell the user a teammate upgraded the board and they should update the plugin
-     (`claude plugin marketplace update slate` then `claude plugin update slate@slate`, and
-     restart Claude Code). Stop.
+   - `ahead` → a teammate upgraded the board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
    - `same` → continue at step 1 in *refresh mode*.
    In refresh mode you re-detect values and compare them to `SLATE.md`; for every value that
    differs, show old vs new and ask before changing it. Never run `board.py init` again and
@@ -136,7 +134,10 @@ recommendation) as option (a). Skip any question whose answer you already know. 
     Pass/Fail, moving cards) save to the board. (a) auto — start it when Slate commands run
     (b) off — I'll open it myself". Then the port: "(a) 8088 (b) another port" (propose another
     if the app uses 8088). Over SSH it is reached with `ssh -L <port>:localhost:<port> <host>`.
-14. Enable the plugin for teammates in `.claude/settings.json`? (a) yes (b) no. See step 6.
+14. Slate updates: (a) for the team — add Slate to the project's `.claude/settings.json` with
+    auto-update on (teammates who trust the repo get it and it keeps itself updated) (b) just for
+    me — turn on auto-update in my own `~/.claude/settings.json` (c) no, I'll update by hand.
+    See step 6.
 15. Does this project need its own extra command (a project-level skill), for example an
     end-to-end test that needs special setup? (a) no (default) (b) yes, describe it.
 
@@ -235,7 +236,17 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
       'Planning, tickets and more project context: read SLATE.md (kept up to date as work goes on)' — so agents that only read CLAUDE.md find it?
       (yes/no)". Append only that line, only on yes. Skip the question if the line is already there.
 - [ ] Same two rules for **AGENTS.md** with `ROOT/templates/AGENTS.md`.
-- [ ] **Settings (only if the user said yes in step 3.14).** Create or merge into
+- [ ] **Just for me (only if the user chose 3.14 b).** Show the exact change first, naming the
+      file `~/.claude/settings.json`, then merge only this entry (keep every other key; merge
+      objects, never replace them; create the file if missing):
+
+  ```json
+  { "extraKnownMarketplaces": { "slate": { "source": { "source": "github", "repo": "Zidane786/slate" }, "autoUpdate": true } } }
+  ```
+
+  This is the same setting as `/plugin` → **Marketplaces** → **slate** → **Enable auto-update**
+  (there is no CLI command for it). It applies to you in every project.
+- [ ] **For the team (only if the user chose 3.14 a).** Create or merge into
       `.claude/settings.json` (keep every existing key; merge objects, don't replace them):
 
   ```json

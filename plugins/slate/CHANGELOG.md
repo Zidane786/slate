@@ -6,6 +6,23 @@ version is noted when it changes. Each release lists **Highlights**, then **Adde
 nothing). Merging a version bump into `main` publishes a GitHub Release with that version's
 section.
 
+## Unreleased
+
+### Added
+
+- `/slate:init` (and `/slate:upgrade`, once) can turn on Slate's auto-update: for the team (the
+  project's `.claude/settings.json`, `"autoUpdate": true`) or just for you (your
+  `~/.claude/settings.json`), always asking first. Same setting as `/plugin` → Marketplaces →
+  Enable auto-update.
+- When the project's board is newer than your plugin (a teammate upgraded), Slate offers to run
+  `claude plugin marketplace update slate` and `claude plugin update slate@slate` for you, then
+  asks you to `/reload-plugins`.
+
+### Changed
+
+- Install and update steps in the README, plugin README and release notes: install/upgrade first,
+  every command in a code block, accurate plugin-update and auto-update steps.
+
 ## 0.2.0 — 2026-09-26
 
 Board schema **2**. Older boards keep working; `/slate:upgrade` (or `board.py migrate`) upgrades

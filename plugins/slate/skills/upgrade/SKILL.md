@@ -29,9 +29,8 @@ the project already set.
    version (**OLD**) and the plugin version (**NEW**):
    - `same` → "Already on Slate <version>." Still run `python3 kanban/board.py doctor --against
      "<ROOT>"`; if it lists `setup` problems, offer to fix them (step 4). Otherwise stop.
-   - `ahead` → "This board is newer than your plugin (<board> vs <plugin>). Update the plugin
-     instead: `claude plugin marketplace update slate`, `claude plugin update slate@slate`,
-     restart." Stop — never downgrade.
+   - `ahead` → the board is newer than the plugin (<board> vs <plugin>) — never downgrade;
+     offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
    - `behind` → continue.
 4. `git status --short kanban/ SLATE.md`: if those files have uncommitted changes, say so and
    ask whether to continue (the upgrade replaces the Slate-owned files).
@@ -70,6 +69,13 @@ Manual, Accept edits and Auto mode Claude Code shows its approval card and the u
 activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses it, and the user
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
 one edit. If the user declines, stop. Copilot CLI support: planned.
+
+## Step 2b: offer auto-update (once)
+
+If `~/.claude/plugins/known_marketplaces.json` shows the `slate` marketplace without
+`"autoUpdate": true`, and no settings file sets it, offer the same choice as `/slate:init`
+question 14 (team / just for me / no) and apply it the same way. Skip if the user said no before
+(a `Decisions` line in `SLATE.md` records it).
 
 ## Step 3: run each version's upgrade steps
 
