@@ -247,17 +247,25 @@ Commit all of it. Teammates without the plugin can still open the board and run
 
 ### Sharing with your team
 
-`/slate:init` can add this to `.claude/settings.json` so teammates are offered the plugin
-when they trust the repo:
+`/slate:init` can add this to the project's `.claude/settings.json` (committed):
 
 ```json
 {
   "extraKnownMarketplaces": {
-    "slate": { "source": { "source": "github", "repo": "Zidane786/slate" } }
+    "slate": { "source": { "source": "github", "repo": "Zidane786/slate" }, "autoUpdate": true }
   },
   "enabledPlugins": { "slate@slate": true }
 }
 ```
+
+- **What teammates get:** when they open the repo and accept Claude Code's folder-trust prompt,
+  Claude Code adds the Slate marketplace in the background and loads the plugin — no install
+  command, because Slate's marketplace entry is a relative path. The first time they see
+  "Plugins changed. Run /reload-plugins to activate."
+- **`autoUpdate: true`** keeps Slate updated for everyone (third-party marketplaces don't
+  auto-update otherwise). Leave it out to update by hand.
+- **Not covered:** `claude -p` scripts and cloud sessions never show the trust prompt; install
+  there with `claude plugin install slate@slate`.
 
 ## FAQ
 

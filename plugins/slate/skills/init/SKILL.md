@@ -242,7 +242,8 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   {
     "extraKnownMarketplaces": {
       "slate": {
-        "source": { "source": "github", "repo": "Zidane786/slate" }
+        "source": { "source": "github", "repo": "Zidane786/slate" },
+        "autoUpdate": true
       }
     },
     "enabledPlugins": {
@@ -251,7 +252,13 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   }
   ```
 
-  Teammates who trust the repo are then offered the Slate marketplace and plugin.
+  When a teammate opens the repo and accepts Claude Code's folder-trust prompt, Claude Code adds
+  the Slate marketplace in the background and loads the plugin (Slate's marketplace entry is a
+  relative path, so no separate install is needed); the first time they see "Plugins changed.
+  Run /reload-plugins to activate." `autoUpdate: true` keeps Slate updated for everyone (ask the
+  user; leave it out if they prefer updating by hand). This doesn't apply to `claude -p` or cloud
+  sessions, which never show the trust prompt — there, install with
+  `claude plugin install slate@slate`.
 - [ ] **Project skill (only if the user said yes in step 3.15).** Create
       `.claude/skills/<name>/SKILL.md` with frontmatter `name` and `description` and the exact
       steps of that one extra command, and add it to `SLATE.md` under "Commands". Nothing else.
