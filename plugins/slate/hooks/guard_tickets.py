@@ -146,6 +146,18 @@ def split_commands(command: str) -> list[str]:
     return [p for p in parts if p.strip()]
 
 
+# A redirect (> file, >> file) and tee name the file they write. When those are the only writes in
+# a simple command, the command writes the protected file only if it is one of those targets:
+# `printf 'kanban/.slate-unlock*.json\n' >> .gitignore` merely mentions it and writes .gitignore.
+_WORD = r"(\"[^\"]*\"|'[^']*'|[^\s;&|<>]+)"
+REDIR_RE = re.compile(r"\d?>>?\|?\s*" + _WORD)
+TEE_RE = re.compile(r"\btee\b((?:\s+-{1,2}[\w-]+)*)((?:\s+" + _WORD + r")+)")
+
+
+def _unquote(word: str) -> str:
+    return word[1:-1] if len(word) >= 2 and word[0] == word[-1] and word[0] in "\"'" else word
+
+
 def bash_writes(command: str, target_re: re.Pattern[str] = TICKETS_RE, skip_board_py: bool = True) -> bool:
     """True when a Bash command looks like it writes a file matching target_re directly.
     skip_board_py: a simple command that runs board.py doesn't count (it writes tickets.json itself)."""
@@ -157,8 +169,14 @@ def bash_writes(command: str, target_re: re.Pattern[str] = TICKETS_RE, skip_boar
             continue
         # `2>&1` and `>/dev/null` redirections don't write the file.
         cleaned = re.sub(r"\d?>&\d|\d?>\s*/dev/null", "", part)
-        if WRITE_RE.search(cleaned) or OPEN_WRITE_RE.search(cleaned):
-            return True
+        targets = [_unquote(m.group(1)) for m in REDIR_RE.finditer(cleaned)]
+        for m in TEE_RE.finditer(cleaned):
+            targets += [_unquote(w) for w in re.findall(_WORD, m.group(2))]
+        rest = TEE_RE.sub(" ", REDIR_RE.sub(" ", cleaned))
+        if WRITE_RE.search(rest) or OPEN_WRITE_RE.search(rest):
+            return True  # a write that doesn't name its target here (sed -i, cp, python open(.., "w"), ...)
+        if any(target_re.search(t) for t in targets):
+            return True  # the redirect / tee target is the protected file
     return False
 
 

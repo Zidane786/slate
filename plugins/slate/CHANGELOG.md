@@ -36,6 +36,16 @@ Board schema **2** (unchanged).
 - Install and update steps in the README, plugin README and release notes: install/upgrade first,
   every command in a code block, accurate plugin-update and auto-update steps.
 
+### Fixed
+
+- The guard blocked shell commands that only **mention** a protected file while writing a
+  different one — for example adding the `kanban/.slate-unlock*.json` lines to `.gitignore`
+  (which `/slate:init` does) or a `kanban/tickets.json` line to `.gitattributes`. It now checks
+  what a redirect or `tee` actually writes; writing `tickets.json` or the unlock files themselves
+  is still blocked.
+- Scripts used by CI and releases print UTF-8 on Windows (a `→` crashed them on Windows
+  runners); a new test keeps every Slate script UTF-8-safe.
+
 ### Upgrade notes
 
 `/slate:upgrade` replaces the board files (0.2.0 → 0.2.1) and adds Slate to the project's
