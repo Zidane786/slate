@@ -2,7 +2,7 @@
   "preview": true,
   "phases": [
     {
-      "id": "P4",
+      "id": "P5",
       "name": "Help from support",
       "goal": "Support staff can help people who can't reach their email.",
       "demo": "Maya in support sends a reset link on someone's behalf from the support screen."
@@ -10,7 +10,7 @@
   ],
   "tickets": [
     {
-      "id": "ACME-011",
+      "id": "ACME-013",
       "title": "Support can send a reset link for someone",
       "summary": "Support staff can send a reset link to a person's email from the support screen, so people who phone in get help quickly.",
       "story": "Sam phones Acme because he can't find the reset page. Maya opens his account, clicks 'Send reset link', and Sam gets the usual email.",
@@ -34,19 +34,19 @@
           "required": true
         }
       ],
-      "phase": "P4",
+      "phase": "P5",
       "areas": [
         "frontend",
         "backend"
       ],
       "priority": "P2",
-      "rank": 11,
+      "rank": 13,
       "status": "backlog",
       "depends_on": [
         "ACME-002"
       ],
       "unlocks": [
-        "ACME-012"
+        "ACME-014"
       ],
       "estimate": "0.5d",
       "labels": [
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "id": "ACME-012",
+      "id": "ACME-014",
       "title": "Support sees when a link was sent for someone",
       "summary": "The support screen shows when a reset link was last sent and by whom, so two people don't send one at the same time.",
       "story": "Maya is about to send Sam a link and sees 'Sent 2 minutes ago by Joe'. She tells Sam to check his inbox instead.",
@@ -76,15 +76,15 @@
           "required": true
         }
       ],
-      "phase": "P4",
+      "phase": "P5",
       "areas": [
         "frontend"
       ],
       "priority": "P3",
-      "rank": 12,
+      "rank": 14,
       "status": "backlog",
       "depends_on": [
-        "ACME-011",
+        "ACME-013",
         "ACME-009"
       ],
       "unlocks": [],

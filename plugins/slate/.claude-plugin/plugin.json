@@ -1,6 +1,6 @@
 {
   "name": "slate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Brainstorm ideas into plain-language tickets on a local kanban board, then build them one by one with tests, review and user testing.",
   "author": {
     "name": "Zidane786"

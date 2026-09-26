@@ -3,8 +3,8 @@
     "project": "Acme",
     "prefix": "ACME",
     "repo_url": "https://github.com/acme/acme-app",
-    "slate_version": "0.1.0",
-    "schema_version": 1,
+    "slate_version": "0.2.0",
+    "schema_version": 2,
     "generated": "2026-09-26",
     "statuses": [
       "draft",
@@ -12,9 +12,27 @@
       "ready",
       "in_progress",
       "review",
+      "qa",
       "user_testing",
+      "merge_ready",
       "done"
     ],
+    "status_roles": {
+      "qa": "review"
+    },
+    "status_labels": {
+      "review": "Code review",
+      "qa": "QA",
+      "merge_ready": "Waiting for merge"
+    },
+    "status_from": {
+      "qa": [
+        "review"
+      ],
+      "user_testing": [
+        "qa"
+      ]
+    },
     "areas": [
       "backend",
       "frontend",
@@ -29,6 +47,43 @@
     "user_test_areas": [
       "frontend",
       "ui"
+    ],
+    "unlock_log": [
+      {
+        "date": "2026-09-24 10:02",
+        "event": "activated",
+        "reason": "fix a typo in ACME-006's title by hand",
+        "minutes": 5,
+        "until": "2026-09-24T10:07:00Z",
+        "approved": "permission prompt",
+        "permission_mode": "default"
+      },
+      {
+        "date": "2026-09-24 10:04",
+        "event": "used",
+        "reason": "fix a typo in ACME-006's title by hand",
+        "tool": "Edit"
+      }
+    ],
+    "removed": [
+      {
+        "ticket": {
+          "id": "ACME-014",
+          "title": "Reset by text message",
+          "summary": "Send the reset link by SMS as well as email.",
+          "phase": "P4",
+          "priority": "P3",
+          "rank": 99,
+          "status": "backlog",
+          "depends_on": [],
+          "areas": [
+            "backend"
+          ],
+          "estimate": "M"
+        },
+        "removed": "2026-09-25",
+        "reason": "No phone numbers on file; dropped for now"
+      }
     ]
   },
   "phases": [
@@ -49,6 +104,19 @@
       "name": "Safe",
       "goal": "Reset links can't be misused, and there is a record of every change.",
       "demo": "An old or already-used link is refused; asking for many links in a row is slowed down."
+    },
+    {
+      "id": "P4",
+      "name": "Two-step sign-in",
+      "goal": "People can add a second step (a code from their phone) when they log in.",
+      "demo": "Turn on two-step sign-in and log in with a code from an authenticator app."
+    },
+    {
+      "id": "BACKLOG",
+      "name": "Someday",
+      "goal": "Ideas worth keeping that aren't planned yet.",
+      "demo": "Nothing yet: move a ticket to a scheduled phase to plan it.",
+      "unscheduled": true
     }
   ],
   "tickets": [
@@ -141,7 +209,9 @@
         "ACME-004",
         "ACME-005",
         "ACME-007",
-        "ACME-008"
+        "ACME-008",
+        "ACME-011",
+        "ACME-012"
       ],
       "estimate": "1d",
       "labels": [
@@ -284,6 +354,53 @@
       }
     },
     {
+      "id": "ACME-011",
+      "title": "Opening a reset link twice shows an error page",
+      "summary": "If you click the reset link a second time, you get a broken error page instead of the friendly 'This link has already been used' message.",
+      "story": "Priya clicks the link, gets distracted, and clicks it again from her inbox. She sees 'Something went wrong (500)' and thinks the reset is broken.",
+      "description": "Found while building ACME-004. The second visit to an already-opened link crashes instead of showing a message.\n\n- Expected: a clear message and a *Send a new link* button.\n- Actual: an error page.",
+      "acceptance": [
+        "Opening a link a second time shows 'This link has already been used'",
+        "The page offers a button to send a new link"
+      ],
+      "test_scenarios": [
+        "When a used link is opened again, then the already-used message is shown and nothing crashes"
+      ],
+      "user_tests": [
+        {
+          "title": "Open the same link twice",
+          "setup": "Ask for a reset for priya@example.com and open the email in the test inbox.",
+          "steps": [
+            "Click 'Choose a new password'",
+            "Go back to the email and click the button again"
+          ],
+          "expect": "The second time you see 'This link has already been used' and a 'Send a new link' button.",
+          "required": true
+        }
+      ],
+      "technical": "`GET /reset/:token` raises on a consumed token; catch it and render the used-link page.",
+      "phase": "P2",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P1",
+      "rank": 4,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [
+        "ACME-004"
+      ],
+      "estimate": "0.5d",
+      "labels": [
+        "bug",
+        "fixes-ACME-004"
+      ],
+      "handoff": []
+    },
+    {
       "id": "ACME-004",
       "title": "The reset link lets you choose a new password",
       "summary": "Clicking the link in the email opens a page where you type a new password twice and save it.",
@@ -324,10 +441,15 @@
         "backend"
       ],
       "priority": "P0",
-      "rank": 4,
+      "rank": 5,
       "status": "in_progress",
+      "claimed_by": {
+        "by": "feat/ACME-004-reset-form",
+        "since": "2026-09-25 14:10"
+      },
       "depends_on": [
-        "ACME-002"
+        "ACME-002",
+        "ACME-011"
       ],
       "unlocks": [
         "ACME-006",
@@ -337,7 +459,27 @@
       "labels": [
         "reset"
       ],
-      "handoff": []
+      "handoff": [
+        {
+          "date": "2026-09-26",
+          "status": "in_progress",
+          "note": "Page and fresh-link check done; saving the password next. Paused for ACME-011 (reopening a link twice crashes)."
+        }
+      ],
+      "item_checks": {
+        "acceptance:0": {
+          "date": "2026-09-26",
+          "evidence": "test_reset_page_shows_email passes; opened /reset/<token> locally and saw priya@example.com"
+        },
+        "test:0": {
+          "date": "2026-09-26",
+          "evidence": "tests/test_reset.py::test_fresh_link_shows_email"
+        },
+        "test:2": {
+          "date": "2026-09-26",
+          "evidence": "tests/test_reset.py::test_mismatch_saves_nothing"
+        }
+      }
     },
     {
       "id": "ACME-005",
@@ -372,8 +514,8 @@
         "frontend"
       ],
       "priority": "P2",
-      "rank": 5,
-      "status": "review",
+      "rank": 6,
+      "status": "merge_ready",
       "depends_on": [
         "ACME-002"
       ],
@@ -390,8 +532,65 @@
           "date": "2026-09-26",
           "status": "review",
           "note": "Helper built with the common-password list. Three automated tests pass. Review running now."
+        },
+        {
+          "date": "2026-09-26",
+          "status": "user_testing",
+          "note": "Review clean. To try it: `npm run dev`, then open a fresh reset link for leo@example.com."
+        },
+        {
+          "date": "2026-09-26",
+          "status": "merge_ready",
+          "note": "You tried it and it passed. PR #49 is open; waiting for it to be merged."
         }
-      ]
+      ],
+      "user_checks": {
+        "0": {
+          "result": "pass",
+          "date": "2026-09-26",
+          "note": "Orange then green, as described."
+        }
+      },
+      "item_checks": {
+        "acceptance:0": {
+          "date": "2026-09-26",
+          "evidence": "checked in the browser"
+        },
+        "acceptance:1": {
+          "date": "2026-09-26",
+          "evidence": "checked in the browser"
+        },
+        "acceptance:2": {
+          "date": "2026-09-26",
+          "evidence": "checked in the browser"
+        },
+        "test:0": {
+          "date": "2026-09-26",
+          "evidence": "tests/test_strength.py case 1"
+        },
+        "test:1": {
+          "date": "2026-09-26",
+          "evidence": "tests/test_strength.py case 2"
+        },
+        "test:2": {
+          "date": "2026-09-26",
+          "evidence": "tests/test_strength.py case 3"
+        }
+      },
+      "commits": [
+        {
+          "sha": "5b1e8d3c9a7f2e4d6b0a8c1f3e5d7b9a2c4e6f81",
+          "date": "2026-09-26",
+          "message": "Password strength helper with the common-password list",
+          "branch": "slate/acme-005-weak-password-advice"
+        }
+      ],
+      "pr": {
+        "url": "https://github.com/acme/acme-app/pull/49",
+        "number": 49,
+        "title": "Clear advice when a new password is too weak",
+        "state": "open"
+      }
     },
     {
       "id": "ACME-006",
@@ -425,7 +624,7 @@
         "backend"
       ],
       "priority": "P1",
-      "rank": 6,
+      "rank": 7,
       "status": "backlog",
       "depends_on": [
         "ACME-004",
@@ -471,7 +670,7 @@
         "backend"
       ],
       "priority": "P0",
-      "rank": 7,
+      "rank": 8,
       "status": "ready",
       "depends_on": [
         "ACME-002"
@@ -504,8 +703,12 @@
         "infra"
       ],
       "priority": "P1",
-      "rank": 8,
-      "status": "backlog",
+      "rank": 9,
+      "status": "qa",
+      "claimed_by": {
+        "by": "maya",
+        "since": "2026-09-26 09:40"
+      },
       "depends_on": [
         "ACME-002"
       ],
@@ -513,7 +716,31 @@
       "estimate": "0.5d",
       "labels": [
         "security"
-      ]
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-25",
+          "status": "in_progress",
+          "note": "Started."
+        },
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "note": "Built and tested; ready for review."
+        },
+        {
+          "date": "2026-09-26",
+          "status": "qa",
+          "note": "Review clean. Over to QA.",
+          "via": "board page"
+        }
+      ],
+      "item_checks": {
+        "acceptance:0": {
+          "date": "2026-09-25",
+          "evidence": "tests/test_rate_limit.py::test_fourth_request_sends_nothing"
+        }
+      }
     },
     {
       "id": "ACME-009",
@@ -534,7 +761,7 @@
         "backend"
       ],
       "priority": "P2",
-      "rank": 9,
+      "rank": 10,
       "status": "backlog",
       "depends_on": [
         "ACME-004"
@@ -554,7 +781,7 @@
         "backend"
       ],
       "priority": "P2",
-      "rank": 10,
+      "rank": 11,
       "status": "draft",
       "depends_on": [],
       "unlocks": [],
@@ -562,6 +789,50 @@
         "security",
         "email"
       ]
+    },
+    {
+      "id": "ACME-012",
+      "title": "Sign in with a link instead of a password",
+      "summary": "People could log in by getting a one-time link by email, so they never need to remember a password.",
+      "story": "Sam never remembers passwords. He types his email, taps the link that arrives, and he's in.",
+      "description": "An idea to keep for later. Reuses the reset-link email from P1.\n\nOpen question: do we keep passwords at all once this exists?",
+      "acceptance": [
+        "The login page offers 'Email me a sign-in link'",
+        "The link logs you in once, within 15 minutes"
+      ],
+      "test_scenarios": [
+        "When a sign-in link is used, then the person is logged in and the link stops working"
+      ],
+      "user_tests": [
+        {
+          "title": "Log in with a link",
+          "setup": "Open http://localhost:3000/login.",
+          "steps": [
+            "Click 'Email me a sign-in link'",
+            "Type sam@example.com",
+            "Open the email and click the link"
+          ],
+          "expect": "You land on your dashboard, logged in.",
+          "required": true
+        }
+      ],
+      "phase": "BACKLOG",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "priority": "P3",
+      "rank": 12,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [],
+      "estimate": "2d",
+      "labels": [
+        "someday"
+      ],
+      "handoff": []
     }
   ]
 }

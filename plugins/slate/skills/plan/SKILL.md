@@ -1,40 +1,70 @@
 ---
 name: plan
-description: Brainstorm an idea into plain-language tickets on the Slate kanban board - story, flow picture, phases, plain cards, a board preview, then save as ready tickets or drafts. Also adds a single quick ticket, or finishes a draft ticket. Use when asked to plan a feature, "add a ticket for X", break an idea into tickets, or finish a draft.
+description: Brainstorm an idea into plain-language tickets on the Slate kanban board - story, flow picture, phases, plain cards, a board preview, then save as ready tickets or drafts. Also adds a single quick ticket, a bug ticket for a problem found in other work, a someday idea in an unscheduled phase, finishes a draft, or tidies phases (rename, reorder, remove). Use when asked to plan a feature, "add a ticket for X", "log a bug", break an idea into tickets, or finish a draft.
 argument-hint: "[idea | ticket ID]"
-allowed-tools: Bash(python3 kanban/board.py *)
+allowed-tools: Bash(python3 kanban/board.py *), Bash(python kanban/board.py *), Bash(py -3 kanban/board.py *)
 ---
 
 # /slate:plan [idea | ID] — brainstorm into tickets
 
 Turn an idea into tickets that someone who doesn't write code can read and understand, and
 show every one before it is saved. Every board read and write is a `python3 kanban/board.py …`
-call from the repo root. **Never edit `kanban/tickets.json` directly** (a hook blocks it); the
-only JSON you write by hand is the batch file.
+call from the repo root (use the command from `SLATE.md` "Python: `…`" instead of `python3`
+when it names another, e.g. `py -3`). **Never edit `kanban/tickets.json` directly** (a hook
+blocks it) and don't read it directly either: use `status`, `show`, `export --json`. The only
+JSON you write by hand is the batch file. Every command, flag and "use it when" is in
+`<ROOT>/reference/commands.md`.
 
-## Step 0: version check and context
+This skill also looks after the board's **shape**: phases, states (columns), workflow rules,
+priorities, and removing or restoring tickets. Always ask before removing tickets or states,
+and show the change as a picture first. A hand edit of `tickets.json` is never part of
+planning: if one ever seems needed, stop and use `/slate:sync` (it explains the supervised
+`unlock`: Claude Code's approval card in Manual / Accept edits / Auto mode, or the user types a
+code in their own terminal in Plan / Bypass / Don't-ask mode; one unlock = one edit).
+
+## Step 0: version check, board server and context
 
 1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
 2. If `kanban/board.py` is missing: say "This repo isn't set up for Slate yet — run
    `/slate:init` first." and stop.
-3. `python3 kanban/board.py version --against "<ROOT>"`
+3. Read `SLATE.md` (prefix, **Plan style**, Python command, Board server / Board port,
+   `## Workflow`, docs map). If it is missing, fall back to `CLAUDE.md` / `AGENTS.md` / docs and
+   suggest re-running `/slate:init`.
+4. `python3 kanban/board.py version --against "<ROOT>"`
    - `same` → say nothing.
    - `behind` → "This project's board is Slate <board>, the plugin is <plugin>. Upgrade now
      with `/slate:upgrade`?" Ask once, then continue either way (never run it yourself).
    - `ahead` → "A teammate upgraded this board; update your Slate plugin
-     (`claude plugin marketplace update slate`, `claude plugin update slate@slate`, restart)." You may read and discuss, but do not write
-     anything to the board until the plugin is updated.
-4. Read `SLATE.md` (prefix, **Plan style**, docs map). If it is missing, fall back to
-   `CLAUDE.md` / `AGENTS.md` / docs and suggest re-running `/slate:init`.
-5. `python3 kanban/board.py status` so you know the phases and tickets that already exist.
+     (`claude plugin marketplace update slate`, `claude plugin update slate@slate`, restart)."
+     You may read and discuss, but do not write anything to the board until the plugin is
+     updated.
+5. **Board server.** Unless `SLATE.md` says `Board server: off`:
+   `python3 kanban/board.py serve --ensure --port <Board port from SLATE.md, default 8088>`.
+   It reuses a running server or starts one, never two. Show the URL it prints **once** in this
+   conversation ("Live board: <url>"); over SSH add "From your machine:
+   `ssh -L <port>:localhost:<port> <host>`, then open the URL." If `serve` isn't in
+   `python3 kanban/board.py --help` (an older board), skip this and use `cd kanban && python3 -m http.server
+   8088` in ⑤ (a view-only board).
+6. `python3 kanban/board.py status` (phases, tickets, workflow mode) and
+   `python3 kanban/board.py export --json --statuses` (state names, labels, roles, rules), so
+   you know what exists. Talk about states by their **label** (column title).
+7. If any board.py command prints a board-of-record warning, stop and ask before writing
+   (see `/slate:sync`).
 
 ## Which mode?
 
 | `$ARGUMENTS` / request | Mode |
 |---|---|
-| an existing ticket id whose status is `draft` | **Finish a draft** (below) |
+| an existing ticket id whose status has the draft role | **Finish a draft** (below) |
 | a small, already-clear ask ("add a ticket for X") | **Quick ticket** (below) |
+| a bug found in existing work ("ACME-004 crashes when …") | **Bug ticket** (below) |
+| "someday", "later", "park this idea" | **Someday idea** (below) |
+| change several tickets at once, add a note, change priorities | **Edit tickets** (below) |
+| drop / delete / bring back a ticket | **Remove or restore** (below) |
+| rename / reorder / remove / change a phase | **Phases** (below) |
+| "add a QA column", rename or remove a column | **States** (below) |
+| "tickets must go through review", "make the workflow strict", "why can't I move X" | **Workflow rules** (below) |
 | an idea, or empty (ask "What would you like to plan?") | **Full plan**: stages ①–⑥ |
 
 ## Conversation rules (all modes)
@@ -118,9 +148,11 @@ merge or reorder until they're happy.
 3. `python3 kanban/board.py add --dry-run --file <batch>` (add `--after <ID>` to place the new
    tickets after an existing one). This prints the ids and ranks they will get and writes
    `kanban/preview.json`.
-4. Tell the user how to see it: "Open the board — `cd kanban && python3 -m http.server 8088`,
-   then http://localhost:8088 (reload if it's already open). The new tickets have a dashed
-   border and a *preview* tag; nothing is saved yet." Show the ids/ranks table too.
+4. Tell the user how to see it: "Open the board at <the URL from step 0> (it refreshes by
+   itself). The new tickets have a dashed border and a *preview* tag; nothing is saved yet."
+   With `Board server: off`: `python3 kanban/board.py serve --port <Board port>` in a terminal,
+   or `cd kanban && python3 -m http.server 8088` for a view-only board. Show the ids/ranks table
+   too.
 5. **Iterate.** Changes ("move the audit log before the rate limit", "split the email ticket",
    "make it P2") are edits to the batch file — ticket order in the file is rank order. Then
    repeat 2–3 so the preview refreshes.
@@ -164,8 +196,182 @@ python3 kanban/board.py new --draft --title "…" --summary "…" --phase P1   #
 python3 kanban/board.py check
 ```
 
+Repeat a flag to add more (`--acceptance`, `--test`, `--user-test-json`, `--labels`, `--areas`,
+`--depends` all add up). `--labels`, `--areas` and `--depends` also take comma lists;
+acceptance and test sentences never split on commas.
+
 A quick ticket that grows (several screens, several tickets, open questions) → switch to the
 full plan.
+
+## Bug ticket
+
+A bug found while building or testing another ticket gets its own ticket, so the fix is
+visible and the broken ticket waits for it.
+
+1. Play the bug back in plain words: what the person did, what they expected, what happened.
+   Show it as a plain card (④) like any other ticket: the summary says what goes wrong for the
+   user; acceptance says what "fixed" looks like; one "When …, then …" test that fails today.
+2. Ask before writing, then:
+
+   ```bash
+   python3 kanban/board.py new --bug --fixes ACME-004 --dry-run --title "…" --summary "…" \
+     --phase P2 --story "…" --description "…" --acceptance "…" --test "When …, then …" \
+     --priority P1 --areas backend --estimate 0.5d
+   # then the same without --dry-run
+   ```
+
+   board.py adds the labels `bug` and `fixes-ACME-004`, makes ACME-004 wait for the new ticket,
+   and ranks it just before ACME-004. Several tickets: `--fixes ACME-004,ACME-006`.
+3. If a fixed ticket is already `done` or `merge_ready`, board.py refuses with `ask the user:`.
+   Ask: "ACME-004 is already <status>. Reopen it (back to in progress) so it waits for the
+   fix?" Only on a yes, run the command again with `--reopen`. On a no, drop `--fixes` for
+   that ticket and mention it in the description instead.
+4. `python3 kanban/board.py check`.
+
+## Someday idea
+
+An idea worth keeping that nobody should build yet goes in an **unscheduled** phase (the
+board shows it last and folded; `next`, `list` and `/slate:work` skip it).
+
+- If there's no unscheduled phase yet, ask first, then:
+  `python3 kanban/board.py add-phase --id BACKLOG --name "Someday" --goal "Ideas we may build later" --demo "Nothing yet" --unscheduled`
+  (then refresh `SLATE.md`'s Workflow section, below).
+- Save the idea there as a draft (it can be thin):
+  `python3 kanban/board.py new --draft --phase BACKLOG --title "…" --summary "…"`
+- When the user wants to build it: finish it (below) and move it,
+  `python3 kanban/board.py edit <ID> phase=P3`, then `promote` if it was a draft.
+
+## Phases
+
+Change phases only through board.py, and only after the user agrees:
+
+```bash
+python3 kanban/board.py edit-phase P2 name="Password changes" goal="…" demo="…"
+python3 kanban/board.py edit-phase BACKLOG unscheduled:=true      # or false to schedule it
+python3 kanban/board.py rename-phase P2 P2a                      # tickets move with it
+python3 kanban/board.py remove-phase P4 --move-to P3             # refuses while tickets use it, unless --move-to
+python3 kanban/board.py reorder-phases P1 P3 P2 BACKLOG          # list every phase once; this is display order
+```
+
+Show the phase picture (③) before and after, and ask before removing one. After any phase
+change, refresh `SLATE.md` (see **Keep SLATE.md's Workflow in step** below).
+
+## Edit tickets (several at once, notes, priorities)
+
+- **Several tickets, one change** (all or nothing: if one is refused, none changes). Show the
+  list of tickets and the change, ask, then:
+
+  ```bash
+  python3 kanban/board.py edit ACME-004,ACME-005,ACME-006 phase=P3
+  python3 kanban/board.py edit ACME-007,ACME-008 priority=P1 --rerank
+  ```
+
+- **A note on the ticket's history** without changing anything else ("waiting on legal",
+  "decided to keep SMS out"): `python3 kanban/board.py note ACME-004 "…"` (`ID1,ID2` for several).
+- **Priorities.** The list lives in `meta.priorities` (default `P0 P1 P2 P3`). To change it,
+  show old → new, ask, then
+  `python3 kanban/board.py set-meta priorities:='["Must","Should","Could"]'`. board.py refuses
+  while a ticket still uses a dropped priority and prints the `edit` that moves those tickets
+  first: show that list to the user before running it.
+
+## Remove or restore
+
+Tickets are never deleted: `remove` archives them in `meta.removed` (ids are never reused) and
+`restore` brings them back.
+
+1. `python3 kanban/board.py show <ID>` for each; tell the user in plain words what goes and what
+   depends on it ("ACME-012 waits for it").
+2. **Ask first:** "Remove ACME-011 and ACME-012 (archived, can be restored)? Why?" Only on a yes:
+
+   ```bash
+   python3 kanban/board.py remove ACME-011,ACME-012 --reason "<the user's reason>"
+   python3 kanban/board.py remove ACME-011 --reason "…" --detach          # also drop it from other tickets' depends_on
+   python3 kanban/board.py remove ACME-003 --reason "…" --force-done "…"  # a done ticket: only when the user insists
+   ```
+
+   Refused because other tickets depend on it → show them and ask: `--detach` (they stop
+   waiting for it), or remove them too, or keep it.
+3. See archived tickets: `python3 kanban/board.py export --json --removed`. Bring one back:
+   `python3 kanban/board.py restore ACME-011` (with the user's OK).
+
+## States (columns)
+
+Every state has a **role** (`draft backlog ready in_progress review user_testing merge_ready
+done`); Slate's rules follow the role, so a renamed or added state behaves like its role. A
+done-role and a backlog- or ready-role state must always remain. Show the columns before and
+after as a picture, and ask before every change (removing a state needs an explicit yes):
+
+```
+ now:   Draft │ Backlog │ Ready │ In progress │ Review │ User testing │ Waiting for merge │ Done
+ after: Draft │ Backlog │ Ready │ In progress │ Review │ QA │ User testing │ Waiting for merge │ Done
+                                                         ▲ new, works like Review
+```
+
+```bash
+python3 kanban/board.py add-status qa --after review --like review --label "QA" --note required   # --first to put it first
+python3 kanban/board.py edit-status in_progress label="Doing"                     # column title only
+python3 kanban/board.py edit-status qa role=user_testing                          # change what it behaves like
+python3 kanban/board.py edit-status review note=optional                          # moving here no longer needs a note
+python3 kanban/board.py rename-status qa quality_check                            # tickets move with it
+python3 kanban/board.py reorder-statuses draft backlog ready in_progress review qa user_testing merge_ready done
+python3 kanban/board.py remove-status qa --move-to review                         # refuses while tickets are in it, unless --move-to
+```
+
+`--like` takes a role or an existing state. When adding a state, also ask: **"Should moving a
+ticket into <label> need a note for the ticket's history (what was done, what to check)?
+(a) yes (b) no"** — recommend the `--like` state's setting (by default Review, User testing,
+Waiting for merge and Done need one; the others don't) and pass `--note required|optional`.
+The same question changes an existing state: `edit-status <name> note=required|optional`.
+Moving back while workflow rules exist always needs a note. Then refresh `SLATE.md` (below).
+
+## Workflow rules
+
+By default any move is allowed (workflow `free`). Rules say which states may come right before
+a state (`from`); board.py then refuses a forward move that skips a step and prints the next
+allowed step. Moving back always works (with a note).
+
+1. Show the current path as a picture from `export --json --statuses`, then the proposed one:
+
+   ```
+   strict:  Backlog/Ready ─▶ In progress ─▶ Review ─▶ User testing ─▶ Waiting for merge ─▶ Done
+                                              └───────────────────────▶┘ (no user test needed)
+   ```
+
+2. Recommend from how the team works, one question at a time (does every change get
+   reviewed? is there a QA step? do users test by hand? who merges?). Asked "what do we actually
+   do?": `python3 kanban/board.py flow` shows the moves tickets really made, with counts — turn
+   that into a plain recommendation ("your tickets nearly always go Review → User testing →
+   Waiting for merge → Done; lock that in? 2 skipped Review — keep that possible?").
+3. Apply only on a yes:
+
+   ```bash
+   python3 kanban/board.py set-meta workflow=strict            # the usual path (skips states the board lacks)
+   python3 kanban/board.py edit-status qa from=review          # one rule: QA only right after Review
+   python3 kanban/board.py edit-status merge_ready from=qa,user_testing
+   python3 kanban/board.py edit-status qa from=                # clear one rule
+   python3 kanban/board.py set-meta workflow=free              # remove every rule
+   ```
+
+4. "Why can't I move X?" → run the move with `set` and read the refusal: it names the allowed
+   previous states and the next allowed step. Explain it in plain words; change the rule only if
+   the user wants to.
+
+## Keep SLATE.md's Workflow in step
+
+After any change to states, rules or phases (and after adding a `BACKLOG` phase), `SLATE.md`'s
+`## Workflow` section must match the board, because every agent reads it. Ask "Update SLATE.md's
+Workflow section to match?" and on a yes run:
+
+```bash
+python3 kanban/board.py workflow --markdown
+```
+
+and replace the **whole** `## Workflow` section (from its heading to the next `##` heading) with
+that output; it includes the heading. Add nothing inside it: `doctor` compares it with the board
+word for word and reports `slate-md-workflow-stale` otherwise. Project notes (who merges PRs, why
+a rule exists) go under "Rules" or "Decisions". If `workflow` isn't in
+`python3 kanban/board.py --help` (an older board), write the section by hand from
+`export --json --statuses`.
 
 ## Finish a draft (`/slate:plan <ID>` on a draft)
 
@@ -176,6 +382,10 @@ full plan.
 3. Write the fields: `python3 kanban/board.py edit <ID> story="…" description="…"
    acceptance:='["…","…"]' test_scenarios:='["When …, then …"]' user_tests:='[{…}]'`
    (`key=value` for text, `key:=JSON` for lists and objects; or `--file patch.json` for long ones).
+   To add to a text field instead of replacing it, use `+=`:
+   `python3 kanban/board.py edit <ID> description+="Also: …"` (works for `description`,
+   `technical`, `story`, `summary`, `visual`; a blank line goes between). After changing
+   `depends_on`, add `--rerank` so the ticket moves after its dependencies if needed.
 4. Ask: "Mark it ready to work, or keep it as a draft?" → `python3 kanban/board.py promote <ID>`
    on ready. If promote refuses, it lists what's still missing: fill it and retry.
 5. `python3 kanban/board.py check`.
@@ -210,10 +420,10 @@ full plan.
 | `plan_doc` | from a plan | `docs/plans/<date>-<topic>.md` |
 | `phase` | yes | an existing phase id or one defined in the batch's `phases` |
 | `areas` | yes | list from `meta.areas`, e.g. `["frontend"]` |
-| `priority` | yes | `P0`–`P3` |
+| `priority` | yes | one of `meta.priorities` (default `P0`–`P3`) |
 | `depends_on` | yes (may be `[]`) | batch keys or existing ids (`"ACME-009"`) |
 | `estimate` | yes | `0.5d`, `1d`, `2d` |
-| `labels` | optional | list of short tags |
+| `labels` | optional | list of short tags (`bug` and `fixes-<ID>` come from `new --bug --fixes`) |
 
 Never put `id`, `rank`, `status`, `unlocks`, `handoff` or `user_checks` in a batch: board.py
 assigns them.
@@ -256,7 +466,11 @@ A good user test:
 
 ## Before you finish
 
+- [ ] Every status move you made (`set`, `promote`, bulk `set`) carried a short note for the ticket's history (`--handoff "…"`), even where the state doesn't require one.
+
 - [ ] The user saw the phase picture, every card, and the board preview before anything was saved
 - [ ] Every write went through `board.py`; `check` passes
 - [ ] Plan doc saved and linked from each ticket's `plan_doc` (full plans)
 - [ ] No `kanban/.batch.json` or stale `kanban/preview.json` left behind
+- [ ] Nothing removed (tickets or states) without the user's explicit yes
+- [ ] States, rules or phases changed → `SLATE.md` `## Workflow` updated (with the user's OK)
