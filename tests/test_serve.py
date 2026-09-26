@@ -687,3 +687,99 @@ def test_missing_preview_answers_none_not_404(board: Board, cleanup: List[int]) 
         assert resp.status == 200
         assert json.loads(resp.read().decode("utf-8")) == {"preview": False}
     board.ok("serve", "--stop")
+
+
+# --------------------------------------------------------------------------- claims: every endpoint takes "as"
+
+
+def claimed_by_maya(live: Live, board: Board, tid: str) -> None:
+    code, out, _ = live.post("/api/claim", {"id": tid, "as": "maya"})
+    assert code == 200, out
+    assert board.ticket(tid)["claimed_by"]["by"] == "maya"
+
+
+def assert_claim_refusal(code: int, out: Any, board: Board, tid: str) -> None:
+    assert code == 409, out
+    e = out["errors"][0]
+    assert e["id"] == tid and e["field"] == "claimed_by" and "being worked on by maya" in e["message"]
+    assert e["fix"] and any("--as maya" in f for f in e["fix"])
+
+
+def test_set_as_the_claim_holder(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-001")
+    code, out, _ = live.post("/api/set", {"id": "ACME-001", "status": "in_progress"})
+    assert_claim_refusal(code, out, board, "ACME-001")
+    assert board.ticket("ACME-001")["status"] == "backlog"
+    code, out, _ = live.post("/api/set", {"id": "ACME-001", "status": "in_progress", "as": "maya"})
+    assert code == 200, out
+    t = board.ticket("ACME-001")
+    assert t["status"] == "in_progress" and t["claimed_by"]["by"] == "maya"
+
+
+def test_allowed_as_the_claim_holder(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-001")
+    code, out, _ = live.get("/api/allowed?id=ACME-001")
+    assert code == 200 and "in_progress" not in out["allowed"]
+    assert "being worked on by maya" in out["reasons"]["in_progress"]
+    code, out, _ = live.get("/api/allowed?id=ACME-001&as=maya")
+    assert code == 200 and "in_progress" in out["allowed"]
+
+
+def test_usertest_is_not_claim_gated(live: Live, board: Board) -> None:
+    """The agent's branch holds the claim while the user records the result from the page."""
+    claimed_by_maya(live, board, "ACME-003")
+    code, out, _ = live.post("/api/usertest", {"id": "ACME-003", "index": 0, "result": "pass"})
+    assert code == 200, out
+    assert board.ticket("ACME-003")["user_checks"]["0"]["result"] == "pass"
+    code, out, _ = live.post("/api/usertest", {"id": "ACME-003", "index": 0, "result": "fail", "note": "blank",
+                                               "as": "priya"})
+    assert code == 200, out
+    h = board.ticket("ACME-003")["handoff"][-1]
+    assert "User test failed" in h["note"] and h["via"] == "board page" and h["as"] == "priya"
+
+
+def test_check_and_uncheck_item_are_not_claim_gated(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-001")
+    code, out, _ = live.post("/api/check-item", {"id": "ACME-001", "kind": "acceptance", "index": 0,
+                                                 "evidence": "unit test", "as": "sam"})
+    assert code == 200, out
+    assert "acceptance:0" in board.ticket("ACME-001")["item_checks"]
+    code, out, _ = live.post("/api/uncheck-item", {"id": "ACME-001", "kind": "acceptance", "index": 0})
+    assert code == 200, out
+    assert "item_checks" not in board.ticket("ACME-001")
+
+
+def test_note_is_not_claim_gated_and_records_as(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-001")
+    code, out, _ = live.post("/api/note", {"id": "ACME-001", "text": "hello"})
+    assert code == 200, out
+    h = board.ticket("ACME-001")["handoff"][-1]
+    assert h["note"] == "hello" and h["via"] == "board page" and "as" not in h
+    code, out, _ = live.post("/api/note", {"id": "ACME-001", "text": "from sam", "as": "sam"})
+    assert code == 200, out
+    assert board.ticket("ACME-001")["handoff"][-1]["as"] == "sam"
+
+
+def test_promote_as_the_claim_holder(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-004")
+    code, out, _ = live.post("/api/promote", {"id": "ACME-004"})
+    assert_claim_refusal(code, out, board, "ACME-004")
+    assert board.ticket("ACME-004")["status"] == "draft"
+    code, out, _ = live.post("/api/promote", {"id": "ACME-004", "as": "maya"})
+    assert code == 200, out
+    assert board.ticket("ACME-004")["status"] == "backlog"
+
+
+def test_release_as_the_claim_holder(live: Live, board: Board) -> None:
+    claimed_by_maya(live, board, "ACME-002")
+    code, out, _ = live.post("/api/release", {"id": "ACME-002"})
+    assert code == 409 and out["errors"][0]["field"] == "claimed_by" and "maya" in out["errors"][0]["message"]
+    assert out["errors"][0]["fix"]
+    code, out, _ = live.post("/api/release", {"id": "ACME-002", "as": "maya"})
+    assert code == 200, out
+    assert "claimed_by" not in board.ticket("ACME-002")
+
+
+def test_as_must_be_text(live: Live) -> None:
+    code, out, _ = live.post("/api/note", {"id": "ACME-001", "text": "x", "as": 7})
+    assert code == 400 and out["errors"][0]["message"]

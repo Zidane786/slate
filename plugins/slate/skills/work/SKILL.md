@@ -257,6 +257,12 @@ to close it without one. Never guess, never merge it yourself.
   testing), with a real handoff note. Never change the rule yourself (`edit-status … from=…`,
   `set-meta workflow=free`): that is the user's call, so ask. Moving **back** (e.g. review →
   in progress after a finding) is allowed while rules exist but needs `--handoff "why"`.
+- **Dependencies** (`error: <ID> depends_on: can't move to <State> until these are …`): each
+  state says where dependencies must be first (default: Done; Waiting for merge also accepts
+  dependencies that are Waiting for merge, so tickets in one PR can wait for the merge together).
+  Say which ones block it and finish those first. `--ignore-deps` only with the user's reason and
+  only for In progress / Review / User testing; never change the rule (`edit-status … deps=…`)
+  yourself.
 - **Claimed by someone else** (`ask the user:` … `--take-over`): stop and ask; add
   `--take-over "<reason>"` only with the user's OK.
 - **Board is busy** (write lock held): another command or agent is writing. Wait a few seconds

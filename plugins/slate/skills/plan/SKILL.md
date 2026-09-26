@@ -352,6 +352,18 @@ allowed step. Moving back always works (with a note).
 4. "Why can't I move X?" → run the move with `set` and read the refusal: it names the allowed
    previous states and the next allowed step. Explain it in plain words; change the rule only if
    the user wants to.
+5. **Dependency rules** (a separate setting per state: where a ticket's dependencies must be
+   before it may move in). Defaults: In progress, Review, User testing and Done need every
+   dependency Done; Waiting for merge also accepts dependencies that are Waiting for merge
+   (tickets shipped in one PR); Draft, Backlog and Ready have no check. Only when the user asks
+   ("can QA tickets wait on each other?"), show the current rule (`export --json --statuses`,
+   `deps`) and apply on a yes:
+
+   ```bash
+   python3 kanban/board.py edit-status qa deps=qa,merge_ready,done   # statuses or roles
+   python3 kanban/board.py edit-status qa deps=none                  # no dependency check
+   python3 kanban/board.py edit-status qa deps=                      # back to the default
+   ```
 
 ## Keep SLATE.md's Workflow in step
 

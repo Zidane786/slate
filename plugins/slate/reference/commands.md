@@ -110,6 +110,15 @@ Flags:
 - `--status` report only (read-only). `--stop` stop the recorded server and remove its file.
   (`--ensure`, `--status` and `--stop` exclude each other.)
 - `--idle-exit HOURS` (default 8; 0 = never) stop by itself after that long without a request.
+- API claims: every write (`/api/set`, `/api/usertest`, `/api/check-item`, `/api/uncheck-item`,
+  `/api/note`, `/api/promote`, `/api/claim`, `/api/release`) takes an optional `"as": "NAME"` in
+  its JSON body, and `GET /api/allowed?id=ID&as=NAME` the same as a query parameter (default: the
+  server's git branch). `set`, `promote`, `claim` and `release` check claims with it as `set --as`
+  does: a ticket claimed by someone else is refused (`claimed_by: being worked on by …`) unless the
+  request carries their name. User test results, ticks and notes are evidence and are never
+  claim-gated (the user tests from the page while an agent's branch holds the claim); history
+  entries written from the page record `"via": "board page"` and, when given, `"as": "NAME"`.
+  `/api/info` lists each status with `deps` (see `edit-status deps=`).
 Use it when: step 0 of `plan`, `work`, `status`, `sync` —
 `python3 kanban/board.py serve --ensure --port <Board port>` unless SLATE.md says
 `Board server: off`; show the link once. Over SSH the user forwards the port:
@@ -192,6 +201,12 @@ Use it when: moving a ticket through the build loop.
   review / user_testing / merge_ready keep the claim; every other status clears it.
 - merge_ready needs passed required user tests, a linked commit and (with a remote) a linked
   PR; done needs the linked PR `merged`.
+- **Dependencies** must be in the states the target's dependency rule names (`edit-status
+  NAME deps=…`; a dependency's state or its role counts). Defaults: in_progress / review /
+  user_testing / done need every dependency done; merge_ready accepts dependencies in
+  merge_ready or done (tickets that ship in the same PR); draft / backlog / ready: no check.
+  Refused as `can't move to <State> until these are done: ID (status)` (or `… are in A or B`).
+  `--ignore-deps` never works for merge_ready or done.
 - **Path rules** (`meta.status_from`, `workflow=strict`): a forward move that isn't allowed is
   refused as `can't move A → B` with the allowed previous statuses and a `fix:` for the next
   allowed step. Follow that step; change the rule only if the user says so.
@@ -255,7 +270,7 @@ removing a state, and regenerate SLATE.md's `## Workflow` afterwards (`workflow 
 Add a column that follows a role's rules. Flags: `NAME`, `--after STATUS` or `--first`,
 `--like ROLE_OR_STATUS` (required), `--label TEXT` (column title), `--note required|optional`
 (must a move into it carry a note for the ticket's history? default: inherited from the `--like`
-state or role).
+state or role), `--deps A,B` (the dependency rule, as `edit-status deps=`; default: by its role).
 Use it when: "add a QA column" → `add-status qa --after review --like review --label "QA"
 --note required`. Ask the user whether a note is required for the new state.
 
@@ -266,10 +281,15 @@ Rename a status; its tickets move with it (history keeps the old name). Flags: `
 Change a status: `label="…"` (column title), `role=…`, `from=a,b` (the path rule: which
 statuses may come right before it; `from=` clears it), `note=required|optional` (whether a move
 into it needs a note for the ticket's history; built-in states too — defaults: required for
-review, user_testing, merge_ready, done; optional otherwise). Flags: `NAME`, assignments.
+review, user_testing, merge_ready, done; optional otherwise), `deps=a,b` (the dependency rule:
+the statuses or roles every dependency must be in before a ticket may move into it; `deps=none`
+turns the check off, `deps=` goes back to the default for its role — done for in_progress /
+review / user_testing / done, merge_ready or done for merge_ready, no check otherwise).
+Flags: `NAME`, assignments. `rename-status` / `remove-status` keep `from` and `deps` in step.
 Use it when: "call In progress 'Doing'" → `edit-status in_progress label="Doing"`; "QA only
 after review" → `edit-status qa from=review`; "no note needed for Review" →
-`edit-status review note=optional`.
+`edit-status review note=optional`; "Waiting for merge may also wait on tickets still in QA"
+→ `edit-status merge_ready deps=qa,merge_ready,done` (only with the user's OK).
 
 #### `reorder-statuses`
 Set the column order; list every status once. Flags: `STATUS STATUS …`.

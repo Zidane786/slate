@@ -116,3 +116,23 @@ def test_demo_fixture_exercises_v02_features() -> None:
     assert any(t.get("item_checks") for t in tickets.values())
     assert any(t["status"] == "qa" for t in tickets.values())
     assert "Forge" not in DEMO.read_text(encoding="utf-8")
+
+
+def test_every_page_write_carries_the_saved_name() -> None:
+    """Bug (0.2.1): 'Take' claimed with the viewer's name, but moves were sent without it, so the
+    server used the git branch and refused the viewer's own move. Every write must go through
+    api(), which adds the saved name as "as"; /api/allowed must carry it too."""
+    js = script()
+    # no POST to the API outside api()
+    posts = [m.start() for m in re.finditer(r'method:\s*"POST"', js)]
+    assert len(posts) == 1, "only api() may POST to the board server"
+    assert re.search(r"function api\(path, body\)[\s\S]{0,400}JSON\.stringify\(withActor\(body\)\)", js)
+    assert re.search(r"function withActor\(body\)[\s\S]{0,300}myName\(\)[\s\S]{0,200}\.as = n", js)
+    # /api/allowed is only fetched through allowedUrl(), which appends &as=<name>
+    assert "getJson(allowedUrl(" in js
+    assert re.search(r'function allowedUrl\(id\)[\s\S]{0,200}"&as=" \+ encodeURIComponent\(n\)', js)
+    assert js.count("./api/allowed?id=") == 1
+    # every write endpoint the page uses goes through api("…")
+    for endpoint in ("set", "claim", "release", "usertest", "note", "promote"):
+        assert f'api("{endpoint}"' in js, endpoint
+    assert re.search(r'api\(path, \{ id: t\.id, kind: kind, index: i \}\)', js)  # check-item / uncheck-item
