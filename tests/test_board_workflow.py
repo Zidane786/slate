@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from conftest import BOARD_SRC, Board, base_doc, full_ticket
+from conftest import VERSION, BOARD_SRC, Board, base_doc, full_ticket
 
 V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
 
@@ -22,7 +22,7 @@ V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testi
 def v2_doc(tickets: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     d = base_doc(tickets or [full_ticket(1, unlocks=["ACME-002"]), full_ticket(2, depends_on=["ACME-001"]),
                              full_ticket(3)])
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2_STATUSES)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2_STATUSES)})
     return d
 
 

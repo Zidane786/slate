@@ -6,7 +6,15 @@ version is noted when it changes. Each release lists **Highlights**, then **Adde
 nothing). Merging a version bump into `main` publishes a GitHub Release with that version's
 section.
 
-## Unreleased
+## 0.2.1 — 2026-09-26
+
+Board schema **2** (unchanged).
+
+### Highlights
+
+- **Clone and go:** every Slate project now carries the settings that give anyone who clones it
+  the Slate plugin, kept up to date automatically.
+- Slate offers to update your plugin for you when a teammate has already upgraded the board.
 
 ### Added
 
@@ -26,6 +34,12 @@ section.
 
 - Install and update steps in the README, plugin README and release notes: install/upgrade first,
   every command in a code block, accurate plugin-update and auto-update steps.
+
+### Upgrade notes
+
+`/slate:upgrade` replaces the board files (0.2.0 → 0.2.1) and adds Slate to the project's
+`.claude/settings.json` if it's missing (the project file, never your personal settings). Commit
+that file so people who clone the repo get Slate.
 
 ## 0.2.0 — 2026-09-26
 

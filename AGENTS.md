@@ -77,6 +77,11 @@ claude plugin validate --strict plugins/slate
   `tests/test_index_static.py` plus a real-browser check (Playwright) against
   `tests/fixtures/board-demo`, in live (`board.py serve`) and view-only mode.
 - Live-test skills in a throwaway repo: `claude --plugin-dir plugins/slate`.
+- **CI (`.github/workflows/test.yml`)** runs on every PR and push to `main`, but the full suite
+  runs only when one of these changed: `plugins/**`, `tests/**`, `scripts/**`,
+  `.github/workflows/**`, `.claude-plugin/**`, `.gitattributes`. Docs-only changes (README, TEST.md,
+  CLAUDE.md, AGENTS.md, SECURITY.md, `docs/**`) pass in seconds with "no code changed". A manual
+  run always runs everything. Keep this list and the workflow's list in step.
 - `tests/test_docs_consistency.py` fails if a skill/doc mentions a command that doesn't exist,
   or a skill doesn't link the reference — keep it green.
 

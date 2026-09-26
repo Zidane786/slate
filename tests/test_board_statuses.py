@@ -10,14 +10,14 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from conftest import USER_TEST, Board, base_doc, full_ticket
+from conftest import VERSION, USER_TEST, Board, base_doc, full_ticket
 
 V2 = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
 
 
 def v2_doc(tickets: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     d = base_doc(tickets)
-    d["meta"].update({"slate_version": "0.2.0", "schema_version": 2, "statuses": list(V2)})
+    d["meta"].update({"slate_version": VERSION, "schema_version": 2, "statuses": list(V2)})
     return d
 
 

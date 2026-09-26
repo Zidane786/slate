@@ -45,7 +45,7 @@ port — `ssh -L 8088:localhost:8088 you@host` — and open http://localhost:808
 Opened straight from disk (`file://`), the browser blocks loading `./tickets.json`: the page
 shows a file picker; choose `tickets.json` (and `preview.json` to see a preview).
 
-The footer shows the board's Slate version (`Slate v0.2.0`) and the version recorded in
+The footer shows the board's Slate version (`Slate v0.2.1`) and the version recorded in
 `tickets.json`. The page also has `<meta name="slate-version">` for scripts.
 
 **Live refresh.** When the page is served (not opened with the file picker), it re-reads
@@ -543,7 +543,7 @@ error: ACME-014 commits: has no commits linked, so it can't be done
 {
   "meta": {
     "project": "Acme", "prefix": "ACME", "repo_url": "https://github.com/acme/app (optional)",
-    "slate_version": "0.2.0", "schema_version": 2,
+    "slate_version": "0.2.1", "schema_version": 2,
     "generated": "2026-09-26",
     "statuses": ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"],
     "areas": ["backend", "frontend", "infra"],

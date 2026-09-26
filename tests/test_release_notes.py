@@ -28,7 +28,9 @@ def test_plugin_version_has_a_changelog_section() -> None:
     assert "### Highlights" in out
     # install and upgrade come first, before the change sections, and appear once
     assert out.index("### Install (new project)") < out.index("### Upgrade (existing projects)") < out.index("### Highlights")
-    assert out.count("claude plugin marketplace update slate") == 1 and "### Upgrade notes" not in out
+    # the Upgrade notes section is moved up into "Upgrade (existing projects)", not repeated below
+    assert out.count("### Install (new project)") == 1 and out.count("### Upgrade (existing projects)") == 1
+    assert "### Upgrade notes" not in out
     assert run("--version").stdout.strip() == version
 
 
