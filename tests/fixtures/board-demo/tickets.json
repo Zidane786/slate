@@ -4,7 +4,7 @@
     "prefix": "ACME",
     "repo_url": "https://github.com/acme/acme-app",
     "slate_version": "0.2.0",
-    "schema_version": 2,
+    "schema_version": 3,
     "generated": "2026-09-26",
     "statuses": [
       "draft",
@@ -15,15 +15,24 @@
       "qa",
       "user_testing",
       "merge_ready",
-      "done"
+      "done",
+      "cancelled",
+      "wontfix"
     ],
     "status_roles": {
-      "qa": "review"
+      "qa": "review",
+      "wontfix": "cancelled"
     },
     "status_labels": {
       "review": "Code review",
       "qa": "QA",
-      "merge_ready": "Waiting for merge"
+      "merge_ready": "Waiting for merge",
+      "wontfix": "Won't fix"
+    },
+    "status_flags": {
+      "wontfix": {
+        "notify_dependents": false
+      }
     },
     "status_from": {
       "qa": [
@@ -211,7 +220,9 @@
         "ACME-007",
         "ACME-008",
         "ACME-011",
-        "ACME-012"
+        "ACME-012",
+        "ACME-013",
+        "ACME-015"
       ],
       "estimate": "1d",
       "labels": [
@@ -630,6 +641,9 @@
         "ACME-004",
         "ACME-005"
       ],
+      "dep_exceptions": {
+        "ACME-005": "Only needs the password rules, which are already built; its merge can land later."
+      },
       "unlocks": [],
       "estimate": "0.5d",
       "labels": [
@@ -833,6 +847,119 @@
         "someday"
       ],
       "handoff": []
+    },
+    {
+      "id": "ACME-013",
+      "title": "Reset by answering security questions",
+      "summary": "People could prove who they are by answering questions like 'your first pet's name' instead of waiting for an email.",
+      "story": "Leo can't get into his email. He answers two questions he picked when he signed up, and he can choose a new password straight away.",
+      "description": "Ask two questions picked at sign-up before allowing a reset without email.",
+      "acceptance": [
+        "People can pick two questions and answers in their settings",
+        "Two right answers let you choose a new password"
+      ],
+      "test_scenarios": [
+        "When both answers are right, then the new-password page opens",
+        "When an answer is wrong, then nothing changes and the attempt is counted"
+      ],
+      "phase": "P3",
+      "areas": [
+        "backend"
+      ],
+      "priority": "P3",
+      "rank": 13,
+      "status": "cancelled",
+      "cancelled_from": "backlog",
+      "depends_on": [
+        "ACME-002"
+      ],
+      "unlocks": [
+        "ACME-015"
+      ],
+      "estimate": "1d",
+      "labels": [
+        "security"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-26",
+          "status": "cancelled",
+          "note": "Answers like a pet's name are easy to find online; two-step sign-in (P4) is the safer backup."
+        }
+      ]
+    },
+    {
+      "id": "ACME-015",
+      "title": "Warn people when a reset is asked for from a new device",
+      "summary": "If a reset is asked for from a phone or computer we've never seen for that account, the email says so, so people notice if it wasn't them.",
+      "story": "Sam gets a reset email he didn't ask for. It says 'asked from a new device in Lisbon', so he knows to ignore it and tell support.",
+      "description": "Add the device and rough location to the reset email when the request comes from a device not seen before for that account.",
+      "acceptance": [
+        "A reset asked for from a new device says so in the email",
+        "A reset from a known device doesn't show the warning"
+      ],
+      "test_scenarios": [
+        "When a reset comes from an unknown device, then the email mentions the new device and rough location",
+        "When a reset comes from a known device, then the email has no warning"
+      ],
+      "phase": "P3",
+      "areas": [
+        "backend"
+      ],
+      "priority": "P2",
+      "rank": 14,
+      "status": "backlog",
+      "depends_on": [
+        "ACME-002",
+        "ACME-013"
+      ],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "security",
+        "email"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-26",
+          "status": "backlog",
+          "note": "Depended on ACME-013, Cancelled: Answers like a pet's name are easy to find online; two-step sign-in (P4) is the safer backup."
+        }
+      ]
+    },
+    {
+      "id": "ACME-016",
+      "title": "Reset emails land in spam for one old mail provider",
+      "summary": "People using a very old email service find the reset email in their spam folder.",
+      "description": "Reported by two people using a mail service that shuts down next month.\n\n- Expected: the email arrives in the inbox.\n- Actual: it goes to spam.",
+      "acceptance": [
+        "The reset email reaches the inbox at the old provider"
+      ],
+      "test_scenarios": [
+        "When a reset email is sent to the old provider's test address, then it passes its spam check"
+      ],
+      "phase": "P1",
+      "areas": [
+        "infra"
+      ],
+      "priority": "P3",
+      "rank": 15,
+      "status": "wontfix",
+      "cancelled_from": "backlog",
+      "depends_on": [],
+      "unlocks": [],
+      "estimate": "0.5d",
+      "labels": [
+        "bug",
+        "email"
+      ],
+      "handoff": [
+        {
+          "date": "2026-09-26",
+          "status": "wontfix",
+          "note": "The provider closes next month and every other provider delivers it fine."
+        }
+      ]
     }
   ]
 }

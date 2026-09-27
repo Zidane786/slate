@@ -7,6 +7,53 @@ nothing). Merging a version bump into `main` publishes a GitHub Release with tha
 section. Each section lists only what changed since the previous version, and a released
 section is never edited afterwards (CI enforces both).
 
+## 0.3.0 — 2026-09-27
+
+Board schema **3**. Older boards keep working; `/slate:upgrade` (or `board.py migrate`) adds
+the new state by adding only.
+
+### Highlights
+
+- **Cancelled:** a built-in state for work you've decided not to do. It never counts as done,
+  and it doesn't block the tickets that depend on it.
+- **State behaviours for any state:** "resolves dependencies", "reachable from any state",
+  "counts as done / left out / open", "finished", "tell dependents", "folded column" — so a team
+  can add its own states like **Won't fix**, **Duplicate** or **On hold** that behave exactly as
+  it wants.
+
+### Added
+
+- **Cancel a ticket:** `board.py cancel ID --reason "why"` (or move it to Cancelled on the board
+  page, or "Cancel ticket…" in the drawer). Allowed from any state — no workflow or dependency
+  rule applies — and a reason is always required. The ticket is finished: `/slate:work`, `next`
+  and `list` never pick it.
+- **Dependents aren't blocked:** a ticket that depends on a cancelled one can still move on, up to
+  Waiting for merge and Done. Each dependent gets a note: "depended on GURU-046, Cancelled:
+  <reason>". The dependency link stays.
+- **Undo:** `board.py uncancel ID --handoff "why"` moves it back to where it was (or `--to`), and
+  notes each dependent. If a dependent already finished while it was cancelled, Slate asks first
+  (`--keep-dependents` keeps them as they are and records why).
+- **Progress shows it separately:** "P1 Reset 3/15 done · 1 cancelled" — cancelled tickets are
+  left out of the total.
+- **Board page:** a Cancelled column after Done, folded by default; cancelled cards are muted and
+  struck through; "Cancel ticket…" and "Undo cancel" actions in live mode.
+- **Per-state behaviours** (`edit-status NAME flag=value`, inherited with `add-status … --like`):
+  `resolves_deps`, `from_any`, `progress=done|excluded|open`, `terminal`, `notify_dependents`,
+  `folded`. Done and Cancelled are simply states with these switched on. Example:
+  `board.py add-status wontfix --after done --like cancelled --label "Won't fix"`. States and
+  their behaviours are set up from the command line or by Claude (after showing you and asking),
+  never from the board page.
+
+### Changed
+
+- New boards have 9 states by default: Cancelled comes after Done.
+
+### Upgrade notes
+
+`/slate:upgrade` replaces the board files and migrates the board to schema 3: it adds the
+Cancelled state after Done (a state already named "cancelled" becomes the built-in one), then,
+with your OK, regenerates the `## Workflow` section of `SLATE.md`. Nothing is removed.
+
 ## 0.2.2 — 2026-09-27
 
 Board schema **2** (unchanged).

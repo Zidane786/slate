@@ -14,8 +14,8 @@ Rules that hold for every command:
   written. A refusal prints `error: <ID> <field>: …` followed by `fix: <command>` (run it, or
   adapt it) or `ask the user: …` (stop and ask, never guess the answer).
 - **Speak in roles, not names.** Every status has a role (`draft backlog ready in_progress
-  review user_testing merge_ready done`); a project may rename statuses or add its own
-  ("qa" with the review role). Before moving tickets, run `export --json --statuses` once and use
+  review user_testing merge_ready done cancelled`); a project may rename statuses or add its own
+  ("qa" with the review role, "wontfix" with the cancelled role). Before moving tickets, run `export --json --statuses` once and use
   the status **name** whose role you mean. Show the user the **label** (column title).
 - Exit codes: `0` ok, `1` refused / validation errors / problems found (`doctor`) / merge
   conflicts (`merge-driver`), `2` wrong usage.
@@ -34,7 +34,8 @@ Rules that hold for every command:
 #### `next`
 What to work on: open tickets to resume (in_progress / review / user_testing roles) first, then
 "Waiting for merge" (a question for the user, not work to resume), then the lowest-rank ready
-ticket. Tickets claimed by someone else are shown as "on: <name>" and never offered.
+ticket. Tickets claimed by someone else are shown as "on: <name>" and never offered; tickets in
+a finished state (flag `terminal`: done, cancelled and states like them) never are either.
 Flags: `--brief` (one line, used by the session hook), `--json`, `--against PLUGIN_ROOT`,
 `--as NAME` (who you are for claims; default the git branch).
 Use it when: picking or resuming work, or starting a session.
@@ -51,14 +52,18 @@ Use it when: reading a ticket before working, reviewing or answering about it.
 
 #### `status`
 Progress per phase, counts per status (with labels and the workflow mode), claims, tickets
-waiting for the user and for merge, drafts, unscheduled count, archived count.
+waiting for the user and for merge, drafts, unscheduled count, archived count. Cancelled tickets
+(and any state with `progress=excluded`) are left out of a phase's total and shown after it:
+`P1 Name   3/15 done · 2 in flight · 1 cancelled`. `--json` phases carry `total` (without the
+excluded ones), `done`, `in_flight`, `cancelled`, `excluded` and `excluded_by` `{status: count}`.
 Flags: `--json`, filters `--phase --status --label --area`.
 Use it when: the user asks "where are we", or for `/slate:status`.
 
 #### `export`
 Full tickets as JSON, filtered; drafts left out unless `--drafts`; `status_label` added when
 labels are set. `--removed` lists archived tickets instead; `--statuses` prints the status
-setup instead: `{workflow, statuses: [{name, role, label, from}]}`.
+setup instead: `{workflow, statuses: [{name, role, label, from, note, deps, flags}]}` (`flags`:
+the effective behaviour flags, see `edit-status`).
 Flags: `--json`, `--drafts`, `--removed`, `--statuses`, `--phase --status --label --area`.
 Use it when: you need many tickets' details at once (instead of reading tickets.json), or the
 status names for each role (`--statuses`).
@@ -85,7 +90,8 @@ Use it when: recommending workflow rules from how the team really works (`/slate
 #### `workflow`
 `workflow --markdown` prints the `## Workflow` section for `SLATE.md` from the board: each
 state (name, column title, role, allowed "from" states, whether a move into it needs a note
-for the ticket's history), the workflow mode, and the project
+for the ticket's history, its dependency rule and how it behaves — its flags in words), the
+workflow mode, and the project
 settings board.py knows. Flags: `--markdown`.
 Use it when: after `/slate:init`, `/slate:upgrade`, or any change to states, rules or phases —
 regenerate SLATE.md's `## Workflow` section from it (with the user's OK), never hand-write it.
@@ -110,15 +116,22 @@ Flags:
 - `--status` report only (read-only). `--stop` stop the recorded server and remove its file.
   (`--ensure`, `--status` and `--stop` exclude each other.)
 - `--idle-exit HOURS` (default 8; 0 = never) stop by itself after that long without a request.
-- API claims: every write (`/api/set`, `/api/usertest`, `/api/check-item`, `/api/uncheck-item`,
-  `/api/note`, `/api/promote`, `/api/claim`, `/api/release`) takes an optional `"as": "NAME"` in
+- API claims: every write (`/api/set`, `/api/cancel`, `/api/uncancel`, `/api/usertest`,
+  `/api/check-item`, `/api/uncheck-item`, `/api/note`, `/api/promote`, `/api/claim`,
+  `/api/release`) takes an optional `"as": "NAME"` in
   its JSON body, and `GET /api/allowed?id=ID&as=NAME` the same as a query parameter (default: the
   server's git branch). `set`, `promote`, `claim` and `release` check claims with it as `set --as`
   does: a ticket claimed by someone else is refused (`claimed_by: being worked on by …`) unless the
   request carries their name. User test results, ticks and notes are evidence and are never
   claim-gated (the user tests from the page while an agent's branch holds the claim); history
   entries written from the page record `"via": "board page"` and, when given, `"as": "NAME"`.
-  `/api/info` lists each status with `deps` (see `edit-status deps=`).
+  `/api/info` lists each status as `{name, role, label, from, note, deps, flags}`; `flags` holds
+  the effective values `{resolves_deps, from_any, progress, terminal, notify_dependents, folded}`.
+- Cancel from the page: `POST /api/cancel {id, reason, as?}` runs `cancel`;
+  `POST /api/uncancel {id, to?, handoff, keep_dependents?, as?}` runs `uncancel`. `/api/set` into a
+  state reachable from anywhere (`from_any`, e.g. a custom "wontfix") skips path and dependency
+  rules but needs the note (`409` with `code: "needs_handoff"` without one); `/api/allowed` always
+  lists those states.
 Use it when: step 0 of `plan`, `work`, `status`, `sync` —
 `python3 kanban/board.py serve --ensure --port <Board port>` unless SLATE.md says
 `Board server: off`; show the link once. Over SSH the user forwards the port:
@@ -176,7 +189,8 @@ brings one back. Refuses while other tickets depend on it unless `--detach` (dro
 `depends_on`); a done ticket needs `--force-done "why"`.
 Flags: `remove ID[,ID…] --reason "…" [--detach] [--force-done REASON]`, `restore ID`.
 Use it when: the user wants a ticket gone (duplicate, dropped idea). **Ask first**, naming the
-tickets; list archived ones with `export --json --removed`.
+tickets; list archived ones with `export --json --removed`. Once work started on a ticket or
+other tickets depend on it, prefer `cancel` (it stays on the board, with its history).
 
 #### `note`
 Add a history note without changing the status. Flags: `ID[,ID…] "text"`.
@@ -210,6 +224,34 @@ Use it when: moving a ticket through the build loop.
 - **Path rules** (`meta.status_from`, `workflow=strict`): a forward move that isn't allowed is
   refused as `can't move A → B` with the allowed previous statuses and a `fix:` for the next
   allowed step. Follow that step; change the rule only if the user says so.
+
+#### `cancel`
+Stop a ticket for good while keeping it on the board: `set ID cancelled` with the note. It goes
+to the state named `cancelled` (else the first cancelled-role state), from **any** state — path
+rules and dependency rules don't apply — and records where it came from (`cancelled_from` on the
+ticket, `from` on the history entry). The claim is cleared. Every ticket that depends on it (and
+isn't finished) gets a history note `depended on ID, Cancelled: <reason>`; for them the
+dependency now counts as resolved, so they can go ahead and reach Waiting for merge and Done.
+Refused when the ticket is already in a cancelled-role state. A ticket claimed by someone else
+needs `--as NAME` (if you are them) or `--take-over REASON` (the user's OK). `ID1,ID2` cancels
+several, all or nothing. A board from before 0.3.0 (schema 2) has no Cancelled state: the refusal
+says `migrate`.
+Flags: `ID[,ID…]`, `--reason TEXT` (required), `--as NAME`, `--take-over REASON`.
+Use it when: the user decides a ticket won't be done (dropped scope, done elsewhere, duplicate).
+Ask first; move it to another cancel-like state (`set ID wontfix --handoff "…"`) when the board
+has one and the user names it.
+
+#### `uncancel`
+Bring a cancelled ticket back: to the state it was cancelled from (`cancelled_from`; backlog when
+none was recorded), or `--to STATUS`. The target's dependency rule applies (path rules don't).
+Every dependent gets a note `ID is back (<State>): <why>`. If a dependent went ahead while it was
+cancelled and its state's dependency rule would now fail (e.g. it is Done), the command refuses
+and lists them (`fix:` move them back first); `--keep-dependents` — only on the user's yes —
+keeps them where they are and records `dep_exceptions: {ID: "<why>"}` on each, which every
+dependency rule (and `check`) treats as resolved.
+Flags: `ID`, `--to STATUS`, `--handoff NOTE` (required), `--keep-dependents`, `--as NAME`,
+`--take-over REASON`.
+Use it when: the user wants cancelled work back on the board.
 
 #### `claim` / `release`
 Mark a ticket as yours / remove the claim, without changing status.
@@ -265,14 +307,36 @@ Set the phase display order; list every phase exactly once. Flags: `ID ID …`.
 Every status has a role; board.py's rules follow the role, not the name. A done-role status and
 a backlog- or ready-role status must always remain. Ask the user before adding, renaming or
 removing a state, and regenerate SLATE.md's `## Workflow` afterwards (`workflow --markdown`).
+States and their flags are changed only through these commands (by an agent, with the user's
+OK) — never from the board page.
+
+**Behaviour flags** (`meta.status_flags {status: {flag: value}}`): every state has them; the
+defaults come from its role, and a flag set with `edit-status` overrides it.
+
+| Flag | Values | Meaning | On by default for |
+|---|---|---|---|
+| `resolves_deps` | true/false | a dependency in this state counts as resolved for every dependency rule (`ready`, `set`, merge_ready, done, `check`) | done, cancelled |
+| `from_any` | true/false | tickets may move in from any state; path rules and the target's dependency rule are skipped; a note is always required | cancelled |
+| `progress` | done/excluded/open | phase progress: counts as done / left out of the total and shown separately / normal | done → done, cancelled → excluded |
+| `terminal` | true/false | finished: `next`, `list`, ready and `/slate:work` never pick it; entering it clears the claim | done, cancelled |
+| `notify_dependents` | true/false | entering it adds `depended on ID, <State>: <reason>` to each unfinished dependent | cancelled |
+| `folded` | true/false | the board page folds this column by default | cancelled |
 
 #### `add-status`
 Add a column that follows a role's rules. Flags: `NAME`, `--after STATUS` or `--first`,
 `--like ROLE_OR_STATUS` (required), `--label TEXT` (column title), `--note required|optional`
 (must a move into it carry a note for the ticket's history? default: inherited from the `--like`
 state or role), `--deps A,B` (the dependency rule, as `edit-status deps=`; default: by its role).
+`--like` a state copies its effective flags too (only the ones that differ from its role are
+stored).
 Use it when: "add a QA column" → `add-status qa --after review --like review --label "QA"
---note required`. Ask the user whether a note is required for the new state.
+--note required`. Ask the user whether a note is required for the new state. Other ways to close
+a ticket without doing it, each behaving like Cancelled: "Won't fix" →
+`add-status wontfix --after cancelled --like cancelled --label "Won't fix"`; "Duplicate" →
+`add-status duplicate --after wontfix --like cancelled --label "Duplicate"`. A pause that isn't
+the end: "On hold" → `add-status on_hold --after in_progress --like cancelled --label "On hold"`
+then `edit-status on_hold terminal=false resolves_deps=false notify_dependents=true` (reachable
+from anywhere, left out of progress, dependents are told and keep waiting).
 
 #### `rename-status`
 Rename a status; its tickets move with it (history keeps the old name). Flags: `OLD NEW`.
@@ -284,12 +348,20 @@ into it needs a note for the ticket's history; built-in states too — defaults:
 review, user_testing, merge_ready, done; optional otherwise), `deps=a,b` (the dependency rule:
 the statuses or roles every dependency must be in before a ticket may move into it; `deps=none`
 turns the check off, `deps=` goes back to the default for its role — done for in_progress /
-review / user_testing / done, merge_ready or done for merge_ready, no check otherwise).
-Flags: `NAME`, assignments. `rename-status` / `remove-status` keep `from` and `deps` in step.
+review / user_testing / done, merge_ready or done for merge_ready, no check otherwise), and the
+behaviour flags (table above): `resolves_deps=true|false from_any=true|false
+progress=done|excluded|open terminal=true|false notify_dependents=true|false folded=true|false`;
+`FLAG=default` clears an override (back to the role's default). A change that would make
+tickets invalid (e.g. `resolves_deps=false` while a Done ticket depends on a cancelled one) is
+refused.
+Flags: `NAME`, assignments. `rename-status` / `remove-status` keep `from`, `deps` and the flags
+in step.
 Use it when: "call In progress 'Doing'" → `edit-status in_progress label="Doing"`; "QA only
 after review" → `edit-status qa from=review`; "no note needed for Review" →
 `edit-status review note=optional`; "Waiting for merge may also wait on tickets still in QA"
-→ `edit-status merge_ready deps=qa,merge_ready,done` (only with the user's OK).
+→ `edit-status merge_ready deps=qa,merge_ready,done` (only with the user's OK); "don't fold the
+Cancelled column" → `edit-status cancelled folded=false`; "tickets waiting on a Won't fix ticket
+should hear about it" → `edit-status wontfix notify_dependents=true`.
 
 #### `reorder-statuses`
 Set the column order; list every status once. Flags: `STATUS STATUS …`.
@@ -401,7 +473,10 @@ Use it when: after an upgrade (run until healthy), when something feels off, in 
 (`--brief`), and at the start of `/slate:sync`.
 
 #### `migrate`
-Apply additive schema migrations in order (1 → 2 adds `merge_ready` before `done`), then check.
+Apply additive schema migrations in order (1 → 2 adds `merge_ready` before `done`; 2 → 3 adds
+`cancelled` (label Cancelled) right after `done` — a state already named `cancelled` with the draft
+role, or none, becomes the built-in one and moves after `done`), then check. Idempotent; a schema
+2 board keeps loading and working until then, only `cancel` (and `set … cancelled`) say `migrate`.
 Use it when: `doctor` or `version` says the schema is behind; `upgrade` runs it for you.
 
 #### `upgrade`

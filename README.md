@@ -185,6 +185,12 @@ else (permission cards, typed unlock codes) works in the terminal you're in.
 
 ## Columns, roles and workflow rules
 
+**Cancelled:** `python3 kanban/board.py cancel ID --reason "why"` (or from the board page) closes a
+ticket you've decided not to do. It never counts as done, and tickets that depend on it are no
+longer blocked. Undo with `uncancel ID --handoff "why"`. Any state can behave like this (or like
+Done) through per-state behaviours, e.g. a "Won't fix" column:
+`python3 kanban/board.py add-status wontfix --after done --like cancelled --label "Won't fix"`.
+
 The default columns are Draft, Backlog, Ready, In progress, Review, User testing, Waiting for
 merge, Done. You can shape them: add one (`add-status qa --after review --like review --label
 "QA"`), rename or relabel one (`edit-status in_progress label="Doing"`), reorder or remove one.

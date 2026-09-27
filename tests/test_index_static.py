@@ -136,3 +136,99 @@ def test_every_page_write_carries_the_saved_name() -> None:
     for endpoint in ("set", "claim", "release", "usertest", "note", "promote"):
         assert f'api("{endpoint}"' in js, endpoint
     assert re.search(r'api\(path, \{ id: t\.id, kind: kind, index: i \}\)', js)  # check-item / uncheck-item
+
+
+# --------------------------------------------------------------------------- 0.3: Cancelled + state flags
+
+
+def fn_body(js: str, name: str) -> str:
+    m = re.search(r"function " + name + r"\([^)]*\) \{\n([\s\S]*?)\n\}\n", js)
+    assert m, name
+    return m.group(1)
+
+
+def test_state_flags_from_info_with_role_defaults_and_meta_overrides() -> None:
+    js = script()
+    assert re.search(r'var DEFAULT_STATUSES = \[[^\]]*"done", "cancelled"\]', js), "Cancelled sits after Done"
+    assert re.search(r'var FLAG_KEYS = \["resolves_deps", "from_any", "progress", "terminal", "notify_dependents", "folded"\]', js)
+    rf = fn_body(js, "roleFlags")
+    assert 'role === "done"' in rf and 'role === "cancelled"' in rf
+    assert re.search(r'role === "cancelled"\) return \{ resolves_deps: true, from_any: true, progress: "excluded", '
+                     r'terminal: true, notify_dependents: true, folded: true \}', rf)
+    assert re.search(r'role === "done"\) return \{ resolves_deps: true, from_any: false, progress: "done", terminal: true', rf)
+    fo = fn_body(js, "flagsOf")
+    assert "liveStatusInfo(st)" in fo and "info.flags" in fo and "state.statusFlags[st]" in fo
+    assert "state.statusFlags = objOr(meta.status_flags)" in js
+
+
+def test_folded_columns_start_folded_and_toggle() -> None:
+    js = script()
+    assert "flagsOf(st).folded" in js and "state.colFold" in js
+    assert '" folded"' in js and "toggleFold" in js
+    assert ".col.folded" in page() and "writing-mode: vertical-rl" in page()
+
+
+def test_cancelled_cards_drawer_and_actions() -> None:
+    js, html = script(), page()
+    assert re.search(r"function isCancelled\(t\) \{[^}]*isExcludedStatus\(statusOf\(t\)\)", js)
+    assert re.search(r'f\.terminal && f\.progress === "excluded"', js)
+    assert '" is-cancelled"' in js and ".card.is-cancelled .title { text-decoration: line-through" in html
+    assert 'el("span", "badge b-cancel", labelStatus(statusOf(t)).toLowerCase())' in js
+    # drawer: banner with the reason from the last history note, Undo cancel, Cancel ticket…
+    assert "function cancelReason(t)" in js and "cancelledNotice(t)" in js
+    assert '"Undo cancel"' in js and "Cancel ticket…" in js
+    assert 'api("cancel", { id: t.id, reason: reason })' in js
+    assert 'api("uncancel", body)' in js and "body.keep_dependents = true" in js
+    assert "Keep dependents as they are" in js and "keep[-_]dependents" in js
+    assert "t.cancelled_from" in js
+    # view only: the cancel is a local change copied as a board.py cancel command
+    assert '" cancel " + shq(mv.id) + " --reason " + note' in js
+    assert '" uncancel " + shq(mv.id)' in js and '" --handoff " + note' in js
+
+
+def test_from_any_states_never_greyed_and_always_ask_for_a_note() -> None:
+    js = script()
+    mr = fn_body(js, "moveReason")
+    assert mr.lstrip().startswith("// A state reachable from any state") and "if (flagsOf(st).from_any) return null;" in mr
+    assert "!flagsOf(s).from_any" in fn_body(js, "localAllowed")
+    assert "if (flagsOf(st).from_any) return true;" in fn_body(js, "noteRequired")
+
+
+def test_excluded_progress_text_format() -> None:
+    js = script()
+    ps = fn_body(js, "progressSummary")
+    assert 'done + "/" + total + " done"' in ps
+    assert '" · " + excl[st] + " " + labelStatus(st).toLowerCase()' in ps
+    assert 'if (p === "excluded")' in ps
+    assert "progressSummary(all)" in js and "progressSummary(saved)" in js
+
+
+def test_resolves_deps_and_dep_exceptions_drive_blocked_by() -> None:
+    js = script()
+    dr = fn_body(js, "depResolved")
+    assert "flagsNow(dep).resolves_deps" in dr and "depException(t, d)" in dr
+    assert "dep_exceptions" in fn_body(js, "depException")
+    assert "!depResolved(t, d)" in fn_body(js, "openDeps")
+    assert "showsBlocked(t)" in fn_body(js, "cardChips")
+    assert "isTerminal(t)" in fn_body(js, "isReady"), "finished tickets are never ready"
+
+
+def test_demo_fixture_exercises_v03_cancelled() -> None:
+    doc = json.loads(DEMO.read_text(encoding="utf-8"))
+    meta = doc["meta"]
+    assert meta["schema_version"] == 3
+    sts = meta["statuses"]
+    assert sts.index("cancelled") == sts.index("done") + 1
+    assert meta["status_roles"]["wontfix"] == "cancelled" and meta["status_labels"]["wontfix"] == "Won't fix"
+    assert isinstance(meta["status_flags"], dict)
+    tickets = {t["id"]: t for t in doc["tickets"]}
+    done_like = {"done", "cancelled", "wontfix"}
+    cancelled = [t for t in tickets.values() if t["status"] == "cancelled"]
+    assert cancelled and cancelled[0]["cancelled_from"]
+    cid = cancelled[0]["id"]
+    dependents = [t for t in tickets.values() if cid in t["depends_on"]]
+    assert dependents, "a cancelled ticket with a dependent"
+    # that dependent is unblocked: every dependency is done or cancelled
+    assert any(all(tickets[d]["status"] in done_like for d in t["depends_on"]) for t in dependents)
+    assert any(t["status"] == "wontfix" for t in tickets.values())
+    assert any(t.get("dep_exceptions") for t in tickets.values())

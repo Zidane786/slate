@@ -57,7 +57,10 @@ directly. `status` and `list` take the same filters (e.g. `status --label bug`).
 
 ## Report (under 220 words)
 
-1. **Phases:** a small table, phase · done/total.
+1. **Phases:** a small table, phase · done/total, plus what was left out of the total when there
+   is any: "3/15 done · 1 cancelled" (from `status --json`: `total` already leaves out cancelled
+   and other excluded states; `excluded_by` gives the count per state — name them by label).
+   Cancelled tickets are finished, not done, and never "blocked".
 2. **In flight:** each ticket in an in_progress- or review-role state: id, title, state label,
    **on: <claim>** (branch or agent), last handoff line.
 3. **Waiting for you to test:** each user_testing-role ticket with its user tests as short
@@ -69,7 +72,8 @@ directly. `status` and `list` take the same filters (e.g. `status --label bug`).
 5. **Drafts:** how many, and "finish one with `/slate:plan <ID>`". **Unscheduled:** how many
    someday tickets (not offered by `next`). **Archived:** how many removed tickets (restorable
    with `/slate:plan`), only when there are any.
-6. **Blocked:** tickets waiting on unfinished dependencies, open questions, or claimed by
+6. **Blocked:** tickets waiting on unfinished dependencies (a cancelled dependency no longer
+   blocks; `dep_exceptions` on a ticket are dependencies the user agreed it may stay past), open questions, or claimed by
    someone else, and why (bug tickets, labelled `bug` / `fixes-<ID>`, show which ticket waits
    for them).
 7. **Workflow:** one line only when it isn't `free`: "Workflow: strict — Backlog → In progress →

@@ -58,9 +58,9 @@ code in their own terminal in Plan / Bypass / Don't-ask mode; one unlock = one e
 | a bug found in existing work ("ACME-004 crashes when …") | **Bug ticket** (below) |
 | "someday", "later", "park this idea" | **Someday idea** (below) |
 | change several tickets at once, add a note, change priorities | **Edit tickets** (below) |
-| drop / delete / bring back a ticket | **Remove or restore** (below) |
+| drop / delete / cancel / bring back a ticket | **Cancel, remove or restore** (below) |
 | rename / reorder / remove / change a phase | **Phases** (below) |
-| "add a QA column", rename or remove a column | **States** (below) |
+| "add a QA column", "a Won't fix column", rename or remove a column | **States** (below) |
 | "tickets must go through review", "make the workflow strict", "why can't I move X" | **Workflow rules** (below) |
 | an idea, or empty (ask "What would you like to plan?") | **Full plan**: stages ①–⑥ |
 
@@ -271,14 +271,31 @@ change, refresh `SLATE.md` (see **Keep SLATE.md's Workflow in step** below).
   while a ticket still uses a dropped priority and prints the `edit` that moves those tickets
   first: show that list to the user before running it.
 
-## Remove or restore
+## Cancel, remove or restore
 
-Tickets are never deleted: `remove` archives them in `meta.removed` (ids are never reused) and
-`restore` brings them back.
+Tickets are never deleted. Two ways to drop one:
+
+- **Cancel** (preferred once work started on it, or when other tickets depend on it): it stays on
+  the board in the Cancelled column with its history, never counts as done, is left out of
+  progress, and every ticket that depended on it gets a note and stops waiting for it.
+- **Remove**: archives it in `meta.removed` (ids are never reused); for tickets nobody started
+  and nothing depends on (a duplicate idea, a mistake). `restore` brings them back.
 
 1. `python3 kanban/board.py show <ID>` for each; tell the user in plain words what goes and what
-   depends on it ("ACME-012 waits for it").
-2. **Ask first:** "Remove ACME-011 and ACME-012 (archived, can be restored)? Why?" Only on a yes:
+   depends on it ("ACME-012 waits for it"), and recommend cancel or remove by the rule above.
+2. **Cancel — ask first:** "Cancel ACME-011 (stays on the board as Cancelled; ACME-012 stops
+   waiting for it)? Why?" Only on a yes:
+
+   ```bash
+   python3 kanban/board.py cancel ACME-011 --reason "<the user's reason>"
+   python3 kanban/board.py cancel ACME-011,ACME-013 --reason "…"          # several, all or nothing
+   python3 kanban/board.py set ACME-011 wontfix --handoff "…"             # a project state that works like Cancelled
+   python3 kanban/board.py uncancel ACME-011 --handoff "<why it is back>"  # bring it back (to where it was, or --to STATE)
+   ```
+
+   `uncancel` refused because a dependent went ahead while it was cancelled → show them and ask:
+   move them back first, or let them stay (`--keep-dependents`, only on a yes).
+3. **Remove — ask first:** "Remove ACME-011 and ACME-012 (archived, can be restored)? Why?" Only on a yes:
 
    ```bash
    python3 kanban/board.py remove ACME-011,ACME-012 --reason "<the user's reason>"
@@ -288,13 +305,13 @@ Tickets are never deleted: `remove` archives them in `meta.removed` (ids are nev
 
    Refused because other tickets depend on it → show them and ask: `--detach` (they stop
    waiting for it), or remove them too, or keep it.
-3. See archived tickets: `python3 kanban/board.py export --json --removed`. Bring one back:
+4. See archived tickets: `python3 kanban/board.py export --json --removed`. Bring one back:
    `python3 kanban/board.py restore ACME-011` (with the user's OK).
 
 ## States (columns)
 
 Every state has a **role** (`draft backlog ready in_progress review user_testing merge_ready
-done`); Slate's rules follow the role, so a renamed or added state behaves like its role. A
+done cancelled`); Slate's rules follow the role, so a renamed or added state behaves like its role. A
 done-role and a backlog- or ready-role state must always remain. Show the columns before and
 after as a picture, and ask before every change (removing a state needs an explicit yes):
 
@@ -320,6 +337,34 @@ ticket into <label> need a note for the ticket's history (what was done, what to
 Waiting for merge and Done need one; the others don't) and pass `--note required|optional`.
 The same question changes an existing state: `edit-status <name> note=required|optional`.
 Moving back while workflow rules exist always needs a note. Then refresh `SLATE.md` (below).
+
+**Custom finished states and behaviour flags.** Besides its role, every state has flags
+(`export --json --statuses` shows them): `resolves_deps` (dependents stop waiting for tickets
+here), `from_any` (reachable from any state, always with a note), `progress` (`done` /
+`excluded` from the phase total / `open`), `terminal` (finished: never picked by next or
+`/slate:work`), `notify_dependents` (dependents get a note when a ticket moves here) and `folded`
+(the column starts folded). When the user wants other ways to close work without doing it
+("Won't fix", "Duplicate") or a pause ("On hold"), propose states that behave like Cancelled and
+**show the picture first**, with what changes in plain words:
+
+```
+ now:   … │ Waiting for merge │ Done │ Cancelled (folded)
+ after: … │ Waiting for merge │ Done │ Cancelled (folded) │ Won't fix (folded) │ Duplicate (folded)
+                                                           ▲ new: like Cancelled — finished, not done,
+                                                             dependents stop waiting and get a note
+```
+
+Only after a yes:
+
+```bash
+python3 kanban/board.py add-status wontfix --after cancelled --like cancelled --label "Won't fix"
+python3 kanban/board.py add-status duplicate --after wontfix --like cancelled --label "Duplicate"
+python3 kanban/board.py edit-status duplicate notify_dependents=false   # tune one behaviour
+python3 kanban/board.py edit-status duplicate notify_dependents=default # back to its role's default
+```
+
+States and flags are set only this way (by you, with the user's OK) — never from the board page.
+Then refresh `SLATE.md` (below).
 
 ## Workflow rules
 
