@@ -105,6 +105,12 @@ Open the printed URL in a browser. Check and report:
 
 Then stop it: `PY kanban/board.py serve --stop` (the runtime file `kanban/.slate-serve.json` must be gone).
 
+**Cancelling:** add a second ticket that depends on SCR-001, then
+`PY kanban/board.py cancel SCR-001 --reason "not needed"` → the second ticket isn't blocked any more
+(`PY kanban/board.py list` offers it) and its history has "depended on SCR-001, Cancelled: …";
+`PY kanban/board.py status` shows "· 1 cancelled"; the board page shows a folded Cancelled column
+after Done. Undo: `PY kanban/board.py uncancel SCR-001 --handoff "needed after all"`.
+
 **View-only mode:** `PY -m http.server 8090` inside `kanban/`, open it, confirm the header says
 **"View only"**, drag a card, and check the **"Copy as board.py commands"** button produces a
 `set …` command. Stop the server.

@@ -89,6 +89,11 @@ title) when you talk to the user.
       Wait for a yes.
 - [ ] **Drafts are never picked.** If the named ticket has the draft role, say: "<ID> is a
       draft — not finished enough to build. Finish it first with `/slate:plan <ID>`?" and stop.
+- [ ] **Finished tickets are never picked.** If the named ticket is in a terminal state (the done
+      or cancelled role, or any state whose `flags.terminal` is true in `export --json
+      --statuses`), say so ("<ID> is Cancelled: <reason from its history>") and stop. Bring a
+      cancelled one back only if the user asks: `python3 kanban/board.py uncancel <ID> --handoff
+      "<the user's reason>"`, then start again from step 1.
 - [ ] **Unscheduled tickets are never picked.** If the ticket's phase is unscheduled (`show`
       says so), say "<ID> is in an unscheduled phase. Move it to <phase> first?" and, on a yes,
       `python3 kanban/board.py edit <ID> phase=<scheduled phase>`.
@@ -97,8 +102,9 @@ title) when you talk to the user.
       the next ticket. Only if the user explicitly says to take it over, pass
       `--take-over "<the user's reason>"` on the `set` / `claim` below. Claimed by you (your
       branch) → resume it.
-- [ ] `python3 kanban/board.py show <ID>`. If any dependency isn't done, stop and say which
-      ones block it (and offer the next ready ticket instead; start it only if the user says so).
+- [ ] `python3 kanban/board.py show <ID>`. If any dependency isn't done (a cancelled dependency
+      counts as resolved; its note in the history says why it was dropped — mention it if it
+      changes what this ticket must do), stop and say which ones block it (and offer the next ready ticket instead; start it only if the user says so).
       Only if the user explicitly says to start anyway, add
       `--ignore-deps "<the user's reason>"` to the `set` below.
 - [ ] Resuming? Read the ticket's history (handoff log and notes) and pick up where it says. A
@@ -265,6 +271,9 @@ to close it without one. Never guess, never merge it yourself.
   yourself.
 - **Claimed by someone else** (`ask the user:` … `--take-over`): stop and ask; add
   `--take-over "<reason>"` only with the user's OK.
+- **The work turns out not to be needed** (done elsewhere, dropped by the user): don't close it as
+  done. Ask the user; on a yes `python3 kanban/board.py cancel <ID> --reason "<the user's
+  reason>"` (it keeps the history and tells dependents), commit the board change, and stop.
 - **Board is busy** (write lock held): another command or agent is writing. Wait a few seconds
   and retry, up to about a minute. Only when the error or `doctor` says the lock is **stale**
   (older than 60 s, or its process is gone): `python3 kanban/board.py unlock-write`, then retry.

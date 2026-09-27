@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="slate-version" content="0.2.2" />
+<meta name="slate-version" content="0.3.0" />
 <link rel="icon" href="data:," />
 <title>Slate board</title>
 <style>
@@ -212,6 +212,28 @@ main { padding: 12px 14px 24px; }
 .col.role-user_testing > h2 { color: var(--amber); }
 .col.role-merge_ready > h2 { color: var(--accent); }
 .col.role-done > h2 { color: var(--ok); }
+.col.role-cancelled > h2 { color: var(--faint); }
+/* folded columns (state flag "folded", e.g. Cancelled): a slim strip with the title + count */
+.col > h2.foldable { cursor: pointer; }
+.col > h2.foldable:hover { color: var(--text); }
+.col > h2 .fold { color: var(--faint); font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.col.folded {
+  flex: 0 0 40px; min-width: 40px; max-width: 40px; cursor: pointer;
+  align-items: center; padding: 8px 0;
+}
+.col.folded:hover { border-color: var(--border-strong); }
+.col.folded > h2 {
+  writing-mode: vertical-rl; border-bottom: 0; padding: 4px 0; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+}
+.col.folded > h2 .n { margin: 0; }
+.card.is-cancelled { background: var(--panel-2); box-shadow: none; opacity: .72; }
+.card.is-cancelled .title { text-decoration: line-through; color: var(--muted); }
+.card.is-cancelled .summary { color: var(--faint); }
+.b-cancel { background: var(--panel-2); color: var(--muted); border-color: var(--border-strong); }
+.row.is-cancelled { opacity: .6; }
+.row.is-cancelled .rtitle { text-decoration: line-through; color: var(--muted); }
+.drawer h2.struck { text-decoration: line-through; color: var(--muted); }
 .col .stack { padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .card {
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
@@ -276,6 +298,7 @@ main { padding: 12px 14px 24px; }
 .chip.done { color: var(--ok); border-color: var(--ok); background: var(--ok-bg); }
 .chip.open { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
 .chip.pv { border-style: dashed; }
+.chip.cx { color: var(--faint); border-color: var(--border-strong); background: var(--panel-2); text-decoration: line-through; }
 a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .chip.bug { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); cursor: default; font-weight: 600; }
 .chip.fix { color: var(--amber); border-color: var(--amber-border); background: var(--amber-bg); }
@@ -307,6 +330,11 @@ select.status {
 }
 .notice.pv { border: 1.5px dashed var(--accent); background: var(--accent-soft); color: var(--text); }
 .notice.dr { border-style: dashed; border-color: var(--border-strong); }
+.notice.cx { border-color: var(--border-strong); }
+.dactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; font-size: 12.5px; }
+.modal label.field { display: block; font-size: 12.5px; color: var(--muted); margin: 10px 0 4px; }
+.modal select { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; }
+.modal label.keep { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--text); }
 .notice b { color: var(--text); }
 .dsect { margin-top: 26px; min-width: 0; }
 .dsect > h3 {
@@ -560,7 +588,7 @@ select.status option:disabled { color: var(--faint); }
 
 <div id="bannerHost"></div>
 <main id="main"></main>
-<footer class="site" id="siteFoot">Slate v0.2.2</footer>
+<footer class="site" id="siteFoot">Slate v0.3.0</footer>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <div id="drawerHost"></div>
@@ -577,7 +605,7 @@ select.status option:disabled { color: var(--faint); }
  * never exported and never written to the overlay.
  * ------------------------------------------------------------------ */
 
-var SLATE_VERSION = "0.2.2";
+var SLATE_VERSION = "0.3.0";
 var POLL_FAST_MS = 5000;        // while things change or the viewer is active
 var POLL_SLOW_MS = 30000;       // after IDLE_MS without a change or an interaction
 var IDLE_MS = 180000;
@@ -587,16 +615,25 @@ var NAME_KEY = "slate.claim.name";
 var HANDOFF_PLACEHOLDER = "<note for the ticket's history>";
 var THEME_KEY = "slate.theme";
 var OVERLAY_KEY = "slate.board.overlay.v1";   // replaced in boot() with slate.<prefix>.overlay.v1
-var DEFAULT_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"];
+var DEFAULT_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done", "cancelled"];
 var DEFAULT_USER_TEST_AREAS = ["frontend", "ui"];
 // Every status has a role (one of the built-in names); behaviour keys off roles, never names.
 var ROLES = DEFAULT_STATUSES;
-var HANDOFF_ROLES = ["review", "user_testing", "merge_ready", "done"];
+var HANDOFF_ROLES = ["review", "user_testing", "merge_ready", "done", "cancelled"];
 var STATUS_LABELS = {
   draft: "Draft", backlog: "Backlog", ready: "Ready", in_progress: "In Progress",
   review: "Review", user_testing: "User testing", merge_ready: "Waiting for merge", done: "Done",
-  blocked: "Blocked"
+  cancelled: "Cancelled", blocked: "Blocked"
 };
+// State behaviours ("flags"). /api/info gives the effective values per status; without them (older
+// server, view only) they come from the role, then meta.status_flags overrides per status.
+var FLAG_KEYS = ["resolves_deps", "from_any", "progress", "terminal", "notify_dependents", "folded"];
+var PROGRESS_VALUES = ["done", "excluded", "open"];
+function roleFlags(role) {
+  if (role === "done") return { resolves_deps: true, from_any: false, progress: "done", terminal: true, notify_dependents: false, folded: false };
+  if (role === "cancelled") return { resolves_deps: true, from_any: true, progress: "excluded", terminal: true, notify_dependents: true, folded: true };
+  return { resolves_deps: false, from_any: false, progress: "open", terminal: false, notify_dependents: false, folded: false };
+}
 
 var state = {
   raw: null,          // exact parsed tickets.json, never mutated
@@ -632,6 +669,8 @@ var state = {
   statusLabels: {},   // meta.status_labels
   statusRoles: {},    // meta.status_roles
   statusFrom: {},     // meta.status_from (path rules)
+  statusFlags: {},    // meta.status_flags (per-status behaviour overrides, view only)
+  colFold: {},        // status -> true/false once the viewer folds/unfolds a column (this session)
   live: null,         // /api/info answer when served by `board.py serve`, else null (view only)
   token: "",
   infoFails: 0,
@@ -671,6 +710,59 @@ function roleOf(s) {
 }
 function statusesWithRole(r) { return state.statuses.filter(function (s) { return roleOf(s) === r; }); }
 function useOverlay() { return !state.live; }
+// The /api/info entry for a status (live mode), or null.
+function liveStatusInfo(st) {
+  if (!state.live) return null;
+  return arr(state.live.statuses).filter(function (x) {
+    return x && typeof x === "object" && x.name === st;
+  })[0] || null;
+}
+function cleanFlags(base, over) {
+  if (!over || typeof over !== "object" || Array.isArray(over)) return base;
+  FLAG_KEYS.forEach(function (k) {
+    if (!Object.prototype.hasOwnProperty.call(over, k)) return;
+    var v = over[k];
+    if (k === "progress") { if (PROGRESS_VALUES.indexOf(v) !== -1) base[k] = v; }
+    else if (typeof v === "boolean") base[k] = v;
+  });
+  return base;
+}
+// Effective behaviours of a status: /api/info flags (live) win; else role defaults + meta.status_flags.
+function flagsOf(st) {
+  var info = liveStatusInfo(st);
+  if (info && info.flags && typeof info.flags === "object") return cleanFlags(roleFlags(roleOf(st)), info.flags);
+  return cleanFlags(roleFlags(roleOf(st)), state.statusFlags[st]);
+}
+function flagsNow(t) { return flagsOf(statusOf(t)); }
+function isTerminal(t) { return !!t && flagsNow(t).terminal; }
+function progressOf(t) { return flagsNow(t).progress; }
+// Cancelled-like: finished without counting as done (terminal + progress "excluded").
+function isExcludedStatus(st) { var f = flagsOf(st); return f.terminal && f.progress === "excluded"; }
+function isCancelled(t) { return !!t && isExcludedStatus(statusOf(t)); }
+// The status `board.py cancel` moves a ticket to: "cancelled" when it has the cancelled role,
+// else the first status with that role; null when the board has none.
+function cancelStatus() {
+  if (state.statuses.indexOf("cancelled") !== -1 && roleOf("cancelled") === "cancelled") return "cancelled";
+  return statusesWithRole("cancelled")[0] || null;
+}
+// "3/15 done · 1 cancelled": the total leaves out tickets in an "excluded" state, which are
+// listed per state instead.
+function progressSummary(list) {
+  var done = 0, total = 0, excl = {};
+  list.forEach(function (t) {
+    var p = progressOf(t);
+    if (p === "excluded") { var st = statusOf(t); excl[st] = (excl[st] || 0) + 1; return; }
+    total++;
+    if (p === "done") done++;
+  });
+  var text = done + "/" + total + " done";
+  var extra = "";
+  state.statuses.concat(Object.keys(excl).filter(function (s) { return state.statuses.indexOf(s) === -1; }))
+    .forEach(function (st) {
+      if (excl[st]) extra += " · " + excl[st] + " " + labelStatus(st).toLowerCase();
+    });
+  return { done: done, total: total, excluded: excl, text: text + extra, extra: extra };
+}
 
 function loadOverlay() {
   try {
@@ -692,6 +784,7 @@ function tidyEntry(id) {
   var e = state.overlay[id];
   if (!e) return;
   if (e.checks && !Object.keys(e.checks).length) delete e.checks;
+  if (e.note !== undefined && !e.status) delete e.note;   // a local move's note/reason goes with it
   if (!Object.keys(e).length) delete state.overlay[id];
 }
 
@@ -721,16 +814,28 @@ function isUnscheduledPhase(pid) {
   return !!(p && p.unscheduled === true);
 }
 function isUnscheduled(t) { return !!t && isUnscheduledPhase(t.phase); }
+// dep_exceptions: { DEP_ID: reason } - dependencies the ticket may go on without.
+function depException(t, d) {
+  var ex = t && t.dep_exceptions;
+  if (!ex || typeof ex !== "object" || Array.isArray(ex) || !Object.prototype.hasOwnProperty.call(ex, d)) return null;
+  return typeof ex[d] === "string" && ex[d] ? ex[d] : "exception";
+}
+// A dependency is resolved when it sits in a state that resolves_deps (Done, Cancelled, ...) or
+// the ticket lists it in dep_exceptions.
+function depResolved(t, d) {
+  if (depException(t, d) !== null) return true;
+  var dep = state.byId[d];
+  return !!dep && !!flagsNow(dep).resolves_deps;
+}
 function openDeps(t) {
-  return (t.depends_on || []).filter(function (d) {
-    var dep = state.byId[d];
-    return !dep || !isDone(dep);
-  });
+  return (t.depends_on || []).filter(function (d) { return !depResolved(t, d); });
 }
 function isBlocked(t) { return openDeps(t).length > 0; }
-// Ready = saved ticket in backlog/ready with every dependency done.
+// Shown as "blocked" (chips, red edge): open deps on a ticket that isn't finished, a draft or a preview.
+function showsBlocked(t) { return isBlocked(t) && !isDone(t) && !isTerminal(t) && !isDraft(t) && !isPreview(t); }
+// Ready = saved, unfinished ticket in backlog/ready with every dependency resolved.
 function isReady(t) {
-  if (isPreview(t) || isUnscheduled(t)) return false;
+  if (isPreview(t) || isUnscheduled(t) || isTerminal(t)) return false;
   var r = roleNow(t);
   return (r === "backlog" || r === "ready") && !isBlocked(t);
 }
@@ -997,6 +1102,7 @@ function normalise(data, preview) {
   state.statusLabels = objOr(meta.status_labels);
   state.statusRoles = objOr(meta.status_roles);
   state.statusFrom = objOr(meta.status_from);
+  state.statusFlags = objOr(meta.status_flags);
   state.userTestAreas = Array.isArray(meta.user_test_areas) ? meta.user_test_areas.slice() : DEFAULT_USER_TEST_AREAS.slice();
   state.repoUrl = (typeof meta.repo_url === "string" && /^https?:\/\//i.test(meta.repo_url)) ? meta.repo_url : "";
   state.phases = arr(data.phases).map(function (p) { var c = {}; for (var k in p) c[k] = p[k]; return c; });
@@ -1087,7 +1193,7 @@ function passes(t) {
     if (!hit) return false;
   }
   if (state.readyOnly && !isReady(t)) return false;
-  if (state.hideDone && isDone(t)) return false;
+  if (state.hideDone && (isDone(t) || isTerminal(t))) return false;
   return true;
 }
 
@@ -1127,7 +1233,7 @@ function localAllowed(t) {
   sts.forEach(function (s) {
     var from = state.statusFrom[s];
     var fwd = sts.indexOf(s) > sts.indexOf(cur);
-    if (s !== cur && fwd && Array.isArray(from) && from.length && from.indexOf(cur) === -1) {
+    if (s !== cur && fwd && !flagsOf(s).from_any && Array.isArray(from) && from.length && from.indexOf(cur) === -1) {
       out.reasons[s] = labelStatus(s) + " can only be reached from: " + from.map(labelStatus).join(", ");
     } else out.allowed.push(s);
   });
@@ -1142,6 +1248,8 @@ function allowedFor(t) {
   return (a && Array.isArray(a.allowed)) ? a : null;
 }
 function moveReason(t, st) {
+  // A state reachable from any state (Cancelled, Won't fix, ...) is never greyed out.
+  if (flagsOf(st).from_any) return null;
   var a = allowedFor(t);
   if (!a || st === statusOf(t) || a.allowed.indexOf(st) !== -1) return null;
   return (a.reasons && a.reasons[st]) || ("Not allowed from " + labelStatus(statusOf(t)));
@@ -1159,20 +1267,52 @@ function setStatus(id, status) {
     return;
   }
   if (state.live) { liveSetStatus(t, status); return; }
+  var cur = statusOf(t);
+  // View only: moving to a from-any state (Cancelled, ...) or out of a cancelled one asks for the
+  // note/reason now, so "Copy as board.py commands" can carry it.
+  var leaving = isExcludedStatus(cur) && !flagsOf(status).terminal && status !== t.status;
+  if (status !== t.status && (flagsOf(status).from_any || leaving)) {
+    askMoveNote(t, cur, status).then(function (note) {
+      if (note === null) { renderKeepScroll(); return; }
+      var e2 = entry(id);
+      e2.status = status;
+      e2.note = note;
+      tidyEntry(id);
+      saveOverlay();
+      render();
+    });
+    return;
+  }
   var e = entry(id);
-  if (status === t.status) delete e.status; else e.status = status;
+  if (status === t.status) delete e.status; else { e.status = status; delete e.note; }
   tidyEntry(id);
   saveOverlay();
   render();
 }
 
-// Does moving to this status need a note for the ticket's history? /api/info statuses may carry
-// note: "required" | "optional"; without that, fall back to the built-in rule (review, user
-// testing, waiting for merge and done roles need one).
+// The note box for a move: a reason for a cancel-like state, a history note otherwise.
+function askMoveNote(t, from, status) {
+  var cancelling = isExcludedStatus(status) && !isExcludedStatus(from);
+  var back = isBackward(from, status);
+  return askText({
+    title: t.id + " → " + labelStatus(status),
+    message: cancelling
+      ? "Why is " + t.id + " moving to " + labelStatus(status) + "? The reason is saved in the ticket's history, and tickets that depend on it are no longer blocked."
+      : (isExcludedStatus(from)
+        ? "Bringing " + t.id + " back from " + labelStatus(from) + " needs a short note for the ticket's history: why it's back."
+        : (back ? "Moving back to " + labelStatus(status) + " needs a short note for the ticket's history: why it's going back."
+          : "Moving to " + labelStatus(status) + " needs a short note for the ticket's history: what was done, or why it moves on.")),
+    placeholder: cancelling ? "Reason (saved in the history)" : "Note for the ticket's history",
+    okLabel: cancelling ? labelStatus(status) : "Move", cancelLabel: cancelling ? "Keep it" : "Cancel", multiline: true
+  });
+}
+
+// Does moving to this status need a note for the ticket's history? A from-any state always
+// does. /api/info statuses may carry note: "required" | "optional"; without that, fall back to
+// the built-in rule (review, user testing, waiting for merge, done and cancelled roles need one).
 function noteRequired(st) {
-  var info = state.live && arr(state.live.statuses).filter(function (x) {
-    return x && typeof x === "object" && x.name === st;
-  })[0];
+  if (flagsOf(st).from_any) return true;
+  var info = liveStatusInfo(st);
   if (info && (info.note === "required" || info.note === "optional")) return info.note === "required";
   return HANDOFF_ROLES.indexOf(roleOf(st)) !== -1;
 }
@@ -1193,6 +1333,16 @@ function needsHandoff(res) {
 
 function liveSetStatus(t, status) {
   var from = t.status;
+  // Out of a cancelled state: that's "uncancel" (it notes the dependents), with this target.
+  if (isExcludedStatus(from) && !flagsOf(status).terminal) { undoCancel(t, status); return; }
+  // Into the state `board.py cancel` uses: that's "cancel" (a reason is required).
+  if (status === cancelStatus() && !isExcludedStatus(from)) {
+    askMoveNote(t, from, status).then(function (reason) {
+      if (reason === null) { renderKeepScroll(); return; }
+      sendCancel(t, reason);
+    });
+    return;
+  }
   var go = function (handoff) {
     var body = { id: t.id, status: status };
     if (handoff) body.handoff = handoff;
@@ -1203,20 +1353,108 @@ function liveSetStatus(t, status) {
     });
   };
   var ask = function () {
-    var back = isBackward(from, status);
-    return askText({
-      title: t.id + " \u2192 " + labelStatus(status),
-      message: back ? "Moving back to " + labelStatus(status) + " needs a short note for the ticket's history: why it's going back."
-        : "Moving to " + labelStatus(status) + " needs a short note for the ticket's history: what was done, or why it moves on.",
-      placeholder: "Note for the ticket's history", okLabel: "Move", multiline: true
-    }).then(function (note) {
+    return askMoveNote(t, from, status).then(function (note) {
       if (note === null) { renderKeepScroll(); return; }
       return go(note);
     });
   };
-  // Pre-open the note box when the target needs a note (from /api/info) or the move goes back;
-  // otherwise try without one and ask only if the server answers needs_handoff.
+  // Pre-open the note box when the target needs a note (from /api/info, or a from-any state) or
+  // the move goes back; otherwise try without one and ask only if the server answers needs_handoff.
   if (isBackward(from, status) || noteRequired(status)) ask(); else go("");
+}
+
+// POST cancel {id, reason}.
+function sendCancel(t, reason) {
+  return api("cancel", { id: t.id, reason: reason }).then(function (res) {
+    if (res.ok) return afterSave("Cancelled " + t.id, res);
+    refused("Can't cancel " + t.id, res);
+  });
+}
+
+// Does a refusal ask whether to keep the dependents as they are (uncancel --keep-dependents)?
+function asksKeepDependents(res) {
+  return arr(res && res.errors).some(function (e) {
+    if (!e || typeof e !== "object") return false;
+    var fx = typeof e.fix === "string" ? [e.fix] : arr(e.fix);
+    return [String(e.message || ""), String(e.code || "")].concat(fx.map(String)).some(function (s) {
+      return /keep[-_]dependents/i.test(s);
+    });
+  });
+}
+
+// "Undo cancel": a note, an optional "back to" state (default cancelled_from), then
+// POST uncancel {id, to?, handoff, keep_dependents?}. When the server refuses because dependents
+// already moved on, the dialog comes back with the errors and a "Keep dependents as they are" box.
+function undoCancel(t, to, prev) {
+  prev = prev || {};
+  var targets = state.statuses.filter(function (s) { return !flagsOf(s).terminal; });
+  var def = to || prev.to || t.cancelled_from;
+  if (targets.indexOf(def) === -1) def = statusesWithRole("backlog")[0] || targets[0];
+  var nodes = [];
+  if (prev.res) {
+    var errs = el("ul", "errlist");
+    arr(prev.res.errors).forEach(function (e) {
+      e = (e && typeof e === "object") ? e : { message: String(e) };
+      var li = el("li");
+      li.appendChild(el("div", null, String(e.message || "")));
+      var fx = typeof e.fix === "string" ? [e.fix] : arr(e.fix);
+      fx.forEach(function (f) { li.appendChild(el(/^ask the user:/i.test(String(f)) ? "div" : "code", "plain", String(f))); });
+      errs.appendChild(li);
+    });
+    nodes.push(errs);
+  }
+  nodes.push(el("p", null, "Bring " + t.id + " back from " + labelStatus(statusOf(t))
+    + ". Tickets that depend on it get a note that it's back."));
+  var lab = el("label", "field", "Back to");
+  var sel = el("select");
+  sel.id = "uncancelTo";
+  targets.forEach(function (s) {
+    var o = el("option", null, labelStatus(s) + (s === t.cancelled_from ? " (where it was)" : ""));
+    o.value = s;
+    if (s === def) o.selected = true;
+    sel.appendChild(o);
+  });
+  lab.appendChild(document.createElement("br"));
+  lab.appendChild(sel);
+  nodes.push(lab);
+  var ta = el("textarea");
+  ta.id = "uncancelNote";
+  ta.placeholder = "Note for the ticket's history: why it's back";
+  ta.setAttribute("aria-label", "Note for the ticket's history");
+  if (prev.note) ta.value = prev.note;
+  nodes.push(ta);
+  var keep = null;
+  if (prev.res && asksKeepDependents(prev.res)) {
+    var kl = el("label", "keep");
+    keep = el("input");
+    keep.type = "checkbox";
+    keep.id = "keepDependents";
+    kl.appendChild(keep);
+    kl.appendChild(el("span", null, "Keep dependents as they are"));
+    nodes.push(kl);
+  }
+  var send = function (btn) {
+    var note = ta.value.trim();
+    if (!note) { ta.focus(); return; }
+    btn.disabled = true;
+    var body = { id: t.id, handoff: note };
+    if (sel.value) body.to = sel.value;
+    if (keep && keep.checked) body.keep_dependents = true;
+    closeModal();
+    api("uncancel", body).then(function (res) {
+      if (res.ok) return afterSave(t.id + " is back in " + labelStatus(sel.value), res);
+      if (!body.keep_dependents && asksKeepDependents(res)) {
+        undoCancel(t, sel.value, { res: res, note: note, to: sel.value });
+        return;
+      }
+      refused("Can't undo the cancel of " + t.id, res);
+    });
+  };
+  var m = openModal("Undo cancel: " + t.id, nodes,
+    [["Keep it cancelled", "btn subtle", function () { closeModal(); renderKeepScroll(); }], ["Undo cancel", "btn primary", send]],
+    function () { renderKeepScroll(); });
+  m.id = "uncancelModal";
+  setTimeout(function () { ta.focus(); }, 0);
 }
 
 /* ---------------- board API (live mode: `board.py serve`) ---------------- */
@@ -1390,11 +1628,17 @@ function areaBadges(t) {
   return (t.areas || []).map(function (a) { return el("span", "badge b-area", a); });
 }
 
-function depChip(depId, onOpen) {
+// owner: the ticket that depends on depId (its dep_exceptions count), or null (Unlocks list).
+function depChip(depId, onOpen, owner) {
   var dep = state.byId[depId];
-  var c = el("button", "chip " + (dep && isDone(dep) ? "done" : "open") + (isPreview(dep) ? " pv" : ""), depId);
+  var ex = owner ? depException(owner, depId) : null;
+  var resolved = owner ? depResolved(owner, depId) : !!(dep && flagsNow(dep).resolves_deps);
+  var cls = dep && isCancelled(dep) ? "cx" : (resolved ? "done" : "open");
+  var c = el("button", "chip " + cls + (isPreview(dep) ? " pv" : ""), depId);
   c.type = "button";
   c.title = dep ? dep.title + " (" + (isPreview(dep) ? "preview" : labelStatus(statusOf(dep))) + ")" : "unknown ticket";
+  if (dep && isCancelled(dep)) c.title += ": doesn't block";
+  if (ex !== null && !(dep && flagsNow(dep).resolves_deps)) c.title += " · not waited on: " + ex;
   c.addEventListener("click", function (ev) { ev.stopPropagation(); if (dep) onOpen(depId); });
   return c;
 }
@@ -1421,6 +1665,12 @@ function statusSelect(t, small) {
 // The one "state" badge a card or row shows, most important first.
 function stateBadge(t) {
   if (isPreview(t)) return el("span", "badge b-preview", "preview");
+  if (isCancelled(t)) {
+    var cx = el("span", "badge b-cancel", labelStatus(statusOf(t)).toLowerCase());
+    cx.title = "Finished without doing it: not counted as done, doesn't block the tickets that depend on it";
+    return cx;
+  }
+  if (isTerminal(t)) return null;
   if (isDraft(t)) return el("span", "badge b-draft", "not ready");
   if (needsYou(t)) return el("span", "badge b-needs", "needs you");
   if (isMergeReady(t)) return el("span", "badge b-merge", "waiting for merge");
@@ -1479,7 +1729,7 @@ function cardChips(t) {
     ch.title = cl.by + " is on it" + (cl.since ? " since " + cl.since : "");
     box.appendChild(ch);
   }
-  if (isBlocked(t) && !isDone(t) && !isDraft(t) && !isPreview(t)) {
+  if (showsBlocked(t)) {
     var open = openDeps(t);
     open.slice(0, 3).forEach(function (id) { box.appendChild(jumpChip("open", "blocked by " + id, id)); });
     if (open.length > 3) {
@@ -1494,10 +1744,11 @@ function cardChips(t) {
 /* ---------------- board view ---------------- */
 
 function cardFor(t) {
-  var blocked = isBlocked(t) && !isDone(t) && !isDraft(t) && !isPreview(t);
+  var blocked = showsBlocked(t);
   var cls = "card";
   if (blocked) cls += " is-blocked";
   if (isDraft(t)) cls += " is-draft";
+  if (isCancelled(t)) cls += " is-cancelled";
   if (needsYou(t)) cls += " needs-you";
   if (isPreview(t)) cls += " is-preview";
   var loc = localStatus(t);
@@ -1543,7 +1794,7 @@ function cardFor(t) {
   var foot = el("div", "foot");
   if (t.estimate) foot.appendChild(el("span", null, t.estimate));
   var dn = (t.depends_on || []).length;
-  if (dn && !(isBlocked(t) && !isDone(t) && !isDraft(t) && !isPreview(t))) {
+  if (dn && !blocked) {
     foot.appendChild(el("span", null, dn + (dn > 1 ? " deps" : " dep")));
   }
   var b = stateBadge(t);
@@ -1571,19 +1822,38 @@ function renderBoard(root) {
   var list = sortTickets(visible());
   var board = el("div", "board");
   state.statuses.forEach(function (st) {
-    var col = el("div", "col col-" + st + (roleOf(st) ? " role-" + roleOf(st) : ""));
+    // Columns whose state has the "folded" flag (Cancelled by default) start folded: a slim strip
+    // with the title and count. Click to unfold / fold; remembered for this page visit only.
+    var foldable = flagsOf(st).folded;
+    var folded = foldable && (Object.prototype.hasOwnProperty.call(state.colFold, st) ? state.colFold[st] : true);
+    var col = el("div", "col col-" + st + (roleOf(st) ? " role-" + roleOf(st) : "") + (folded ? " folded" : ""));
     col.dataset.status = st;
+    var toggleFold = function () { state.colFold[st] = !folded; renderKeepScroll(); };
 
-    var head = el("h2");
+    var head = el("h2", foldable ? "foldable" : null);
     head.appendChild(el("span", null, labelStatus(st)));
     var items = list.filter(function (t) { return statusOf(t) === st; });
+    if (foldable && !folded) head.appendChild(el("span", "fold", "‹ fold"));
     head.appendChild(el("span", "n", items.length));
     col.appendChild(head);
+    if (foldable) {
+      var target = folded ? col : head;
+      target.tabIndex = 0;
+      target.setAttribute("role", "button");
+      target.setAttribute("aria-expanded", String(!folded));
+      target.title = folded ? "Show " + labelStatus(st) + " (" + items.length + ")" : "Fold " + labelStatus(st);
+      target.addEventListener("click", toggleFold);
+      target.addEventListener("keydown", function (e) {
+        if (e.target === target && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleFold(); }
+      });
+    }
 
-    var stack = el("div", "stack");
-    if (!items.length) stack.appendChild(el("div", "empty", "Nothing here"));
-    items.forEach(function (t) { stack.appendChild(cardFor(t)); });
-    col.appendChild(stack);
+    if (!folded) {
+      var stack = el("div", "stack");
+      if (!items.length) stack.appendChild(el("div", "empty", "Nothing here"));
+      items.forEach(function (t) { stack.appendChild(cardFor(t)); });
+      col.appendChild(stack);
+    }
 
     col.addEventListener("dragover", function (e) {
       e.preventDefault();
@@ -1609,8 +1879,8 @@ function renderBoard(root) {
 /* ---------------- implementation order view ---------------- */
 
 function orderRow(t) {
-  var muted = (isBlocked(t) && !isDone(t)) || isDraft(t);
-  var r = el("div", "row" + (muted ? " muted" : "") + (isPreview(t) ? " is-preview" : "")
+  var muted = showsBlocked(t) || isDraft(t);
+  var r = el("div", "row" + (muted ? " muted" : "") + (isCancelled(t) ? " is-cancelled" : "") + (isPreview(t) ? " is-preview" : "")
     + (localStatus(t) ? " is-local" : ""));
   r.appendChild(el("div", "rank", "#" + t.rank));
   r.appendChild(el("div", "rid", t.id));
@@ -1628,7 +1898,7 @@ function orderRow(t) {
 
   var deps = el("div", "deps");
   if ((t.depends_on || []).length) {
-    t.depends_on.forEach(function (d) { deps.appendChild(depChip(d, openDrawer)); });
+    t.depends_on.forEach(function (d) { deps.appendChild(depChip(d, openDrawer, t)); });
   } else {
     deps.appendChild(el("span", "rank", "no deps"));
   }
@@ -1673,8 +1943,10 @@ function phaseBlock(p, all, rows, opts) {
   }
   if (opts.empty) h.appendChild(el("span", "note", "no tickets yet"));
   else if (!opts.open) h.appendChild(el("span", "note", rows.length + (rows.length === 1 ? " ticket" : " tickets") + " hidden, click to show"));
-  var doneN = all.filter(isDone).length;
-  var pill = el("span", "pill", doneN + " / " + all.length + " done");
+  // "3/15 done · 1 cancelled": excluded states (Cancelled, ...) are left out of the total.
+  var prog = progressSummary(all);
+  var doneN = prog.done;
+  var pill = el("span", "pill phase-progress", prog.text);
   pill.style.marginLeft = "auto";
   h.appendChild(pill);
   head.appendChild(h);
@@ -1692,7 +1964,7 @@ function phaseBlock(p, all, rows, opts) {
   if (opts.open) {
     var bar = el("div", "bar");
     var fill = el("i");
-    fill.style.width = (all.length ? Math.round(doneN / all.length * 100) : 0) + "%";
+    fill.style.width = (prog.total ? Math.round(doneN / prog.total * 100) : 0) + "%";
     bar.appendChild(fill);
     head.appendChild(bar);
   }
@@ -1966,15 +2238,28 @@ function userTestsSect(t) {
 function linksSect(t) {
   var s = sect("Needs / Unlocks");
   var dl = el("dl", "links");
-  function row(label, ids, none) {
+  function row(label, ids, none, owner) {
     dl.appendChild(el("dt", null, label));
     var dd = el("dd");
-    if (ids && ids.length) ids.forEach(function (id) { dd.appendChild(depChip(id, openDrawer)); });
+    if (ids && ids.length) ids.forEach(function (id) { dd.appendChild(depChip(id, openDrawer, owner)); });
     else dd.appendChild(el("span", "plain", none));
     dl.appendChild(dd);
   }
-  row("Needs", t.depends_on, "No other tickets.");
-  row("Unlocks", t.unlocks, "Nothing waits on this.");
+  row("Needs", t.depends_on, "No other tickets.", t);
+  row("Unlocks", t.unlocks, "Nothing waits on this.", null);
+  // Dependencies that don't block: cancelled ones and dep_exceptions, each with its reason.
+  var notes = [];
+  t.depends_on.forEach(function (d) {
+    var dep = state.byId[d];
+    if (dep && isCancelled(dep)) notes.push(d + " is " + labelStatus(statusOf(dep)).toLowerCase() + ", so it doesn't block this ticket.");
+    else if (depException(t, d) !== null && !(dep && flagsNow(dep).resolves_deps)) notes.push("Not waiting on " + d + ": " + depException(t, d));
+  });
+  if (notes.length) {
+    dl.appendChild(el("dt", null, ""));
+    var nd = el("dd");
+    nd.appendChild(el("span", "plain", notes.join(" ")));
+    dl.appendChild(nd);
+  }
   s.appendChild(dl);
   return s;
 }
@@ -2107,7 +2392,7 @@ function claimLine(t) {
     if (c.since) sp.appendChild(document.createTextNode(" since " + c.since));
     line.appendChild(sp);
   } else line.appendChild(el("span", null, "Nobody is on this ticket."));
-  if (state.live && !isDone(t)) {
+  if (state.live && !isDone(t) && !isTerminal(t)) {
     var me = myName();
     if (!c || c.by !== me) {
       var take = el("button", "btn", c ? "Take over…" : "Take");
@@ -2126,6 +2411,81 @@ function claimLine(t) {
     }
   }
   return line;
+}
+
+// Why a ticket is cancelled: the local reason (view only), else the last history note written for
+// its current state (else the last note), without a leading "Cancelled:" label.
+function cancelReason(t) {
+  var o = useOverlay() && state.overlay[t.id];
+  if (o && o.status && o.status !== t.status && typeof o.note === "string") return o.note;
+  var h = t.handoff;
+  if (typeof h === "string" && h) h = [{ note: h }];
+  h = arr(h).filter(function (x) { return x && typeof x === "object" && typeof x.note === "string" && x.note; });
+  if (!h.length) return "";
+  var st = statusOf(t);
+  var mine = h.filter(function (x) { return x.status === st; });
+  var note = (mine.length ? mine[mine.length - 1] : h[h.length - 1]).note;
+  var lab = labelStatus(st).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return note.replace(new RegExp("^\\s*(" + lab + "|cancelled)\\s*:\\s*", "i"), "");
+}
+
+// Drawer banner for a cancelled ticket: the reason, and Undo cancel (live) or the command (view only).
+function cancelledNotice(t) {
+  var n = el("div", "notice cx");
+  n.id = "cancelNotice";
+  n.appendChild(el("b", null, labelStatus(statusOf(t)) + ": "));
+  var why = cancelReason(t);
+  n.appendChild(document.createTextNode(why || "no reason recorded."));
+  n.appendChild(el("div", "plain", "It doesn't count as done, and the tickets that depend on it are not blocked by it."));
+  var row = el("div", "row2");
+  if (state.live) {
+    var u = el("button", "btn", "Undo cancel");
+    u.id = "uncancelBtn";
+    u.type = "button";
+    u.title = "Bring it back (board.py uncancel " + t.id + ")";
+    u.addEventListener("click", function () { undoCancel(t, null); });
+    row.appendChild(u);
+  } else if (localStatus(t)) {
+    row.appendChild(el("span", "tag-local", "local only"));
+    row.appendChild(el("span", "plain", "Use “Copy as board.py commands” to save it, or move it back with the status menu."));
+  } else {
+    row.appendChild(el("span", "plain", "To undo it: "));
+    row.appendChild(el("code", "md-code", BOARD_CMD + " uncancel " + t.id + " --handoff \"why\""));
+  }
+  n.appendChild(row);
+  return n;
+}
+
+// "Cancel ticket…": live -> POST cancel {id, reason}; view only -> a local move with the reason,
+// copied later as `board.py cancel ID --reason "…"`.
+function cancelAction(t) {
+  var cs = cancelStatus();
+  if (!cs || isPreview(t) || isTerminal(t)) return null;
+  var row = el("div", "dactions");
+  var b = el("button", "btn subtle", "Cancel ticket…");
+  b.id = "cancelTicketBtn";
+  b.type = "button";
+  b.title = "Decide not to do it (board.py cancel " + t.id + " --reason …)";
+  b.addEventListener("click", function () {
+    askText({
+      title: "Cancel " + t.id + "?",
+      message: "Why won't this be done? The reason is saved in the ticket's history. It won't count as done, "
+        + "and tickets that depend on it are no longer blocked" + (state.live ? " (each gets a note)." : ".")
+        + (state.live ? "" : " View only: this stays in this browser until you copy it as a board.py command."),
+      placeholder: "Reason (saved in the history)", okLabel: "Cancel ticket", cancelLabel: "Keep it", multiline: true
+    }).then(function (reason) {
+      if (reason === null) return;
+      if (state.live) { sendCancel(t, reason); return; }
+      var e = entry(t.id);
+      e.status = cs;
+      e.note = reason;
+      tidyEntry(t.id);
+      saveOverlay();
+      render();
+    });
+  });
+  row.appendChild(b);
+  return row;
 }
 
 // "Add note": a history note without a status change (board.py note).
@@ -2211,7 +2571,7 @@ function renderDrawer(fresh) {
   top.appendChild(next);
   top.appendChild(close);
   head.appendChild(top);
-  head.appendChild(el("h2", null, t.title));
+  head.appendChild(el("h2", isCancelled(t) ? "struck" : null, t.title));
 
   var meta = el("div", "dmeta");
   function sep() { meta.appendChild(el("span", "sep", "·")); }
@@ -2233,7 +2593,7 @@ function renderDrawer(fresh) {
       else meta.appendChild(el("span", "badge b-area", "#" + l));
     });
   }
-  if (!isDone(t) && !isDraft(t) && !isPreview(t) && (isBlocked(t) || isReady(t))) {
+  if (!isDone(t) && !isTerminal(t) && !isDraft(t) && !isPreview(t) && (isBlocked(t) || isReady(t))) {
     sep();
     var nOpen = openDeps(t).length;
     meta.appendChild(el("span", "badge " + (nOpen ? "b-blocked" : "b-ready"),
@@ -2242,11 +2602,15 @@ function renderDrawer(fresh) {
   head.appendChild(meta);
   var cline = claimLine(t);
   if (cline) head.appendChild(cline);
+  var cact = cancelAction(t);
+  if (cact) head.appendChild(cact);
   d.appendChild(head);
 
   var body = el("div", "dbody");
 
-  if (isPreview(t)) {
+  if (isCancelled(t) && !isPreview(t)) {
+    body.appendChild(cancelledNotice(t));
+  } else if (isPreview(t)) {
     var pv = el("div", "notice pv");
     pv.innerHTML = "<b>Preview.</b> This ticket is not saved yet. It is on the board so you can look it over; "
       + "nothing is written until Claude runs <code>board.py add</code>. It is left out of Export.";
@@ -2370,17 +2734,19 @@ function buildMenu(detailsId, key, values, labelFn) {
 function updateChrome() {
   var saved = savedTickets();
   var total = saved.length;
-  var done = saved.filter(isDone).length;
+  var sum = progressSummary(saved);
   var prog = saved.filter(isInProgress).length;
   var waiting = saved.filter(needsYou).length;
 
   var counts = $("#counts");
   counts.innerHTML = "";
-  [["total", total], ["done", done], ["in progress", prog]].forEach(function (p) {
+  // "3/15 done · 1 cancelled": the done total leaves out excluded states (Cancelled, ...).
+  [["total", String(total)], ["done" + sum.extra, sum.done + "/" + sum.total], ["in progress", String(prog)]].forEach(function (p) {
     var s = el("span", "pill");
-    s.innerHTML = "<b>" + p[1] + "</b> " + esc(p[0]);
+    s.innerHTML = "<b>" + esc(p[1]) + "</b> " + esc(p[0]);
     counts.appendChild(s);
   });
+  counts.children[1].id = "doneProgress";
   if (waiting) {
     var w = el("button", "pill needs");
     w.type = "button";
@@ -2614,7 +2980,7 @@ function askText(o) {
       if (e.key === "Enter" && (!o.multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); ok(); }
     });
     var m = openModal(o.title, [o.message ? el("p", null, o.message) : null, input],
-      [["Cancel", "btn subtle", function () { finish(null); }], [o.okLabel || "OK", "btn primary", ok]],
+      [[o.cancelLabel || "Cancel", "btn subtle", function () { finish(null); }], [o.okLabel || "OK", "btn primary", ok]],
       function () { if (!settled) { settled = true; resolve(null); } });
     m.id = "askModal";
     var okBtn = m.querySelector(".mbtns .btn.primary");
@@ -2706,6 +3072,9 @@ function historyPanel() {
 
 /* ---------------- view only: local changes as board.py commands ---------------- */
 
+// A double-quoted shell word ("…" as in the docs), for notes and reasons.
+function dq(s) { return "\"" + String(s).replace(/[\\"$`]/g, "\\$&") + "\""; }
+
 function shq(s) {
   s = String(s);
   return /^[A-Za-z0-9_.\/:@%+=,-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\"'\"'") + "'";
@@ -2732,14 +3101,27 @@ function localCommands() {
       if (u) items.push(BOARD_CMD + " usertest " + shq(t.id) + " " + u[1] + " " + v);
     });
     if (o.status && o.status !== t.status) {
-      moves.push({ id: t.id, status: o.status,
+      moves.push({ id: t.id, status: o.status, from: t.status, t: t,
+        note: typeof o.note === "string" && o.note ? o.note : "",
         needs: noteRequired(o.status) || (isBackward(t.status, o.status) && hasPathRules()) });
     }
   });
   var sets = [], groups = {};
   moves.forEach(function (mv) {
-    if (mv.needs) {
-      sets.push(BOARD_CMD + " set " + shq(mv.id) + " " + shq(mv.status) + " --handoff \"" + HANDOFF_PLACEHOLDER + "\"");
+    var note = dq(mv.note || HANDOFF_PLACEHOLDER);
+    // Into the state `board.py cancel` uses: cancel ID --reason "…".
+    if (mv.status === cancelStatus() && !isExcludedStatus(mv.from)) {
+      sets.push(BOARD_CMD + " cancel " + shq(mv.id) + " --reason " + note);
+      return;
+    }
+    // Out of a cancelled state: uncancel ID [--to STATUS] --handoff "…".
+    if (isExcludedStatus(mv.from) && !flagsOf(mv.status).terminal) {
+      sets.push(BOARD_CMD + " uncancel " + shq(mv.id) + (mv.status !== mv.t.cancelled_from ? " --to " + shq(mv.status) : "")
+        + " --handoff " + note);
+      return;
+    }
+    if (mv.needs || mv.note) {
+      sets.push(BOARD_CMD + " set " + shq(mv.id) + " " + shq(mv.status) + " --handoff " + note);
       return;
     }
     var g = groups[mv.status];

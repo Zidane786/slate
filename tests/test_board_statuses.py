@@ -50,7 +50,9 @@ def test_add_status_with_role_and_label(b: Board) -> None:
     assert next(t for t in ex if t["id"] == "ACME-003")["status_label"] == "QA"
     setup = json.loads(b.ok("export", "--json", "--statuses").stdout)
     assert {"name": "qa", "role": "review", "label": "QA", "from": [], "note": "required",
-            "deps": ["done"]} in setup["statuses"]
+            "deps": ["done"], "flags": {"resolves_deps": False, "from_any": False, "progress": "open",
+                                        "terminal": False, "notify_dependents": False, "folded": False}} \
+        in setup["statuses"]
 
 
 def test_add_status_refusals(b: Board) -> None:

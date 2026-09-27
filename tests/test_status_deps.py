@@ -208,10 +208,12 @@ def test_workflow_markdown_shows_the_dependencies_column(board: Board) -> None:
     md = board.ok("workflow", "--markdown").stdout
     assert "| Dependencies must be in |" in md
     row = {ln.split("|")[1].strip(): ln for ln in md.splitlines() if ln.startswith("| `")}
-    assert row["`merge_ready`"].rstrip().endswith("| `merge_ready`, `done` |")
-    assert row["`done`"].rstrip().endswith("| `done` |")
-    assert row["`review`"].rstrip().endswith("| no check |")
-    assert row["`backlog`"].rstrip().endswith("| no check |")
+    # the last column (Behaves) follows the dependencies column
+    deps_cell = {k: v.rstrip().rstrip("|").rsplit("|", 2)[-2].strip() for k, v in row.items()}
+    assert deps_cell["`merge_ready`"] == "`merge_ready`, `done`"
+    assert deps_cell["`done`"] == "`done`"
+    assert deps_cell["`review`"] == "no check"
+    assert deps_cell["`backlog`"] == "no check"
 
 
 def test_export_statuses_lists_deps(board: Board) -> None:

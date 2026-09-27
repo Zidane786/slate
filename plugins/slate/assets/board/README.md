@@ -45,7 +45,7 @@ port — `ssh -L 8088:localhost:8088 you@host` — and open http://localhost:808
 Opened straight from disk (`file://`), the browser blocks loading `./tickets.json`: the page
 shows a file picker; choose `tickets.json` (and `preview.json` to see a preview).
 
-The footer shows the board's Slate version (`Slate v0.2.2`) and the version recorded in
+The footer shows the board's Slate version (`Slate v0.3.0`) and the version recorded in
 `tickets.json`. The page also has `<meta name="slate-version">` for scripts.
 
 **Live refresh.** When the page is served (not opened with the file picker), it re-reads
@@ -95,7 +95,7 @@ drafts are dimmed. Click a phase header to fold or unfold it.
   last, folded, with an `unscheduled` tag. Unfold one to see its tickets.
 - While a filter or search is active, phases with nothing matching are left out.
 
-### Draft, User testing and Waiting for merge columns
+### Draft, User testing, Waiting for merge and Cancelled columns
 
 - **Draft** holds tickets that are written down but not finished. `board.py next` and
   `list` never pick them. A draft needs only a title, a summary and a phase. Its drawer
@@ -105,6 +105,9 @@ drafts are dimmed. Click a phase header to fold or unfold it.
 - **Waiting for merge** (status `merge_ready`) holds tickets that are built, reviewed, tested
   and have their commit and PR linked. The card shows the PR; the drawer opens with a note
   and the PR link. A ticket moves on to **Done** only once you tell Claude the PR is merged.
+- **Cancelled** holds work you decided not to do. It is folded by default (click to unfold);
+  cancelled tickets never count as done, and phase progress leaves them out
+  ("3/15 done · 1 cancelled"). Any state with the `folded` flag folds the same way.
 
 ## The ticket drawer
 
@@ -248,11 +251,13 @@ with `unlock-write` (only when it is older than 60 s or its process is gone).
 | `copy-to PATH [--force]` (alias `export-file`) | Write a checked copy of this board to PATH |
 | `install-merge-driver [--python CMD]` | Set up git to merge `tickets.json` ticket by ticket |
 | `merge-driver BASE OURS THEIRS` | Used by git during merges; you don't run it yourself |
+| `cancel ID[,ID…] --reason "why" [--as NAME] [--take-over "why"]` | Stop a ticket for good, keeping it on the board (see "Cancelling"). From any state; its dependents get a note and stop waiting for it |
+| `uncancel ID [--to STATUS] --handoff "why" [--keep-dependents]` | Bring a cancelled ticket back to where it was (or `--to`); refuses, listing them, when dependents went ahead — `--keep-dependents` keeps them there |
 | `claim ID [--as NAME] [--take-over "why"]` / `release ID [--as NAME] [--take-over "why"]` | Mark a ticket as yours / remove the claim (see "Who is on what") |
 | `unlock --reason "…" [--minutes 5]` / `lock` | Ask for one hand edit of `tickets.json` (see "Unlock") / cancel an active unlock or a pending request |
 | `unlock-write` | Remove a stale write lock (older than 60 s, or its process is gone) |
 | `add-status NAME --after STATUS\|--first --like ROLE_OR_STATUS [--label "…"] [--note required\|optional] [--deps A,B]` | Add a status (column) that follows a role's rules (see "Statuses"); `--note` defaults to the `--like` state's setting, `--deps` to its role's dependency rule |
-| `rename-status OLD NEW` / `edit-status NAME [label=…] [role=…] [from=a,b] [note=required\|optional] [deps=a,b\|none]` | Rename a status (its tickets move with it) / change its label, role, path rule, whether moving into it needs a note for the ticket's history, or where dependencies must be first (`deps=` back to the default) |
+| `rename-status OLD NEW` / `edit-status NAME [label=…] [role=…] [from=a,b] [note=required\|optional] [deps=a,b\|none] [FLAG=value]` | Rename a status (its tickets move with it) / change its label, role, path rule, whether moving into it needs a note for the ticket's history, where dependencies must be first (`deps=` back to the default), or a behaviour flag (`FLAG=default` clears it; see "Statuses") |
 | `reorder-statuses S S …` / `remove-status NAME [--move-to OTHER]` | Column order (every status once) / remove a status |
 | `set-meta workflow=strict\|free` | Path rules preset: forward moves follow backlog → in progress → review → user testing → waiting for merge → done / no rules |
 | `remove ID[,ID…] --reason "…" [--detach] [--force-done "why"]` / `restore ID` | Archive tickets in `meta.removed` (not deleted; ids are never reused) / bring one back |
@@ -411,7 +416,7 @@ main checkout.
 ## Statuses
 
 The columns are `meta.statuses`, in order. Every status has a **role** — `draft`, `backlog`,
-`ready`, `in_progress`, `review`, `user_testing`, `merge_ready` or `done` — and board.py's rules
+`ready`, `in_progress`, `review`, `user_testing`, `merge_ready`, `done` or `cancelled` — and board.py's rules
 follow the role, not the name: which tickets are ready, what `next` resumes, draft checks,
 claims, the user test and merge gates, what `done` means for dependents. A built-in status's
 role is its own name; `meta.status_roles` maps any other name (`add-status qa --after review
@@ -437,7 +442,30 @@ merge_ready or done status) and `/api/allowed` all use the same rule; refusals r
 `can't move to Waiting for merge until these are in Waiting for merge or Done: ACME-011 (review)`.
 `rename-status` and `remove-status` keep the references in step (a role name stays, since it still
 matches). `export --json --statuses`, `/api/info` and `workflow --markdown` show each status's rule.
-Ready tickets (`next`) are still `backlog`/`ready` ones with every dependency `done`.
+Ready tickets (`next`) are still `backlog`/`ready` ones with every dependency `done` (or in any
+state that resolves dependencies, like `cancelled`; see the flags below).
+
+**Behaviour flags.** Every status also has flags (`meta.status_flags`: `{status: {flag: value}}`);
+the defaults come from its role and a flag set with `edit-status NAME FLAG=value` overrides it
+(`FLAG=default` clears the override):
+
+- `resolves_deps` — a dependency in this state counts as resolved for every dependency rule
+  (ready, `set`, merge_ready, done, `check`). Default: on for done and cancelled.
+- `from_any` — tickets may move in from any state: path rules and the dependency rule are
+  skipped, a note is always required. Default: on for cancelled.
+- `progress` — `done` (counts as done), `excluded` (left out of the phase total, shown after it:
+  "3/15 done · 1 cancelled") or `open`. Default: done for done, excluded for cancelled.
+- `terminal` — finished: `next`, `list` and `/slate:work` never pick it; entering it clears the
+  claim. Default: on for done and cancelled.
+- `notify_dependents` — entering it adds `depended on ID, <State>: <reason>` to the history of
+  every unfinished ticket that depends on it. Default: on for cancelled.
+- `folded` — the board page folds this column by default. Default: on for cancelled.
+
+`add-status NAME --like STATE` copies that state's flags (`--like cancelled --label "Won't fix"`
+gives a Won't fix column that behaves like Cancelled). `export --json --statuses`, `/api/info`
+(`flags`, the effective values) and `workflow --markdown` (the Behaves column) show them; `check`
+reports unknown flags or values. States and flags are set with these commands (by Claude, after
+you agree), never from the board page.
 
 board.py refuses a status change that would leave no status with the `done` role, or none with
 `backlog`/`ready`. Without a `draft` status, `new --draft` refuses (with the `add-status` fix).
@@ -458,12 +486,28 @@ moves (they still run every other check). `show` and `status` name the active wo
 works, and `workflow --markdown` prints the matching `## Workflow` section for `SLATE.md`
 (`doctor` reports `slate-md-workflow-stale` when the two drift apart).
 
+## Cancelling
+
+`cancel ID --reason "why"` moves a ticket to **Cancelled** from wherever it is (even with a strict
+workflow or open dependencies), records where it came from (`cancelled_from`, and `from` on the
+history entry) and clears its claim; a ticket someone else claimed needs `--as` or
+`--take-over "why"`. Each unfinished ticket that depends on it gets a note ("depended on ACME-004,
+Cancelled: …") and no longer waits for it. Prefer it to `remove` once work started or other
+tickets depend on the ticket: it stays on the board with its history.
+
+`uncancel ID --handoff "why"` brings it back to the state it came from (or `--to STATUS`; the
+target's dependency rule applies, path rules don't) and notes it on each dependent ("ACME-004 is
+back (Backlog): …"). If a dependent went ahead meanwhile (say it is Done now), `uncancel`
+refuses and lists them; move them back first, or, if you agree they stay, `--keep-dependents`
+records `dep_exceptions: {"ACME-004": "why"}` on each, which the dependency rules and `check`
+accept.
+
 ## Who is on what (claims)
 
 `set ID in_progress` records who is working on the ticket in `claimed_by`
 (`{"by": "<branch>", "since": "YYYY-MM-DD HH:MM"}`): the current git branch, or `host-user`
 when there is none; `--as NAME` overrides it. `review`, `user_testing` and `merge_ready` keep
-the claim; `done`, `backlog`, `ready` and `draft` clear it. `next` and `list` skip tickets
+the claim; `done`, `cancelled`, `backlog`, `ready` and `draft` (and any `terminal` state) clear it. `next` and `list` skip tickets
 claimed by someone else and show `on: <name>`; `status` lists every claim. Moving a ticket
 someone else claimed is refused with an `ask the user:` line; with their OK add
 `--take-over "why"` (the reason goes into the handoff note). `done` is not blocked by a claim
@@ -564,9 +608,12 @@ error: ACME-014 commits: has no commits linked, so it can't be done
 {
   "meta": {
     "project": "Acme", "prefix": "ACME", "repo_url": "https://github.com/acme/app (optional)",
-    "slate_version": "0.2.2", "schema_version": 2,
+    "slate_version": "0.3.0", "schema_version": 3,
     "generated": "2026-09-26",
-    "statuses": ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"],
+    "statuses": ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done",
+                 "cancelled"],
+    "status_labels": { "cancelled": "Cancelled" },
+    "status_flags": { "cancelled": { "folded": false } },
     "areas": ["backend", "frontend", "infra"],
     "priorities": ["P0", "P1", "P2", "P3"],
     "user_test_areas": ["frontend", "ui"],
@@ -584,9 +631,14 @@ error: ACME-014 commits: has no commits linked, so it can't be done
     "user_tests": [{ "title": "…", "setup": "…", "steps": ["…"], "expect": "…", "required": true }],
     "technical": "markdown, optional", "plan_doc": "docs/plans/…md, optional",
     "phase": "P1", "areas": ["frontend"], "priority": "P1", "rank": 1, "status": "in_progress",
+    "cancelled_from": "review (only while in a cancelled state)",
     "claimed_by": { "by": "slate/ACME-001-reset", "since": "2026-09-26 14:05" },
-    "depends_on": [], "unlocks": [], "estimate": "1d", "labels": [],
-    "handoff": [{ "date": "2026-09-26", "status": "review", "note": "…" }],
+    "depends_on": [], "dep_exceptions": { "ACME-000": "why it may stay past it (optional)" },
+    "unlocks": [], "estimate": "1d", "labels": [],
+    "handoff": [{ "date": "2026-09-26", "status": "review", "note": "…" },
+                { "date": "2026-09-27", "status": "cancelled", "from": "review", "note": "…" },
+                { "date": "2026-09-27", "status": "backlog", "note": "depended on ACME-000, Cancelled: …",
+                  "about": "ACME-000" }],
     "user_checks": { "0": { "result": "pass", "date": "2026-09-26", "note": "" } },
     "item_checks": { "acceptance:0": { "date": "2026-09-26", "evidence": "…" }, "test:2": { "date": "2026-09-26", "evidence": "…" } },
     "commits": [{ "sha": "3f9c2a71b0d8…(7-40 hex)", "date": "2026-09-26", "message": "subject line", "branch": "optional" }],
@@ -613,6 +665,13 @@ order of `phases` is the display order. Also optional in schema 2: `meta.status_
 `{"until": "<ISO UTC>", "reason": "…", "approved": "…"}`, the request, the used record, the
 pending log) and `kanban/.slate-write.lock` are not board data.
 
+**Schema 3** (Slate 0.3.0) adds the built-in `cancelled` role and status (right after `done`,
+label Cancelled; `migrate` adds it, and turns a status already named `cancelled` with the draft
+role into it), `meta.status_flags`, and the ticket fields `cancelled_from` and `dep_exceptions`
+(written only by `cancel`/`set` and `uncancel --keep-dependents`); history entries may carry
+`from` (the state a ticket left for a cancel-like state) and `about` (a note about another
+ticket). Schema 2 boards keep loading and working; only cancelling asks for `migrate`.
+
 Rules `board.py check` enforces:
 
 - Every ticket needs `id title phase priority rank status depends_on areas estimate` plus
@@ -622,9 +681,10 @@ Rules `board.py check` enforces:
 - If any of a ticket's `areas` is in `meta.user_test_areas`, the ticket needs at least one
   `user_tests` entry with `"required": true`.
 - A **draft** (status `draft`) needs only `title`, `summary` and `phase`. Leaving draft runs
-  the full checks first. Only other drafts may depend on a draft.
-- A ticket can't be `done` while something it needs isn't done, or while a required user
-  test has no `pass` in `user_checks`.
+  the full checks first. Only other drafts (and cancelled tickets) may depend on a draft. A
+  **cancelled** ticket needs only what a draft needs.
+- A ticket can't be `done` while something it needs isn't done (or cancelled, or listed in its
+  `dep_exceptions`), or while a required user test has no `pass` in `user_checks`.
 - `commits` entries have a 7-40 character hex `sha` (each only once) and a `YYYY-MM-DD`
   `date`; `pr.url` and `meta.repo_url` are `http(s)://` links; `pr.state` is one of the four
   states.
@@ -632,7 +692,9 @@ Rules `board.py check` enforces:
   the tickets it needs. Every `phase` and `status` exists.
 - **Open** statuses (picked up first): `in_progress`, `review`, `user_testing`.
   **Waiting for merge**: `merge_ready` (listed by `next`, not resumed).
-  **Ready**: `backlog` or `ready` with every dependency `done`, in a scheduled phase.
+  **Ready**: `backlog` or `ready` with every dependency `done` or `cancelled` (any state with
+  `resolves_deps`), in a scheduled phase. **Finished** (never offered): `done`, `cancelled` and
+  any state with `terminal`.
 
 What the page relies on:
 

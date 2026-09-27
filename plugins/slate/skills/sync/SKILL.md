@@ -107,7 +107,14 @@ runs `/slate:sync <this branch or path>` from the main checkout).
   Then say what `sync` would do by default: new tickets and phases added, notes, commits, ticks
   and test results combined from both, status takes whichever is further along, other field
   edits take theirs (`--prefer ours` keeps this board's). Point out anything that looks like
-  real disagreement (the same field edited differently on both sides).
+  real disagreement (the same field edited differently on both sides). **Cancelled counts as
+  further along than everything except Done**: a ticket cancelled on one side and still open on
+  the other becomes Cancelled, and one that was brought back (`uncancel`) on one side but is still
+  Cancelled on the other stays Cancelled — say so plainly ("ACME-012 was cancelled on main; it
+  will be cancelled here too") and ask. If the user wants it back, `uncancel` it after the sync
+  (`python3 kanban/board.py uncancel <ID> --handoff "…"`); if dependents went ahead meanwhile,
+  ask before `--keep-dependents`. A schema 2 board (no Cancelled state yet) can't take cancelled
+  tickets: it needs `python3 kanban/board.py migrate` first (with the user's OK, or `/slate:upgrade`).
 - [ ] Ask: "Bring main's changes into this board? (all / only some tickets / keep ours on
       field edits / no)". No → stop and report.
 - [ ] `python3 kanban/board.py sync --from <OTHER> --dry-run` (with `--only ID,…` and
@@ -167,6 +174,8 @@ the file: then either abort the merge (`git merge --abort`, only if the user agr
         numbers, booleans: `<field>:=<JSON>`; long text: `--file patch.json` written to the
         scratch area, never into `kanban/`).
       - status → `python3 kanban/board.py set <ID> <status> --handoff "Merge: kept <status> from <branch>, user's choice."`
+        (into a cancelled state: `python3 kanban/board.py cancel <ID> --reason "Merge: …"`; out of
+        one: `python3 kanban/board.py uncancel <ID> --to <status> --handoff "Merge: …"`)
       - phase definitions → `edit-phase` / `rename-phase`; rank → `rerank <ID> --after <OTHER>`.
 - [ ] After the last one: `python3 kanban/board.py check`; fix what it reports with its `fix:`
       lines (ask before anything that changes meaning). Then tell the user the file is ready to

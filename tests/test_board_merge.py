@@ -32,6 +32,13 @@ def three() -> Dict[str, Any]:
     return v2_doc([full_ticket(1, unlocks=["ACME-002"]), full_ticket(2, depends_on=["ACME-001"]), full_ticket(3)])
 
 
+def three_current() -> Dict[str, Any]:
+    """three() at the current schema (3: the cancelled state), so doctor has no schema problem."""
+    d = three()
+    d["meta"].update({"schema_version": 3, "statuses": V2_STATUSES + ["cancelled"]})
+    return d
+
+
 def git(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
                            "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", *args],
@@ -604,14 +611,14 @@ def codes(board: Board, *args: str) -> Dict[str, Dict[str, Any]]:
 
 
 def test_doctor_healthy_outside_git(board: Board) -> None:
-    board.write(three())
+    board.write(three_current())
     r = board.ok("doctor")
     assert "ok: no problems found" in r.stdout
     assert board.ok("doctor", "--brief").stdout.strip() == "Slate: healthy"
 
 
 def test_doctor_git_setup_problems_and_fixes(board: Board) -> None:
-    make_repo(board)
+    make_repo(board, three_current())
     git(board.root, "remote", "add", "origin", "git@github.com:acme/app.git")
     c = codes(board)
     assert {"merge-driver-missing", "gitignore-missing", "repo-url-missing"} <= set(c)

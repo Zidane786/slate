@@ -15,6 +15,7 @@ import pytest
 from conftest import VERSION, FIXTURES, USER_TEST, Board, base_doc, full_ticket
 
 V2_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done"]
+V3_STATUSES = V2_STATUSES + ["cancelled"]  # schema 3 (0.3.0): the built-in cancelled state after done
 PR = "https://github.com/acme/app/pull/7"
 
 
@@ -67,20 +68,21 @@ def new_args(title: str = "A new ticket", *extra: str) -> List[str]:
 # --------------------------------------------------------------------------- schema 2 + migrate
 
 
-def test_init_is_schema_2(board: Board) -> None:
+def test_init_is_schema_3(board: Board) -> None:
     board.ok("init", "--project", "Acme", "--prefix", "ACME")
     m = board.load()["meta"]
-    assert m["schema_version"] == 2 and m["slate_version"] == VERSION and m["statuses"] == V2_STATUSES
+    assert m["schema_version"] == 3 and m["slate_version"] == VERSION and m["statuses"] == V3_STATUSES
 
 
-def test_migrate_1_to_2_inserts_merge_ready_and_is_idempotent(seeded: Board) -> None:
+def test_migrate_1_to_3_inserts_merge_ready_and_cancelled_and_is_idempotent(seeded: Board) -> None:
     out = seeded.ok("migrate").stdout
     assert "added status merge_ready (before done)" in out
-    assert "set meta.schema_version = 2 (was 1)" in out
+    assert "added status cancelled (after done)" in out
+    assert "set meta.schema_version = 3 (was 1)" in out
     m = seeded.load()["meta"]
-    assert m["schema_version"] == 2 and m["statuses"] == V2_STATUSES
+    assert m["schema_version"] == 3 and m["statuses"] == V3_STATUSES
     once = seeded.tickets.read_bytes()
-    assert "already at schema 2" in seeded.ok("migrate").stdout
+    assert "already at schema 3" in seeded.ok("migrate").stdout
     assert seeded.tickets.read_bytes() == once
     seeded.ok("check")
 
@@ -92,7 +94,9 @@ def test_migrate_keeps_tickets_and_custom_statuses(board: Board) -> None:
     board.write(doc)
     board.ok("migrate")
     after = board.load()
-    assert after["meta"]["statuses"] == ["draft", "backlog", "doing", "user_testing", "shipped", "merge_ready"]
+    # no done role: merge_ready and cancelled go last
+    assert after["meta"]["statuses"] == ["draft", "backlog", "doing", "user_testing", "shipped", "merge_ready",
+                                         "cancelled"]
     assert after["tickets"] == doc["tickets"]
 
 
@@ -102,14 +106,14 @@ def test_migrate_does_not_duplicate_existing_merge_ready(board: Board) -> None:
     board.write(doc)
     out = board.ok("migrate").stdout
     assert "added status merge_ready" not in out
-    assert board.load()["meta"]["statuses"] == V2_STATUSES
+    assert board.load()["meta"]["statuses"] == V3_STATUSES
 
 
-def test_legacy_forge_fixture_migrates_to_2(board: Board) -> None:
+def test_legacy_forge_fixture_migrates_to_3(board: Board) -> None:
     shutil.copy(FIXTURES / "legacy-forge-mini.json", board.tickets)
     board.ok("migrate")
     m = board.load()["meta"]
-    assert m["schema_version"] == 2 and m["statuses"] == V2_STATUSES
+    assert m["schema_version"] == 3 and m["statuses"] == V3_STATUSES
     board.ok("check")
 
 
@@ -126,9 +130,9 @@ def test_v1_board_merge_ready_suggests_migrate(seeded: Board) -> None:
     assert "fix: python3 kanban/board.py migrate" in r.stderr
 
 
-def test_writes_refuse_schema_3(v2: Board) -> None:
+def test_writes_refuse_schema_4(v2: Board) -> None:
     doc = v2.load()
-    doc["meta"]["schema_version"] = 3
+    doc["meta"]["schema_version"] = 4
     v2.write(doc)
     r = v2.fail("check-item", "ACME-001", "acceptance", "0")
     assert "board is newer than this board.py" in r.stderr
