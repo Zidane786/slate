@@ -2,8 +2,8 @@
 
 Plan ideas into plain-language tickets on a kanban board in your repo, then build them one at
 a time with tests, review, your own check and the commit/PR recorded on the ticket. You stay
-in charge: Claude builds one ticket per request, parks it in **Waiting for merge**, and stops;
-it moves to Done only after you say the PR is merged.
+in charge: the agent (Claude Code or GitHub Copilot CLI) builds one ticket per request, parks it
+in **Waiting for merge**, and stops; it moves to Done only after you say the PR is merged.
 
 ## Install
 
@@ -99,6 +99,11 @@ on Claude Code's own permission card (Manual / Accept edits / Auto mode) or by t
 your own terminal (Plan / Bypass / Don't-ask mode). One unlock = one edit.
 
 Every board command for agents: [reference/commands.md](reference/commands.md). Works on macOS,
-Linux and Windows (`python3`, `python` or `py -3`). Copilot CLI support: planned.
+Linux and Windows (`python3`, `python` or `py -3`).
+
+**GitHub Copilot CLI:** the same plugin works there (skills, hooks and board):
+`copilot plugin marketplace add Zidane786/slate`, then `copilot plugin install slate@slate`.
+The commands are the same (`/slate:plan`, `/slate:work`, …); the unlock card shows in every mode,
+even Autopilot with Allow all.
 
 Full docs, design and source: https://github.com/Zidane786/slate · Changes: [CHANGELOG.md](CHANGELOG.md)

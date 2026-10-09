@@ -12,9 +12,9 @@ the board server in step 0 is the only thing this skill may start.) Every comman
 
 ## Step 0: version check and board server
 
-1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
+1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code or Copilot CLI). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
-2. If `kanban/board.py` is missing: say "This repo isn't set up for Slate yet — run
+2. If `kanban/board.py` is missing in the project (the current folder, not `ROOT`): say "This repo isn't set up for Slate yet — run
    `/slate:init`." and stop.
 3. Skim `SLATE.md` for the project name (fall back to the `status` header), the Python command
    (use it instead of `python3` when it names another, e.g. `py -3`), `Board server` and

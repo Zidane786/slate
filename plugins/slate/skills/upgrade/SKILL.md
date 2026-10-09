@@ -21,16 +21,16 @@ the project already set.
 
 ## Step 0: versions
 
-1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
+1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code or Copilot CLI). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
-2. If `kanban/board.py` is missing: "This repo isn't set up for Slate yet — run `/slate:init`."
+2. If `kanban/board.py` is missing in the project (the current folder, not `ROOT`): "This repo isn't set up for Slate yet — run `/slate:init`."
    Stop.
 3. `python3 kanban/board.py version --against "<ROOT>" --json` → note the project's board
    version (**OLD**) and the plugin version (**NEW**):
    - `same` → "Already on Slate <version>." Still run `python3 kanban/board.py doctor --against
      "<ROOT>"`; if it lists `setup` problems, offer to fix them (step 4). Otherwise stop.
    - `ahead` → the board is newer than the plugin (<board> vs <plugin>) — never downgrade;
-     offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
+     offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." (In Copilot CLI: `copilot plugin marketplace update slate` and `copilot plugin update slate@slate`.) On yes, run both, then ask the user to run `/reload-plugins` (Copilot CLI: `/restart`, or restart it) and invoke this command again. On no, stop.
    - `behind` → continue.
 4. `git status --short kanban/ SLATE.md`: if those files have uncommitted changes, say so and
    ask whether to continue (the upgrade replaces the Slate-owned files).
@@ -68,7 +68,7 @@ edit is still needed, explain why, then run exactly
 Manual, Accept edits and Auto mode Claude Code shows its approval card and the user's Yes
 activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses it, and the user
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
-one edit. If the user declines, stop. Copilot CLI support: planned.
+one edit. If the user declines, stop. In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
 
 ## Step 2b: team settings (always)
 

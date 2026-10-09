@@ -1,6 +1,6 @@
 # CLAUDE.md — working on the Slate repo
 
-This repo is **Slate**, a Claude Code plugin: plan ideas into plain-language tickets on a kanban
+This repo is **Slate**, a Claude Code (and GitHub Copilot CLI) plugin: plan ideas into plain-language tickets on a kanban
 board inside a project, then build them one ticket at a time with tests, review, the user's own
 check, and the commit/PR recorded on the ticket — always with a human in the loop.
 
@@ -29,7 +29,7 @@ plugins/slate/                        the installed plugin (only this folder shi
     board.py                          the ONLY writer of tickets.json (CLI + serve API)
     index.html                        the board page (one file, no deps)
     README.md                         board docs copied into projects
-  hooks/                              hooks.json, run.sh (python launcher), guard_tickets.py, session_start.py
+  hooks/                              hooks.json, run.sh / run.cmd (python launchers), guard_tickets.py, session_start.py
   templates/                          SLATE.md, CLAUDE.md, AGENTS.md, plan-doc.md for projects
   reference/commands.md               shared command reference all skills link
   upgrades/<version>.md               per-release "What's new" + upgrade steps
@@ -50,7 +50,8 @@ docs/                                 specs, build plans, archive
   hooks, scripts) reconfigures stdout/stderr to UTF-8; every text read/write and subprocess call
   names `encoding="utf-8"` (`tests/test_portability.py` enforces both). UTF-8 + `\n` for every file write,
   pathlib, no `shell=True`, no POSIX-only calls without a Windows path. Hooks go through
-  `hooks/run.sh` (finds python3 / python / py -3).
+  `hooks/run.sh` (finds python3 / python / py -3); on Windows, Copilot CLI runs each hook's
+  `powershell` command, which goes through `hooks/run.cmd` (py -3 / python / python3).
 - **`board.py` is the only thing that changes `tickets.json`.** Every write validates the whole
   board, takes the write lock, writes atomically. The guard hook blocks direct edits; don't
   weaken it.
@@ -60,16 +61,22 @@ docs/                                 specs, build plans, archive
   through `migrate` (bump `SCHEMA_VERSION` only when needed).
 - **Human in the loop, always.** Skills do one ticket per request, ask before choices, never
   merge, never force-push. The unlock needs the user's approval (Claude Code's card in Manual /
-  Accept edits / Auto; typed code in a terminal otherwise); one unlock = one edit.
+  Accept edits / Auto; Copilot CLI's card in every interactive mode; typed code in a terminal
+  otherwise); one unlock = one edit.
 - **Tickets are for non-technical readers** (summary, story, picture, "done when", "try it
   yourself"); technical notes stay collapsed.
 - **Product text never mentions other internal projects** (e.g. "Forge"). Slate is generic.
-- **Claude Code only for now.** Copilot CLI support is planned; don't add half-support.
+- **Claude Code and GitHub Copilot CLI, one plugin.** Copilot CLI loads the same `.claude-plugin/`
+  manifest, skills and Claude-format `hooks.json`. Hook code must work for both: Copilot sends
+  apply_patch text for edits, no `permission_mode`, `tool_result` (not `tool_response`), hides
+  exit-2 stderr (refuse with JSON when `COPILOT_CLI` is set) and needs `{"additionalContext"}`
+  at session start. Every hook has a `powershell` command (Windows Copilot). `tests/test_copilot.py`
+  pins all of this. VS Code Copilot Chat isn't supported yet; don't add half-support.
 
 ## 4. Develop and test
 
 ```
-uv run --with pytest pytest -q                  # full suite (≈800 tests)
+uv run --with pytest pytest -q                  # full suite (≈960 tests)
 uv run --python 3.9 --with pytest pytest -q     # oldest supported Python
 claude plugin validate --strict .
 claude plugin validate --strict plugins/slate

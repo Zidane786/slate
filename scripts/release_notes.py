@@ -38,6 +38,16 @@ Then, inside your project:
 ```
 /slate:init
 ```
+
+**GitHub Copilot CLI** uses the same plugin:
+
+```
+copilot plugin marketplace add Zidane786/slate
+copilot plugin install slate@slate
+```
+
+then restart Copilot and run `/slate:init`. To update there: `copilot plugin marketplace update
+slate`, `copilot plugin update slate@slate`, then `/restart`.
 """
 
 UPGRADE_HEAD = """### Upgrade (existing projects)
