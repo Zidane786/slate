@@ -7,6 +7,55 @@ nothing). Merging a version bump into `main` publishes a GitHub Release with tha
 section. Each section lists only what changed since the previous version, and a released
 section is never edited afterwards (CI enforces both).
 
+## 0.4.0 — 2026-10-09
+
+Board schema **3** (unchanged).
+
+### Highlights
+
+- **GitHub Copilot CLI:** Slate now works in Copilot CLI as well as Claude Code. It's the same
+  plugin, with the same commands (`/slate:plan`, `/slate:work`, …), hooks and board, so one team
+  can use both tools on one board. Install with `copilot plugin marketplace add Zidane786/slate`
+  and `copilot plugin install slate@slate`.
+- **The guard holds in Copilot, even in Autopilot with Allow all:** direct edits to
+  `kanban/tickets.json` are blocked, and a `board.py unlock` still needs your Yes on Copilot's
+  approval card.
+
+### Added
+
+- **Copilot CLI support** for the whole plugin. Verified by hand in Copilot CLI 1.0.94:
+  - The skills appear as `/slate:init`, `/slate:plan` and so on. Copilot's own `/plan` and
+    `/review` are separate commands.
+  - The session-start status line reaches Copilot.
+  - The guard blocks Copilot's edit tool, which sends one patch that can touch several files.
+  - Refusals tell Copilot the fix ("Change tickets through kanban/board.py…"), not just "hook
+    exited with code 2".
+  - `board.py unlock` asks for approval on Copilot's "Hook permission request" card. The card
+    shows in every interactive mode, including Autopilot with Allow all. A non-interactive
+    `copilot -p` run refuses it, and you type the code in your own terminal instead.
+- **Windows hooks for Copilot CLI:** each hook has a PowerShell command that runs the new
+  `hooks/run.cmd` launcher, which finds `py -3`, `python` or `python3`. When no Python is found,
+  the hook is skipped rather than blocking every tool call.
+- **PowerShell commands are guarded:** `Set-Content`, `Out-File`, `Copy-Item`, `Remove-Item`,
+  `[IO.File]::WriteAllText` and the like on `tickets.json` are blocked. This covers Copilot on
+  Windows, and Claude Code's PowerShell tool too.
+
+### Changed
+
+- `board.py unlock` names the tool you're actually in: "Approve it in Copilot CLI's permission
+  card…" inside Copilot. The Claude Code text is unchanged.
+- The skills say "filled in by Claude Code or Copilot CLI", look for `kanban/board.py` in the
+  project rather than the plugin folder, and give the Copilot update commands
+  (`copilot plugin update slate@slate`, then `/restart`) next to Claude Code's.
+- Claude Code's behaviour is unchanged. Refusals there still exit 2 with the reason on stderr,
+  and the session-start line is still plain text.
+
+### Upgrade notes
+
+Update the plugin. Nothing in the project has to change: the board files only change their
+version number. `/slate:upgrade` offers to replace the old "Copilot CLI support: planned" line
+in `SLATE.md`.
+
 ## 0.3.0 — 2026-09-27
 
 Board schema **3**. Older boards keep working; `/slate:upgrade` (or `board.py migrate`) adds
