@@ -5,11 +5,13 @@ Run through hooks/run.sh (which picks python3, python or py -3). Finds the proje
 (CLAUDE_PROJECT_DIR, else the current directory), and when it has kanban/board.py runs
 `board.py next --brief --against <plugin root>` with this same interpreter, passing its output
 through. The line includes doctor's findings and the board page URL when a server is running.
-Never fails the session: any problem means no output and exit 0. Standard library only.
+Claude Code adds plain stdout to the session; GitHub Copilot CLI (COPILOT_CLI set) ignores it, so
+there the line goes out as {"additionalContext": "..."}. Never fails the session: any problem means no output and exit 0. Standard library only.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -30,7 +32,7 @@ def main() -> int:
         return 0
     out = r.stdout.strip()
     if out:
-        print(out)
+        print(json.dumps({"additionalContext": out}) if os.environ.get("COPILOT_CLI") else out)
     return 0
 
 

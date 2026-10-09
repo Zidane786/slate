@@ -379,9 +379,13 @@ def test_copilot_style_unlock_gets_flat_ask(tmp_path: Path) -> None:
 
 
 def test_copilot_style_write_is_blocked(tmp_path: Path) -> None:
+    # Copilot CLI hides an exit-2 hook's stderr from the model, so it gets a JSON deny with the reason.
     body = json.dumps({"toolName": "bash", "cwd": str(tmp_path),
                        "toolArgs": {"command": "echo {} > kanban/tickets.json"}})
-    assert run_guard(body, cwd=tmp_path).returncode == 2
+    r = run_guard(body, cwd=tmp_path)
+    assert r.returncode == 0
+    out = json.loads(r.stdout)
+    assert out["permissionDecision"] == "deny" and out["permissionDecisionReason"].startswith(MESSAGE)
 
 
 @pytest.mark.parametrize(
