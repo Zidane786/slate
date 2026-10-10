@@ -13,7 +13,7 @@ Work from the repo root. Announce each step in one line. Never touch any ticket 
 never edit or read `kanban/tickets.json` directly: board.py writes it. Every board command,
 flag and "use it when" is in `<ROOT>/reference/commands.md`.
 
-**Plugin root (`ROOT`):** `${CLAUDE_PLUGIN_ROOT}` (Claude Code fills this in for plugin skills).
+**Plugin root (`ROOT`):** `${CLAUDE_PLUGIN_ROOT}` (Claude Code and Copilot CLI fill this in for plugin skills).
 If it still reads literally as `${CLAUDE_PLUGIN_ROOT}`, use this skill's base directory
 (printed when the skill loads, `<root>/skills/init`) + `/../..`, resolved to an absolute path.
 Assets are in `ROOT/assets/board/`, templates in `ROOT/templates/`, the plugin version in
@@ -33,7 +33,7 @@ Check, in this order, and take the first branch that matches:
    `python3 kanban/board.py version --against "<ROOT>"`:
    - `behind` → follow the `/slate:upgrade` procedure (read `ROOT/skills/upgrade/SKILL.md` and
      do all its steps, including the "What's new" and upgrades/ steps), then continue at step 1 below in *refresh mode*.
-   - `ahead` → a teammate upgraded the board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
+   - `ahead` → a teammate upgraded the board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." (In Copilot CLI: `copilot plugin marketplace update slate` and `copilot plugin update slate@slate`.) On yes, run both, then ask the user to run `/reload-plugins` (Copilot CLI: `/restart`, or restart it) and invoke this command again. On no, stop.
    - `same` → continue at step 1 in *refresh mode*.
    In refresh mode you re-detect values and compare them to `SLATE.md`; for every value that
    differs, show old vs new and ask before changing it. Never run `board.py init` again and
@@ -258,6 +258,8 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   relative path, so no install command is needed); the first time they see "Plugins changed.
   Run /reload-plugins to activate." `autoUpdate` keeps Slate updated. (`claude -p` and cloud
   sessions never show the trust prompt; there, install with `claude plugin install slate@slate`.)
+  GitHub Copilot CLI doesn't read `.claude/settings.json`: Copilot users install once with
+  `copilot plugin marketplace add Zidane786/slate` and `copilot plugin install slate@slate`.
 
   **If `.claude/settings.json` is ignored by git** (`git check-ignore -q .claude/settings.json`
   succeeds): still write the entry, but **don't edit `.gitignore`**. Tell the user: "Your
@@ -281,7 +283,7 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   is ever truly needed, Claude asks for a one-time unlock: in Manual, Accept edits or Auto mode
   Claude Code shows its approval card and your Yes allows exactly one edit; in Plan, Bypass
   permissions or Don't-ask mode you run `python3 kanban/board.py unlock --reason "…"` in your own
-  terminal (or a tmux pane) and type the code it shows." Copilot CLI support: planned.
+  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
 - Suggest committing these files, then `/slate:plan "<an idea>"` as the next step.
 
 ## If a hand edit of tickets.json is ever needed
@@ -292,7 +294,7 @@ If a hand edit is still needed (for example git conflict markers from a merge wi
 merge driver), explain why to the user, then run exactly
 `python3 kanban/board.py unlock --reason "<why>" --minutes 5` (no `cd … &&`, no pipes: only the
 plain command can activate an unlock). Claude Code shows its approval card in Manual, Accept edits and Auto mode; in Plan, Bypass and Don't-ask mode the guard refuses it, and the user runs `unlock` in their own terminal and types the code it shows. One unlock = one edit. If the user declines, stop.
-Copilot CLI support: planned.
+In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
 
 ## Checklist before you finish
 

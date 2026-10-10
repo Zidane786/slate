@@ -1,6 +1,6 @@
 # Slate
 
-Slate is a Claude Code plugin that gives any project two things:
+Slate is a plugin for Claude Code and GitHub Copilot CLI that gives any project two things:
 
 1. **A way to plan.** You talk an idea through with Claude in plain words, with examples and
    pictures, and it becomes clear, readable tickets on a kanban board that lives in your repo.
@@ -35,6 +35,22 @@ Then, inside your project:
 ```
 /slate:init
 ```
+
+### GitHub Copilot CLI
+
+The same plugin works in Copilot CLI: the same skills, hooks and board. In a terminal:
+
+```
+copilot plugin marketplace add Zidane786/slate
+copilot plugin install slate@slate
+```
+
+(or `/plugin marketplace add Zidane786/slate` and `/plugin install slate@slate` inside Copilot),
+then restart Copilot and run `/slate:init` in your project. The commands are the same as in Claude
+Code (`/slate:plan`, `/slate:work`, …; Copilot's own `/plan` and `/review` are different
+commands). Update with `copilot plugin marketplace update slate` and
+`copilot plugin update slate@slate`, then `/restart`. Windows needs Python (`py -3`, `python` or
+`python3`); the hooks run through PowerShell there.
 
 ## Update to a new version
 
@@ -309,12 +325,16 @@ hand edit is truly needed (say, repairing a messy merge), Claude explains why an
   unlock is refused; you run `python3 kanban/board.py unlock --reason "…"` in your own terminal
   (a tmux pane or second SSH session is fine) and type the 4-letter code it shows.
 
+In **GitHub Copilot CLI** the card ("Hook permission request") shows in every mode, even
+Autopilot with Allow all; only a non-interactive `copilot -p` run refuses it.
+
 One unlock = one edit, expiring after a few minutes if unused, all logged. Git operations on the
 file (checkout, restore, merge, rebase, stash) are never blocked.
 
 **Does Slate work with other agent tools?** The board and `board.py` work anywhere Python runs
-(macOS, Linux, Windows; `python3`, `python` or `py -3`). The skills and hooks are for Claude
-Code. GitHub Copilot CLI support: planned.
+(macOS, Linux, Windows; `python3`, `python` or `py -3`). The plugin (skills and hooks) works in
+**Claude Code** and **GitHub Copilot CLI**: it's the same plugin, so a team can use both on one
+board. VS Code's Copilot Chat isn't supported yet.
 
 **Do I need the plugin to see the board?** No. The board is a single HTML file plus a Python
 script (standard library only) in your repo: `python3 kanban/board.py serve` gives the live

@@ -1,4 +1,4 @@
-<!-- slate v0.3.0 · written by /slate:init, safe to edit values -->
+<!-- slate v0.4.0 · written by /slate:init, safe to edit values -->
 # Slate: how we plan and build in {{PROJECT}}
 
 > This is the project's living context for Slate. Every Slate command reads it first, and
@@ -116,7 +116,8 @@ through board.py, with the user's OK, never from the board page; regenerate `## 
   Manual, Accept edits and Auto mode (the user's Yes on the card is the approval); in Plan,
   Bypass permissions and Don't-ask mode it is refused, and the user runs `unlock` in their own
   terminal (or tmux pane) and types the 4-letter code it shows. One unlock = one edit;
-  if the user declines, stop. Every step is logged in `meta.unlock_log`. Copilot CLI support: planned.
+  if the user declines, stop. Every step is logged in `meta.unlock_log`. In GitHub Copilot CLI the
+  card shows in every mode, even Autopilot with Allow all (a `copilot -p` run refuses it).
 - Board changes without hand edits: `note ID "…"` (a history note), `unlink ID --commit SHA` /
   `--pr` (wrongly linked code), `usertest ID N reset` (a wrongly recorded result), `remove ID
   --reason "…"` / `restore ID` (archive, ask first), `edit ID1,ID2 key=value` (several at once).

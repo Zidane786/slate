@@ -14,9 +14,9 @@ command `SLATE.md` names, e.g. `py -3`); the full list is in `<ROOT>/reference/c
 
 ## Step 0: version check and context
 
-1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
+1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code or Copilot CLI). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
-2. If `kanban/board.py` is missing: say "This repo isn't set up for Slate yet — run
+2. If `kanban/board.py` is missing in the project (the current folder, not `ROOT`): say "This repo isn't set up for Slate yet — run
    `/slate:init` first." You can still review the diff without a ticket; say so.
 3. `python3 kanban/board.py version --against "<ROOT>"`: `same` → silent; `behind` → offer
    `/slate:upgrade` once and continue; `ahead` → tell the user to update the plugin

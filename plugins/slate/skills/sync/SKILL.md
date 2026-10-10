@@ -29,9 +29,9 @@ refusal follow the same `error:` / `fix:` / `ask the user:` shape.
 
 ## Step 0: version check, board server and where we are
 
-1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
+1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code or Copilot CLI). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
-2. If `kanban/board.py` is missing: say "This repo isn't set up for Slate yet — run
+2. If `kanban/board.py` is missing in the project (the current folder, not `ROOT`): say "This repo isn't set up for Slate yet — run
    `/slate:init` first." and stop.
 3. Read `SLATE.md` (Python command, Board server / Board port, `## Workflow` incl. the board of
    record, "Stop and ask before").
@@ -40,7 +40,7 @@ refusal follow the same `error:` / `fix:` / `ask the user:` shape.
    - `behind` → "This project's board is Slate <board>, the plugin is <plugin>. Upgrade now
      with `/slate:upgrade`?" Ask once. The branch/merge commands below need board 0.2.0 or
      newer: if the board is older, stop here and suggest the upgrade.
-   - `ahead` → a teammate upgraded this board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
+   - `ahead` → a teammate upgraded this board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." (In Copilot CLI: `copilot plugin marketplace update slate` and `copilot plugin update slate@slate`.) On yes, run both, then ask the user to run `/reload-plugins` (Copilot CLI: `/restart`, or restart it) and invoke this command again. On no, stop.
 5. **Board server.** Unless `SLATE.md` says `Board server: off`:
    `python3 kanban/board.py serve --ensure --port <Board port, default 8088>`; show the URL once
    (over SSH: `ssh -L <port>:localhost:<port> <host>`). If `serve` isn't in `--help` (an older board), skip.
@@ -216,7 +216,9 @@ the user first and name the exact change.
 
 - `python3 kanban/board.py unlock --reason "<why>" --minutes 5`. Run by you, it only writes a
   request; Claude Code then shows its permission card and the user's Yes activates it.
-- The card only appears in **Manual**, **Accept edits** and **Auto** permission modes.
+- In GitHub Copilot CLI the card ("Hook permission request") shows in every mode, even Autopilot
+  with Allow all; only a `copilot -p` run refuses it (then the user types the code, as below).
+- In Claude Code the card only appears in **Manual**, **Accept edits** and **Auto** permission modes.
   - **Plan** mode refuses: ask the user to leave plan mode first.
   - **Bypass permissions**, **Don't-ask** or a `-p` script refuse (nobody there to approve):
     ask the user to run `python3 kanban/board.py unlock --reason "<why>"` in their own terminal

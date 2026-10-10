@@ -20,13 +20,14 @@ priorities, and removing or restoring tickets. Always ask before removing ticket
 and show the change as a picture first. A hand edit of `tickets.json` is never part of
 planning: if one ever seems needed, stop and use `/slate:sync` (it explains the supervised
 `unlock`: Claude Code's approval card in Manual / Accept edits / Auto mode, or the user types a
-code in their own terminal in Plan / Bypass / Don't-ask mode; one unlock = one edit).
+code in their own terminal in Plan / Bypass / Don't-ask mode; Copilot CLI's card shows in every
+mode; one unlock = one edit).
 
 ## Step 0: version check, board server and context
 
-1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code). If it still reads literally,
+1. `ROOT` = `${CLAUDE_PLUGIN_ROOT}` (filled in by Claude Code or Copilot CLI). If it still reads literally,
    use this skill's base directory (printed when the skill loads) + `/../..`, made absolute.
-2. If `kanban/board.py` is missing: say "This repo isn't set up for Slate yet — run
+2. If `kanban/board.py` is missing in the project (the current folder, not `ROOT`): say "This repo isn't set up for Slate yet — run
    `/slate:init` first." and stop.
 3. Read `SLATE.md` (prefix, **Plan style**, Python command, Board server / Board port,
    `## Workflow`, docs map). If it is missing, fall back to `CLAUDE.md` / `AGENTS.md` / docs and
@@ -35,7 +36,7 @@ code in their own terminal in Plan / Bypass / Don't-ask mode; one unlock = one e
    - `same` → say nothing.
    - `behind` → "This project's board is Slate <board>, the plugin is <plugin>. Upgrade now
      with `/slate:upgrade`?" Ask once, then continue either way (never run it yourself).
-   - `ahead` → a teammate upgraded this board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." On yes, run both, then ask the user to run `/reload-plugins` (or restart Claude Code) and invoke this command again. On no, stop.
+   - `ahead` → a teammate upgraded this board: offer to update it for them: "Your Slate plugin is older than this board (a teammate upgraded). Update it now? I'll run `claude plugin marketplace update slate` and `claude plugin update slate@slate`." (In Copilot CLI: `copilot plugin marketplace update slate` and `copilot plugin update slate@slate`.) On yes, run both, then ask the user to run `/reload-plugins` (Copilot CLI: `/restart`, or restart it) and invoke this command again. On no, stop.
 5. **Board server.** Unless `SLATE.md` says `Board server: off`:
    `python3 kanban/board.py serve --ensure --port <Board port from SLATE.md, default 8088>`.
    It reuses a running server or starts one, never two. Show the URL it prints **once** in this

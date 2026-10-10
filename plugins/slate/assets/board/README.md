@@ -45,7 +45,7 @@ port — `ssh -L 8088:localhost:8088 you@host` — and open http://localhost:808
 Opened straight from disk (`file://`), the browser blocks loading `./tickets.json`: the page
 shows a file picker; choose `tickets.json` (and `preview.json` to see a preview).
 
-The footer shows the board's Slate version (`Slate v0.3.0`) and the version recorded in
+The footer shows the board's Slate version (`Slate v0.4.0`) and the version recorded in
 `tickets.json`. The page also has `<meta name="slate-version">` for scripts.
 
 **Live refresh.** When the page is served (not opened with the file picker), it re-reads
@@ -580,7 +580,10 @@ kanban/.slate-serve.json
 kanban/.slate-serve.log
 ```
 
-Copilot CLI support: planned.
+**GitHub Copilot CLI** runs the same plugin and guard. Its "Hook permission request" card for
+`unlock` shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and
+you run `unlock` in your own terminal instead. The guard also checks Copilot's patch-style edits
+and PowerShell commands.
 
 ## Reading errors
 

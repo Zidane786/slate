@@ -2,12 +2,21 @@
 """Slate guard: block direct edits to kanban/tickets.json (PreToolUse) and activate an approved
 unlock (PostToolUse, run with --post).
 
-Claude Code runs this before Edit, Write, MultiEdit, NotebookEdit and Bash. The
+Claude Code runs this before Edit, Write, MultiEdit, NotebookEdit, Bash and PowerShell. The
 hook payload arrives as JSON on stdin. If the target file is a `kanban/tickets.json`
-(or, for Bash, the command looks like it writes to one without going through
+(or, for Bash/PowerShell, the command looks like it writes to one without going through
 board.py), the tool call is blocked (exit 2, reason on stderr, which Claude Code shows to
 Claude). Anything else, including malformed input, is allowed (exit 0): this
 guard must never break an unrelated edit.
+
+GitHub Copilot CLI runs the same hooks.json and sends the same Claude-style input, except: its
+edit tool sends apply_patch text ("*** Update File: <path>") instead of {file_path}; it shows an
+exit-2 refusal to the model only as "hook exited with code 2"; it sends no permission_mode;
+PostToolUse has tool_result instead of tool_response. So under Copilot (COPILOT_CLI set, patch
+text, or Copilot's own camelCase toolName/toolArgs input) a refusal is JSON on stdout
+(permissionDecision "deny" with the reason, flat and in hookSpecificOutput) with exit 0, and
+patch text is checked file by file. Copilot shows the "ask" card in every mode, even Autopilot
+with Allow all, so a missing permission_mode means "ask" there too.
 
 Two exceptions and one extra rule:
 
@@ -80,7 +89,9 @@ WRITE_RE = re.compile(
     # rsync, sponge; Python file moves/copies that don't use the words above
     r"\bcurl\b[^|;&]*\s(-[a-z]*[oO](?!-)(?!\s*-(?:\s|$))|--output\b(?!\s*-(?:\s|$)))|\bwget\b[^|;&]*\s(-[a-z]*O(?!-)(?!\s*-(?:\s|$))|--output-document(?!=-))|"
     r"\brsync\b|\bsponge\b|\bshutil\.(copy\w*|move)\(|\bos\.(replace|rename|renames|link|symlink)\(|"
-    r"\.(replace|rename|symlink_to|hardlink_to|touch)\()",
+    r"\.(replace|rename|symlink_to|hardlink_to|touch)\(|"
+    # PowerShell (Claude Code's PowerShell tool, Copilot CLI on Windows)
+    r"\b(set|add|clear)-content\b|\bout-file\b|\b(copy|move|remove|rename|new)-item\b|::(write|append)all\w*\()",
     re.IGNORECASE,
 )
 # open(...) is a write only with a mode that contains w, a, x or +: open(p, "w"),
@@ -301,7 +312,8 @@ def ask_json(minutes: str, reason: str, copilot: bool) -> str:
 
 
 def tool_input_of(payload: dict) -> tuple[object, bool]:
-    """(tool_input, copilot_style). Copilot-style hooks send toolName/toolArgs (maybe a JSON string)."""
+    """(tool_input, copilot_style). Copilot-style hooks send toolName/toolArgs (maybe a JSON string,
+    or apply_patch text, which is returned as is)."""
     if "tool_input" in payload or "tool_name" in payload:
         return payload.get("tool_input"), False
     if "toolArgs" in payload or "toolName" in payload:
@@ -310,9 +322,35 @@ def tool_input_of(payload: dict) -> tuple[object, bool]:
             try:
                 args = json.loads(args)
             except ValueError:
-                args = None
+                pass
         return args, True
     return None, False
+
+
+# Copilot CLI's edit tool sends apply_patch text; each file it touches has one of these headers.
+PATCH_FILE_RE = re.compile(r"^\*\*\* (?:Update File|Add File|Delete File|Move to):[ \t]*(.+?)[ \t]*\r?$", re.MULTILINE)
+
+
+def patch_paths(text: str) -> list[str]:
+    """Every file an apply_patch text adds, updates, deletes or moves to."""
+    return [p for p in PATCH_FILE_RE.findall(text) if p]
+
+
+def on_copilot() -> bool:
+    """True when Copilot CLI runs this hook (it sets COPILOT_CLI=1 for hooks)."""
+    return bool(os.environ.get("COPILOT_CLI"))
+
+
+def refuse(message: str, copilot: bool) -> int:
+    """Block the tool call with an actionable reason. Claude Code: exit 2, reason on stderr.
+    Copilot CLI: exit 0 and a JSON deny on stdout (it hides an exit-2 hook's stderr from the model)."""
+    if copilot:
+        print(json.dumps({"permissionDecision": "deny", "permissionDecisionReason": message,
+                          "hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                                 "permissionDecisionReason": message}}))
+        return 0
+    print(message, file=sys.stderr)
+    return 2
 
 
 def unlock_gate(payload: dict) -> str:
@@ -395,7 +433,7 @@ def main_post(stdin_text: str) -> int:
     """PostToolUse: activate an unlock request after the approval card said yes. Always exit 0."""
     try:
         payload = json.loads(stdin_text)
-        if not isinstance(payload, dict) or payload.get("tool_name") != "Bash":
+        if not isinstance(payload, dict) or payload.get("tool_name") not in ("Bash", "PowerShell"):
             return 0
         if unlock_gate(payload) != "ask":
             return 0
@@ -407,11 +445,12 @@ def main_post(stdin_text: str) -> int:
         base = cwd if isinstance(cwd, str) and cwd else os.getcwd()
         active = activate_request(os.path.join(base, "kanban"), payload.get("permission_mode"))
         if active:
-            print(json.dumps({"hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": ("Slate: unlock approved. ONE direct edit of kanban/tickets.json is allowed "
-                                      f"until {active['until']}; the next edit after that one is blocked again."),
-            }}))
+            note = ("Slate: unlock approved. ONE direct edit of kanban/tickets.json is allowed "
+                    f"until {active['until']}; the next edit after that one is blocked again.")
+            out: dict = {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": note}}
+            if on_copilot() or "tool_result" in payload:
+                out = {"additionalContext": note, **out}  # Copilot CLI reads the flat field
+            print(json.dumps(out))
     except Exception:
         return 0
     return 0
@@ -428,38 +467,37 @@ def main(stdin_text: str) -> int:
     tool = payload.get("tool_name") or payload.get("toolName") or ""
     tool = tool if isinstance(tool, str) else ""
     try:
-        tool_input, copilot = tool_input_of(payload)
-        if not isinstance(tool_input, dict):
+        tool_input, camel = tool_input_of(payload)
+        # Only Copilot CLI sends patch text, so that input is answered in Copilot's dialect too.
+        copilot = camel or isinstance(tool_input, str) or on_copilot()
+        if isinstance(tool_input, str):
+            paths = patch_paths(tool_input)
+        elif isinstance(tool_input, dict):
+            command = tool_input.get("command")
+            if isinstance(command, str):
+                if bash_writes(command, PROTECTED_RE, skip_board_py=False):
+                    return refuse(UNLOCK_MESSAGE, copilot)
+                if bash_writes_tickets(command) and not any(
+                        consume_unlock(d, tool or "Bash") for d in bash_kanban_dirs(command, cwd)):
+                    return refuse(MESSAGE + " Reading it (cat, grep, jq, git add/commit) is fine.", copilot)
+                req = unlock_request(command)
+                if req:
+                    gate = unlock_gate(payload)
+                    if gate == "plan":
+                        return refuse(PLAN_MESSAGE, copilot)
+                    if gate == "nobody":
+                        return refuse(NOBODY_MESSAGE, copilot)
+                    print(ask_json(req[0], req[1], camel))
+                return 0
+            paths = [v for k in PATH_KEYS if isinstance(v := tool_input.get(k), str) and v]
+        else:
             return 0
-        command = tool_input.get("command")
-        if isinstance(command, str):
-            if bash_writes(command, PROTECTED_RE, skip_board_py=False):
-                print(UNLOCK_MESSAGE, file=sys.stderr)
-                return 2
-            if bash_writes_tickets(command) and not any(
-                    consume_unlock(d, tool or "Bash") for d in bash_kanban_dirs(command, cwd)):
-                print(MESSAGE + " Reading it (cat, grep, jq, git add/commit) is fine.", file=sys.stderr)
-                return 2
-            req = unlock_request(command)
-            if req:
-                gate = unlock_gate(payload)
-                if gate == "plan":
-                    print(PLAN_MESSAGE, file=sys.stderr)
-                    return 2
-                if gate == "nobody":
-                    print(NOBODY_MESSAGE, file=sys.stderr)
-                    return 2
-                print(ask_json(req[0], req[1], copilot))
-            return 0
-        paths = [v for k in PATH_KEYS if isinstance(v := tool_input.get(k), str) and v]
         for path in paths:
             if is_unlock_file(path, cwd):
-                print(UNLOCK_MESSAGE, file=sys.stderr)
-                return 2
+                return refuse(UNLOCK_MESSAGE, copilot)
             if is_tickets_file(path, cwd) and not consume_unlock(
                     os.path.dirname(resolve(path, cwd)), tool or "Edit"):
-                print(MESSAGE, file=sys.stderr)
-                return 2
+                return refuse(MESSAGE, copilot)
     except Exception:  # never crash on odd input
         return 0
     return 0

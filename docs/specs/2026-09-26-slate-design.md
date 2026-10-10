@@ -56,6 +56,7 @@ project's repo.
 | 21 | *(v0.2)* **Upgrades explain themselves:** `upgrades/<version>.md` = "What's new" in plain words + idempotent steps; `/slate:upgrade` shows What's new first, runs each version's steps in order, records a line in SLATE.md's `## Slate updates`, runs `doctor` until healthy. `reference/commands.md` lists every command for agents; every skill links it. | Agents learn from the plugin at once; projects learn through a supervised, repeatable upgrade. |
 | 22 | *(v0.2)* **No board action needs a hand edit** (`remove`/`restore`, `unlink`, `usertest … reset`, `note`, bulk `edit`, `set-meta priorities`). The one exception, `unlock`, is approved on the agent tool's own permission card (Manual / Accept edits / Auto) or by a code typed in the user's own terminal (Plan / Bypass / Don't-ask); one unlock = one edit. Copilot CLI support: planned. | The guard stays absolute without dead ends. |
 | 23 | *(v0.2)* **Human in the loop is unchanged:** one ticket per request, `merge_ready` then stop, done only after the user says the PR is merged, never merge, every board-shape change (states, rules, removals, syncs) asked first. | The additions give the user more control, never less. |
+| 24 | *(v0.4)* **One plugin for Claude Code and GitHub Copilot CLI.** Copilot CLI loads the same `.claude-plugin/` manifest, skills (`/slate:plan` …) and Claude-format `hooks.json`; the hook scripts adapt to Copilot's input and output (§8.2). No second plugin folder. VS Code Copilot Chat: not yet (its local agent ignores matchers and uses other tool names). | One copy to maintain and version; both tools share one board. Verified by hand in Copilot CLI 1.0.94, including Autopilot + Allow all. |
 
 ## 3. The pieces at a glance
 
@@ -621,9 +622,32 @@ field after a bad merge). Instead of agents working around the guard, Slate has 
   mode first"); **Bypass permissions**, **Don't-ask** and `-p` scripts refuse ("nobody to
   approve"): there the user runs `board.py unlock` in a terminal and types the code. The
   activation hook re-checks the mode. Only the plain command can activate an unlock.
-- Agent tools: **Claude Code only for now.** Copilot CLI support is planned for later.
+- Agent tools: **Claude Code and GitHub Copilot CLI** (§8.2). In Copilot CLI the card shows in every
+  interactive mode, even Autopilot with Allow all; a `copilot -p` run refuses "ask" ("unable to ask
+  user"), so there the user types the code.
 - The rejected desktop pop-up design is archived in
   `docs/archive/2026-09-26-unlock-popup-design.md`.
+
+### 8.2 GitHub Copilot CLI (added in v0.4)
+
+Copilot CLI runs the same `hooks.json` (PascalCase events, matchers, `${CLAUDE_PLUGIN_ROOT}`) and
+sends Claude-style input (`tool_name`, `tool_input`, `cwd`, Claude tool names such as `Edit`,
+`Bash`). Measured differences (Copilot CLI 1.0.94) and how the hooks handle each:
+
+| Copilot CLI does | Slate does |
+|---|---|
+| Edit tool sends apply_patch text: `"tool_input": "*** Begin Patch\n*** Update File: …"` (one patch may touch several files) | The guard reads every `Update/Add/Delete File:` and `Move to:` path and checks each like a `file_path`. |
+| Shows an exit-2 refusal to the model only as "hook exited with code 2" | With `COPILOT_CLI` set (or patch text, or Copilot's camelCase input) the guard refuses with exit 0 and JSON `permissionDecision: "deny"` + reason (flat and in `hookSpecificOutput`). Claude Code keeps exit 2 + stderr. |
+| Sends no `permission_mode`; shows the "ask" card in every mode, even Autopilot + Allow all; `-p` refuses "ask" | Missing mode = ask (as before). Nothing else needed. |
+| PostToolUse has `tool_result`, not `tool_response` | The activation hook doesn't read either; its note goes out flat too (`additionalContext`). |
+| Ignores plain SessionStart stdout | `session_start.py` prints `{"additionalContext": "…"}` when `COPILOT_CLI` is set. |
+| Sets `COPILOT_CLI=1` for hooks and the agent's shell | `board.py unlock` names Copilot's card instead of Claude Code's. |
+| Runs hooks through PowerShell on Windows (`powershell` key) | Every hook has a `powershell` command → `hooks/run.cmd` (finds `py -3`, `python`, `python3`); a missing launcher exits 0, because Copilot treats a failing `preToolUse` hook as a deny. |
+| Has a PowerShell tool on Windows | Matchers include `PowerShell`; the guard knows `Set-Content`, `Out-File`, `Copy-Item`, `[IO.File]::WriteAllText` and the like (Claude Code's PowerShell tool benefits too). |
+
+Copilot only knows its own hook events; Claude-only events in a hooks file are ignored. Slate uses
+three (SessionStart, PreToolUse, PostToolUse), which both tools have. Skills keep their plugin
+prefix in Copilot (`/slate:plan`), so they don't clash with Copilot's own `/plan` and `/review`.
 
 ## 9. Error handling
 

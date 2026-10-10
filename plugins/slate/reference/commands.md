@@ -28,6 +28,10 @@ Rules that hold for every command:
   in `board.py --help` yet. A project whose board is older than the plugin may lack newer
   commands (`serve`, `flow`, `workflow`): check `--help`, use the fallback the entry gives, and
   offer `/slate:upgrade`.
+- **Claude Code or GitHub Copilot CLI?** The skills are the same in both. Where a step differs
+  (plugin update commands, `/reload-plugins` vs `/restart`, when the unlock card shows), the step
+  names both; follow the one for the tool you are running in. If unsure, `COPILOT_CLI=1` in the
+  shell's environment means Copilot CLI; otherwise it is Claude Code.
 
 ## Read (never changes anything)
 
@@ -432,8 +436,11 @@ Flags: `--reason "…"` (required), `--minutes N` (default 5, max 30).
   `-p` refuse ("nobody to approve"): then the user runs
   `python3 kanban/board.py unlock --reason "…"` in their own terminal (or tmux pane / second SSH
   session) and types the 4-letter code it shows.
+- **GitHub Copilot CLI:** the same command shows Copilot's "Hook permission request" card in
+  every mode, even Autopilot with Allow all, and the Yes activates it; a `copilot -p` run refuses
+  it ("unable to ask user"), so the user types the code in their own terminal.
 - One unlock = one edit, expiring after `--minutes` if unused. Everything is logged in
-  `meta.unlock_log`. Copilot CLI support: planned.
+  `meta.unlock_log`.
 Use it when: last resort only — after explaining to the user why no command (`edit`, `sync`,
 `unlink`, repair fixes from `check`) can do it. If the user declines, stop.
 

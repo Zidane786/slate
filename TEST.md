@@ -3,7 +3,7 @@
 Hand this file to any coding agent (Claude Code, Codex, Copilot, …) on a fresh clone of the
 Slate repo, on **Windows, macOS or Linux**, and say: *"Follow TEST.md and report the results."*
 
-It covers four levels. Do them in order; stop and report at the first level that fails.
+It covers five levels. Do them in order; stop and report at the first level that fails.
 
 | Level | What it proves | Needs |
 |---|---|---|
@@ -11,6 +11,7 @@ It covers four levels. Do them in order; stop and report at the first level that
 | 2. Plugin check | Claude Code accepts the plugin | Claude Code CLI |
 | 3. Hands-on board | A real board works end to end on this OS | Python, git, a browser |
 | 4. Claude Code live | The `/slate:*` skills and hooks work in a real session | Claude Code, optionally tmux |
+| 5. Copilot CLI live | The same plugin works in GitHub Copilot CLI, guard included | Copilot CLI, optionally tmux |
 
 **Rules for the agent running this:** don't edit Slate's source to make a check pass. Report
 failures with the exact command and output. Work only inside a scratch folder for levels 3–4 (never
@@ -28,6 +29,7 @@ git --version
 uname -a            # macOS / Linux
 ver                 # Windows (cmd) — or: [System.Environment]::OSVersion (PowerShell)
 claude --version    # if installed
+copilot --version   # if installed
 tmux -V             # if installed
 ```
 
@@ -44,7 +46,7 @@ PY -m pip install --user pytest        # or: uv run --with pytest pytest -q
 PY -m pytest -q
 ```
 
-**Expected:** all tests pass (≈800). Report the last line (`N passed …`).
+**Expected:** all tests pass (≈960; the PowerShell launcher tests run only on Windows). Report the last line (`N passed …`).
 
 If you have more than one Python, also run the oldest supported one (3.9) if available.
 
@@ -173,14 +175,49 @@ board with `ssh -L 8088:localhost:8088 <host>`.
 
 ---
 
+## 5. Copilot CLI live (if you have GitHub Copilot CLI)
+
+Same scratch project, same plugin folder:
+
+```
+cd slate-scratch
+copilot --plugin-dir <repo>/plugins/slate
+```
+
+Try and report:
+
+- [ ] Type `/slate` → the list shows `/slate:init`, `/slate:plan`, `/slate:status`, … (Copilot's own
+      `/plan` and `/review` are separate commands).
+- [ ] Ask "what does the Slate session note say about the board?" (no tools) → it quotes the
+      `Slate 0.x.y: …` status line (the session-start hook reached Copilot).
+- [ ] `/slate:status` → a short report from **this project's** board.
+- [ ] Ask Copilot to change the project name in `kanban/tickets.json` **with its file edit tool,
+      not board.py** → **blocked** with "Change tickets through kanban/board.py…" (not just "hook
+      exited with code 2").
+- [ ] Ask it to change that file with a shell command that writes it in place (Windows:
+      `Set-Content`) → **blocked** with the same reason.
+- [ ] Quit, restart with `--allow-all --autopilot` (status bar: "Autopilot · Allow All"). Ask it to
+      run `PY kanban/board.py unlock --reason "test" --minutes 5` → a **"Hook permission request"**
+      card appears anyway. Answer Yes, then ask for one direct edit with the edit tool (allowed) and
+      a second one (blocked).
+- [ ] `copilot --plugin-dir <repo>/plugins/slate --allow-all -p "run: PY kanban/board.py unlock
+      --reason test"` → refused ("unable to ask user for confirmation"); nothing unlocks.
+- [ ] **Windows only:** the edit and unlock checks in PowerShell. The hooks run `hooks/run.cmd`; a
+      machine without Python must not block tool calls (the hook is skipped).
+
+Cancel any unlock you didn't use: `PY kanban/board.py lock`.
+
+---
+
 ## Report format
 
 ```
-Machine: <OS + version>, Python <ver> (<command>), git <ver>, Claude Code <ver|none>, tmux <ver|none>
+Machine: <OS + version>, Python <ver> (<command>), git <ver>, Claude Code <ver|none>, Copilot CLI <ver|none>, tmux <ver|none>
 Level 1: <N passed / failures with names>
 Level 2: <pass/fail>
 Level 3: <each checkbox: pass/fail + notes>
 Level 4: <each checkbox: pass/fail + notes>
+Level 5: <each checkbox: pass/fail + notes, or skipped>
 Problems: <exact command + output for every failure>
 ```
 

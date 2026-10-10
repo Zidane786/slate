@@ -2,3 +2,5 @@
 * text=auto eol=lf
 *.png binary
 *.jpg binary
+# Windows batch files need CRLF (cmd.exe labels break with LF)
+*.cmd text eol=crlf

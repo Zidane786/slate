@@ -1,5 +1,5 @@
 {
-  "description": "Slate: one-line board status at session start; block direct edits to kanban/tickets.json; activate an approved unlock.",
+  "description": "Slate: one-line board status at session start; block direct edits to kanban/tickets.json; activate an approved unlock. Claude Code runs `command`; GitHub Copilot CLI runs `command` (macOS/Linux) or `powershell` (Windows).",
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +7,7 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" session_start.py",
+            "powershell": "$s = \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\run.cmd\"; if (Test-Path $s) { & $s session_start.py; exit $LASTEXITCODE }; exit 0",
             "timeout": 10
           }
         ]
@@ -14,11 +15,12 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" guard_tickets.py",
+            "powershell": "$s = \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\run.cmd\"; if (Test-Path $s) { & $s guard_tickets.py; exit $LASTEXITCODE }; exit 0",
             "timeout": 10
           }
         ]
@@ -26,11 +28,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" guard_tickets.py --post",
+            "powershell": "$s = \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\run.cmd\"; if (Test-Path $s) { & $s guard_tickets.py --post; exit $LASTEXITCODE }; exit 0",
             "timeout": 10
           }
         ]
