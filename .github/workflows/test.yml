@@ -28,7 +28,10 @@ permissions:
 jobs:
   pytest:
     name: pytest (${{ matrix.os }}, Python ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
+    # ubuntu-latest is Ubuntu 26.04, which actions/setup-python has no Python 3.9 build for (3.9 is
+    # past end of life), so the 3.9 job runs on ubuntu-24.04. The job name keeps "ubuntu-latest"
+    # because main's ruleset requires the checks by these exact names.
+    runs-on: ${{ (matrix.os == 'ubuntu-latest' && matrix.python == '3.9') && 'ubuntu-24.04' || matrix.os }}
     strategy:
       fail-fast: false
       matrix:

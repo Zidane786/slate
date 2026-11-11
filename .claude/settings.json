@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "slate": {
+      "source": { "source": "github", "repo": "Zidane786/slate" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "slate@slate": true
+  }
+}

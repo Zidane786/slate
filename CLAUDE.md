@@ -40,6 +40,9 @@ tests/                                pytest suite (+ fixtures/board-demo for th
 scripts/release_notes.py              prints a version's release notes from the CHANGELOG
 TEST.md                               hands-on test guide for any machine
 docs/                                 specs, build plans, archive
+kanban/                               Slate's own board (made by /slate:init; tickets.json via board.py only)
+SLATE.md                              project context for that board (read by every /slate:* command)
+.claude/settings.json                 loads the published Slate plugin for people who clone this repo
 ```
 
 ## 3. Rules that must hold in every change
@@ -143,3 +146,5 @@ new version.
 
 Small, focused commits: `<area>: <what changed>` with a short body listing verification. Never
 commit generated files (`__pycache__`, `.pytest_cache`, `.DS_Store` — see `.gitignore`).
+
+Planning, tickets and more project context: read SLATE.md (kept up to date as work goes on)
