@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# Slate: local files (never commit)
+kanban/.slate-unlock*.json
+kanban/.slate-write.lock
+kanban/.slate-serve.json
+kanban/.slate-serve.log

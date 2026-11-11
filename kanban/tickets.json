@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "project": "Slate",
+    "prefix": "SLATE",
+    "repo_url": "https://github.com/Zidane786/slate",
+    "slate_version": "0.4.0",
+    "schema_version": 3,
+    "generated": "2026-11-11",
+    "statuses": [
+      "draft",
+      "backlog",
+      "ready",
+      "in_progress",
+      "review",
+      "user_testing",
+      "merge_ready",
+      "done",
+      "cancelled"
+    ],
+    "status_labels": {
+      "cancelled": "Cancelled"
+    },
+    "areas": [
+      "board",
+      "page",
+      "hooks",
+      "skills",
+      "docs",
+      "release"
+    ],
+    "priorities": [
+      "P0",
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "user_test_areas": [
+      "frontend",
+      "ui"
+    ]
+  },
+  "phases": [
+    {
+      "id": "BACKLOG",
+      "name": "Someday",
+      "goal": "Ideas worth keeping, not planned yet",
+      "demo": "Nothing to demo; move a ticket to a real phase to build it",
+      "unscheduled": true
+    }
+  ],
+  "tickets": []
+}

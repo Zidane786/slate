@@ -1,0 +1,3623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="slate-version" content="0.4.0" />
+<link rel="icon" href="data:," />
+<title>Slate board</title>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #eef0f4;
+  --border: #d8dce4;
+  --border-strong: #bcc3ce;
+  --text: #14181f;
+  --muted: #5c6675;
+  --faint: #8a93a1;
+  --accent: #2f6df6;
+  --accent-soft: #e4ecfe;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 12px rgba(16, 24, 40, .06);
+  --p0: #d92d20; --p0-bg: #fde8e6;
+  --p1: #b54708; --p1-bg: #fdf0e3;
+  --p2: #175cd3; --p2-bg: #e6eefc;
+  --p3: #5c6675; --p3-bg: #eceef2;
+  --ok: #067647; --ok-bg: #e3f5ec;
+  --warn: #b42318; --warn-bg: #fdeceb;
+  --amber: #93370d; --amber-bg: #fef0c7; --amber-border: #f5b547;
+  --story-bg: #f3f6fd;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1d232c;
+    --border: #2a323d;
+    --border-strong: #3b4552;
+    --text: #e6e9ee;
+    --muted: #9aa4b2;
+    --faint: #6f7987;
+    --accent: #5b8cff;
+    --accent-soft: #1b2740;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .3);
+    --p0: #ff8a80; --p0-bg: #3a1d1b;
+    --p1: #f0a860; --p1-bg: #3a2a17;
+    --p2: #8ab0ff; --p2-bg: #17243d;
+    --p3: #9aa4b2; --p3-bg: #232a33;
+    --ok: #6fd39b; --ok-bg: #14301f;
+    --warn: #ff8a80; --warn-bg: #3a1d1b;
+    --amber: #fbc96b; --amber-bg: #3a2c10; --amber-border: #a7741c;
+    --story-bg: #172030;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --panel-2: #1d232c;
+  --border: #2a323d;
+  --border-strong: #3b4552;
+  --text: #e6e9ee;
+  --muted: #9aa4b2;
+  --faint: #6f7987;
+  --accent: #5b8cff;
+  --accent-soft: #1b2740;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .3);
+  --p0: #ff8a80; --p0-bg: #3a1d1b;
+  --p1: #f0a860; --p1-bg: #3a2a17;
+  --p2: #8ab0ff; --p2-bg: #17243d;
+  --p3: #9aa4b2; --p3-bg: #232a33;
+  --ok: #6fd39b; --ok-bg: #14301f;
+  --warn: #ff8a80; --warn-bg: #3a1d1b;
+  --amber: #fbc96b; --amber-bg: #3a2c10; --amber-border: #a7741c;
+  --story-bg: #172030;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+a { color: var(--accent); }
+
+/* ---------- header ---------- */
+header {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.hrow {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 14px;
+}
+.hrow + .hrow { border-top: 1px solid var(--border); }
+.brand { font-size: 15px; font-weight: 650; letter-spacing: -.01em; margin-right: 2px; }
+.brand small { font-weight: 400; color: var(--faint); font-size: 11px; margin-left: 6px; }
+.counts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pill {
+  border: 1px solid var(--border); background: var(--panel-2);
+  border-radius: 999px; padding: 2px 9px; font-size: 11.5px; color: var(--muted);
+  white-space: nowrap;
+}
+.pill b { color: var(--text); font-weight: 650; }
+button.pill.needs { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+button.pill.needs b { color: var(--amber); }
+.spacer { flex: 1 1 auto; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.seg button {
+  background: var(--panel); border: 0; padding: 5px 11px; color: var(--muted); font-size: 12.5px;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.btn {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 10px; font-size: 12.5px; color: var(--text);
+}
+.btn:hover:not(:disabled) { border-color: var(--border-strong); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.subtle { color: var(--muted); }
+.search {
+  flex: 0 1 260px; min-width: 150px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 9px;
+}
+.search:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+label.inline { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+
+/* ---------- status banners (compact, click to expand) ---------- */
+#bannerHost { display: flex; flex-direction: column; gap: 6px; margin: 8px 14px 0; }
+#bannerHost:empty { display: none; }
+.banner {
+  padding: 5px 12px; border-radius: 8px; font-size: 12.5px;
+  border: 1.5px dashed var(--accent); background: var(--accent-soft); color: var(--text);
+}
+.banner > summary {
+  list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: baseline;
+  white-space: nowrap; overflow: hidden; min-width: 0;
+}
+.banner > summary::-webkit-details-marker { display: none; }
+.banner strong { color: var(--accent); flex: none; }
+.banner .bact { color: var(--muted); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.banner .bmore { margin-left: auto; color: var(--faint); font-size: 11.5px; flex: none; }
+.banner .bmore::after { content: " \25B8"; }
+.banner[open] .bmore::after { content: " \25BE"; }
+.banner .bbody { color: var(--muted); padding: 4px 0 2px; }
+/* ---------- filter dropdowns ---------- */
+.fd { position: relative; }
+.fd > summary {
+  list-style: none; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--panel); padding: 5px 10px; font-size: 12.5px; cursor: pointer; user-select: none;
+}
+.fd > summary::-webkit-details-marker { display: none; }
+.fd[open] > summary { border-color: var(--accent); color: var(--accent); }
+.fd .count { background: var(--accent); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 10.5px; }
+.fd .menu {
+  position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; min-width: 176px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 6px; max-height: 320px; overflow: auto;
+}
+.fd .menu label {
+  display: flex; align-items: center; gap: 7px; padding: 4px 6px; border-radius: 5px; font-size: 12.5px;
+  cursor: pointer;
+}
+.fd .menu label:hover { background: var(--panel-2); }
+.fd .menu .dim { color: var(--faint); margin-left: auto; font-size: 11px; }
+
+/* ---------- badges ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 5px; padding: 1px 6px; font-size: 10.5px; font-weight: 600;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.b-phase { background: var(--panel-2); color: var(--muted); border-color: var(--border); }
+.b-area  { background: transparent; color: var(--muted); border-color: var(--border); font-weight: 500; }
+.b-prio { border-color: currentColor; }
+.prio-P0 { color: var(--p0); background: var(--p0-bg); }
+.prio-P1 { color: var(--p1); background: var(--p1-bg); }
+.prio-P2 { color: var(--p2); background: var(--p2-bg); }
+.prio-P3 { color: var(--p3); background: var(--p3-bg); }
+.b-blocked { background: var(--warn-bg); color: var(--warn); border-color: currentColor; }
+.b-ready { background: var(--ok-bg); color: var(--ok); border-color: currentColor; }
+.b-needs { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.b-draft { background: var(--panel-2); color: var(--muted); border-color: var(--border-strong); border-style: dashed; }
+.b-preview { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); border-style: dashed; }
+.b-fail { background: var(--warn-bg); color: var(--warn); border-color: currentColor; }
+.rank { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* ---------- board ---------- */
+main { padding: 12px 14px 24px; }
+.board { display: flex; gap: 10px; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+.col {
+  flex: 1 0 205px; min-width: 205px; max-width: 400px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+  display: flex; flex-direction: column; max-height: calc(100vh - 170px);
+}
+.col.drop { border-color: var(--accent); background: var(--accent-soft); }
+.col > h2 {
+  margin: 0; padding: 9px 11px; font-size: 12px; font-weight: 650; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: 7px; border-bottom: 1px solid var(--border);
+}
+.col > h2 .n { margin-left: auto; color: var(--faint); font-weight: 500; }
+.col.role-user_testing > h2 { color: var(--amber); }
+.col.role-merge_ready > h2 { color: var(--accent); }
+.col.role-done > h2 { color: var(--ok); }
+.col.role-cancelled > h2 { color: var(--faint); }
+/* folded columns (state flag "folded", e.g. Cancelled): a slim strip with the title + count */
+.col > h2.foldable { cursor: pointer; }
+.col > h2.foldable:hover { color: var(--text); }
+.col > h2 .fold { color: var(--faint); font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.col.folded {
+  flex: 0 0 40px; min-width: 40px; max-width: 40px; cursor: pointer;
+  align-items: center; padding: 8px 0;
+}
+.col.folded:hover { border-color: var(--border-strong); }
+.col.folded > h2 {
+  writing-mode: vertical-rl; border-bottom: 0; padding: 4px 0; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+}
+.col.folded > h2 .n { margin: 0; }
+.card.is-cancelled { background: var(--panel-2); box-shadow: none; opacity: .72; }
+.card.is-cancelled .title { text-decoration: line-through; color: var(--muted); }
+.card.is-cancelled .summary { color: var(--faint); }
+.b-cancel { background: var(--panel-2); color: var(--muted); border-color: var(--border-strong); }
+.row.is-cancelled { opacity: .6; }
+.row.is-cancelled .rtitle { text-decoration: line-through; color: var(--muted); }
+.drawer h2.struck { text-decoration: line-through; color: var(--muted); }
+.col .stack { padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 9px; box-shadow: var(--shadow); cursor: pointer; min-width: 0;
+}
+.card:hover { border-color: var(--border-strong); }
+.card.dragging { opacity: .45; }
+.card.is-blocked { border-left: 3px solid var(--warn); }
+.card.is-draft { background: var(--panel-2); box-shadow: none; }
+.card.is-draft .title, .card.is-draft .summary { color: var(--muted); }
+.card.needs-you { border-left: 3px solid var(--amber-border); }
+.card.is-preview { border: 1.5px dashed var(--accent); box-shadow: none; }
+.card .top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.card .cid { font-size: 11px; font-weight: 650; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.card .title { font-size: 12.8px; font-weight: 550; line-height: 1.35; margin-bottom: 3px; }
+.card .summary {
+  font-size: 12px; color: var(--muted); margin-bottom: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card .meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+.card .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.card .foot { display: flex; gap: 8px; align-items: center; margin-top: 6px; color: var(--faint); font-size: 11px; flex-wrap: wrap; }
+.empty { color: var(--faint); font-size: 12px; padding: 10px; text-align: center; }
+
+/* ---------- order view ---------- */
+.phase { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+.phase.is-preview { border: 1.5px dashed var(--accent); }
+.phase > header { position: static; border: 0; border-bottom: 1px solid var(--border); background: var(--panel-2); padding: 10px 12px; }
+.phase h2 { margin: 0 0 2px; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.phase > header.toggle { cursor: pointer; }
+.phase > header.toggle:hover { background: var(--panel); }
+.phase .caret { display: inline-block; width: 12px; color: var(--faint); font-size: 11px; transition: transform .12s; }
+.phase.open .caret { transform: rotate(90deg); }
+.phase.collapsed > header { border-bottom: 0; }
+.phase.is-empty { opacity: .75; }
+.phase.is-unsched { border-style: dashed; }
+.phase .note { color: var(--faint); font-size: 11.5px; font-weight: 400; }
+.phase .goal { color: var(--muted); font-size: 12px; margin: 2px 0 0; }
+.phase .demo { color: var(--faint); font-size: 11.5px; margin: 3px 0 0; }
+.bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.bar > i { display: block; height: 100%; background: var(--ok); }
+.rows { display: block; }
+.row {
+  display: grid; grid-template-columns: 40px 82px minmax(160px, 1fr) auto auto auto auto;
+  gap: 8px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+.row:first-child { border-top: 0; }
+.row:hover { background: var(--panel-2); }
+.row.muted { opacity: .55; }
+.row.is-preview { border-left: 3px dashed var(--accent); }
+.row .rid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.row .rtitle { font-size: 12.8px; min-width: 0; }
+.row .rtitle .rsum { display: block; color: var(--faint); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .deps { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--muted);
+  border-radius: 999px; padding: 1px 7px; font-size: 10.5px; cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.done { color: var(--ok); border-color: var(--ok); background: var(--ok-bg); }
+.chip.open { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
+.chip.pv { border-style: dashed; }
+.chip.cx { color: var(--faint); border-color: var(--border-strong); background: var(--panel-2); text-decoration: line-through; }
+a.chip { text-decoration: none; display: inline-flex; align-items: center; }
+.chip.bug { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); cursor: default; font-weight: 600; }
+.chip.fix { color: var(--amber); border-color: var(--amber-border); background: var(--amber-bg); }
+.b-merge { background: var(--accent-soft); color: var(--accent); border-color: currentColor; }
+.b-unsched { background: transparent; color: var(--muted); border-color: var(--border-strong); border-style: dashed; }
+.b-bug { background: var(--warn-bg); color: var(--warn); border-color: currentColor; }
+select.status {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 6px; font-size: 11.5px;
+}
+
+/* ---------- drawer ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(10, 14, 20, .45); z-index: 70; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100%); z-index: 80;
+  background: var(--panel); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0, 0, 0, .18);
+}
+.drawer > header { position: static; border: 0; border-bottom: 1px solid var(--border); padding: 12px 24px 14px; background: var(--panel); }
+.drawer .dtop { display: flex; align-items: center; gap: 8px; }
+.drawer .dtop .cid { font-size: 12px; font-weight: 650; color: var(--muted); }
+.drawer h2 { margin: 8px 0 10px; font-size: 20px; line-height: 1.3; letter-spacing: -.01em; }
+.drawer .dmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.drawer .dmeta .sep { color: var(--border-strong); }
+.drawer .dbody { overflow-y: auto; overflow-x: hidden; padding: 8px 24px 40px; min-width: 0; }
+.notice {
+  margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+}
+.notice.pv { border: 1.5px dashed var(--accent); background: var(--accent-soft); color: var(--text); }
+.notice.dr { border-style: dashed; border-color: var(--border-strong); }
+.notice.cx { border-color: var(--border-strong); }
+.dactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; font-size: 12.5px; }
+.modal label.field { display: block; font-size: 12.5px; color: var(--muted); margin: 10px 0 4px; }
+.modal select { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; }
+.modal label.keep { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--text); }
+.notice b { color: var(--text); }
+.dsect { margin-top: 26px; min-width: 0; }
+.dsect > h3 {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 14px; font-weight: 650; color: var(--text); letter-spacing: -.005em;
+  margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.dsect > h3 .hint { font-size: 12px; font-weight: 500; color: var(--faint); }
+.dsect > h3 .spacer { flex: 1; }
+.prose { font-size: 14px; line-height: 1.65; max-width: 70ch; min-width: 0; }
+.lead { font-size: 15.5px; line-height: 1.6; margin: 0; max-width: 66ch; }
+.story {
+  margin: 0; padding: 12px 16px; background: var(--story-bg);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+  font-size: 14px; line-height: 1.65; max-width: 70ch;
+}
+.story p:last-child { margin-bottom: 0; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 5px 0; font-size: 14px; line-height: 1.5; max-width: 70ch; cursor: pointer; }
+.check input { margin-top: 4px; flex: none; }
+.check.on .ctext > span { color: var(--faint); text-decoration: line-through; }
+.check .ctext { min-width: 0; }
+.check .ev { font-size: 12px; color: var(--ok); margin-top: 1px; overflow-wrap: anywhere; }
+.check input:disabled { cursor: default; }
+.subhead { font-size: 12px; font-weight: 600; color: var(--faint); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.subhead:first-child { margin-top: 0; }
+.plain { font-size: 13.5px; color: var(--muted); }
+
+/* markdown */
+.md-h { margin: 18px 0 6px; line-height: 1.35; }
+.md-h1 { font-size: 16px; }
+.md-h2 { font-size: 15px; }
+.md-h3 { font-size: 14px; }
+.md-h4 { font-size: 13.5px; color: var(--muted); }
+.prose > :first-child, .story > :first-child { margin-top: 0; }
+.md-p { margin: 0 0 10px; }
+.md-ul, .md-ol { margin: 0 0 10px; padding-left: 22px; }
+.md-ul li, .md-ol li { margin: 3px 0; }
+.md-code { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 12.5px; }
+.md-pre {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; margin: 0 0 12px;
+  font-size: 12.5px; line-height: 1.45;
+  white-space: pre; overflow-x: auto; overflow-wrap: normal; word-break: normal;
+  max-width: 100%; tab-size: 4;
+}
+.md-pre code { background: none; border: 0; padding: 0; white-space: pre; font-size: inherit; }
+.md-quote {
+  margin: 0 0 12px; padding: 6px 14px; border-left: 3px solid var(--border-strong);
+  color: var(--muted); background: var(--panel-2); border-radius: 0 6px 6px 0;
+}
+.md-quote > :last-child { margin-bottom: 0; }
+.md-table-wrap { overflow-x: auto; margin: 0 0 12px; max-width: 100%; }
+.md-table { border-collapse: collapse; font-size: 13px; line-height: 1.45; }
+.md-table th, .md-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+.md-table th { background: var(--panel-2); font-weight: 650; }
+
+/* user tests */
+.ut { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: var(--panel); }
+.ut.passed { border-color: var(--ok); }
+.ut.failed { border-color: var(--warn); }
+.ut-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ut-title { font-size: 14.5px; font-weight: 650; }
+.ut-num { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ut .body { font-size: 14px; line-height: 1.6; max-width: 70ch; }
+.ut ol { margin: 0; padding-left: 22px; }
+.ut ol li { margin: 3px 0; }
+.ut .expect { background: var(--ok-bg); color: var(--text); border-radius: 6px; padding: 8px 10px; }
+.ut .recorded { margin-top: 12px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ut .actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.ut .actions .plain { font-size: 12px; }
+.btn.pass[aria-pressed="true"] { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); font-weight: 650; }
+.btn.fail[aria-pressed="true"] { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); font-weight: 650; }
+
+/* technical */
+details.tech { border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); }
+details.tech > summary { cursor: pointer; padding: 9px 12px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+details.tech[open] > summary { border-bottom: 1px solid var(--border); }
+details.tech .prose { padding: 12px 14px 4px; }
+
+/* links row */
+.links { display: grid; grid-template-columns: 70px 1fr; gap: 8px 12px; align-items: center; font-size: 13px; }
+.links dt { color: var(--faint); }
+.links dd { margin: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.path { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; font-size: 12.5px; word-break: break-all; }
+
+/* history timeline */
+.tl { list-style: none; margin: 0; padding: 0 0 0 4px; }
+.tl li { position: relative; padding: 0 0 16px 20px; border-left: 2px solid var(--border); }
+.tl li:last-child { border-left-color: transparent; }
+.tl li::before {
+  content: ""; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--accent);
+}
+.tl li:last-child::before { background: var(--accent); }
+.tl .when { font-size: 12px; color: var(--faint); display: flex; gap: 8px; align-items: center; margin-bottom: 3px; }
+.tl .note { font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 70ch; }
+
+/* code changes (commits + pull request) */
+.b-pr { background: transparent; color: var(--accent); border-color: var(--accent); }
+.pr-draft { background: var(--panel-2); color: var(--muted); border-color: var(--border-strong); }
+.pr-open { background: var(--ok-bg); color: var(--ok); border-color: currentColor; }
+.pr-merged { background: var(--accent-soft); color: var(--accent); border-color: currentColor; }
+.pr-closed { background: var(--warn-bg); color: var(--warn); border-color: currentColor; }
+.prline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 10px; min-width: 0; }
+.prline .lbl { color: var(--faint); font-size: 12px; font-weight: 600; }
+.prline a { overflow-wrap: anywhere; }
+.commits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.commits li { display: flex; gap: 10px; align-items: baseline; font-size: 13px; min-width: 0; }
+.commits .sha {
+  flex: none; font-size: 12px; background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 5px; padding: 1px 6px; color: var(--text); text-decoration: none;
+}
+.commits a.sha:hover { border-color: var(--accent); color: var(--accent); }
+.commits .msg { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.commits .cdate { flex: none; color: var(--faint); font-size: 12px; }
+.nocode { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+/* ---------- loader panel ---------- */
+.loader {
+  max-width: 560px; margin: 60px auto; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px; box-shadow: var(--shadow);
+}
+.loader h2 { margin: 0 0 8px; font-size: 15px; }
+.loader p { color: var(--muted); margin: 0 0 10px; }
+.loader code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.err { color: var(--warn); font-size: 12px; }
+
+/* ---------- "Board updated" note ---------- */
+.toast {
+  position: fixed; left: 14px; bottom: 14px; z-index: 110;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 8px; padding: 6px 12px; font-size: 12.5px; box-shadow: var(--shadow);
+}
+
+/* ---------- footer ---------- */
+footer.site { padding: 6px 14px 20px; color: var(--faint); font-size: 11.5px; text-align: center; }
+
+/* ---------- live / view-only mode ---------- */
+.pill.mode { font-weight: 600; }
+.pill.mode.live { background: var(--ok-bg); color: var(--ok); border-color: currentColor; }
+.pill.mode.view { background: var(--panel-2); color: var(--muted); border-style: dashed; font-weight: 500; }
+.pill.mode code { font-size: 11px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--text); }
+.pill.local-n { border-style: dotted; border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.pill.local-n b { color: var(--accent); }
+.tag-local {
+  display: inline-flex; align-items: center; border: 1px dotted var(--accent); color: var(--accent);
+  background: var(--accent-soft); border-radius: 5px; padding: 0 5px; font-size: 10.5px; font-weight: 600;
+  white-space: nowrap; margin-left: 6px; vertical-align: 1px;
+}
+.card.is-local { outline: 2px dotted var(--accent); outline-offset: 1px; }
+.row.is-local { outline: 2px dotted var(--accent); outline-offset: -2px; }
+.check.local .ctext > span:first-child { border-bottom: 1px dotted var(--accent); }
+.check.on .ctext > span.tag-local { text-decoration: none; color: var(--accent); }
+.ut.local { border-style: dotted; border-width: 2px; }
+.chip.claim { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); cursor: default; font-weight: 600; }
+.col.no-drop { opacity: .5; }
+.col.no-drop.drop { border-color: var(--warn); background: var(--warn-bg); opacity: .8; }
+select.status option:disabled { color: var(--faint); }
+.claimline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.claimline b { color: var(--text); }
+.notebox textarea, .modal textarea, .modal input[type="text"], .ut .utnote {
+  width: 100%; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 7px 9px; font: inherit; color: var(--text);
+}
+.notebox textarea { min-height: 64px; resize: vertical; max-width: 70ch; display: block; }
+.row2 { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.ut .utnote { max-width: 360px; width: auto; flex: 1 1 200px; padding: 5px 8px; font-size: 12.5px; }
+.via { font-size: 11px; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
+
+/* banners (unlock, doctor, version, server) */
+.banner.warn { border: 1.5px solid var(--amber-border); background: var(--amber-bg); }
+.banner.warn strong { color: var(--amber); }
+.banner.bad { border: 1.5px solid var(--warn); background: var(--warn-bg); }
+.banner.bad strong { color: var(--warn); }
+.banner ul { margin: 4px 0 0; padding-left: 18px; width: 100%; color: var(--muted); font-size: 12.5px; }
+.banner code { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 12px; }
+
+/* modal (handoff prompt, refusals, removed tickets, board history, commands) */
+.modal-scrim { position: fixed; inset: 0; background: rgba(10, 14, 20, .5); z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 16px; overflow-y: auto; }
+.modal {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: var(--shadow); width: min(620px, 100%); padding: 18px 20px; min-width: 0;
+}
+.modal h3 { margin: 0 0 8px; font-size: 16px; }
+.modal p { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.modal .mbtns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+.modal textarea { min-height: 90px; resize: vertical; }
+.modal .errlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.modal .errlist li { border-left: 3px solid var(--warn); padding: 2px 0 2px 10px; font-size: 13.5px; }
+.modal .errlist .what { color: var(--faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.modal .fixes { margin: 6px 0 0; padding: 0; list-style: none; }
+.modal .fixes li { border: 0; padding: 2px 0; }
+.modal .fixes code, .modal pre {
+  display: block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 9px; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.modal pre { max-height: 50vh; overflow: auto; margin: 0; }
+.modal table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.modal th, .modal td { border-bottom: 1px solid var(--border); padding: 6px 6px; text-align: left; vertical-align: top; }
+.modal th { color: var(--faint); font-weight: 600; font-size: 12px; }
+.modal .hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+@media (max-width: 720px) {
+  .drawer { width: 100%; border-left: 0; }
+  .drawer > header, .drawer .dbody { padding-left: 16px; padding-right: 16px; }
+  .row { grid-template-columns: 34px 76px 1fr; row-gap: 4px; }
+  .row .deps, .row .rprio, .row .rareas { grid-column: 1 / -1; }
+  .col { max-height: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="brand"><span id="brandName">Slate board</span> <small id="gen"></small></div>
+    <div class="counts" id="counts"></div>
+    <span class="pill mode view" id="modePill">View only</span>
+    <span class="spacer"></span>
+    <div class="seg" role="group" aria-label="View">
+      <button id="viewBoard" aria-pressed="true">Board</button>
+      <button id="viewOrder" aria-pressed="false">Implementation order</button>
+    </div>
+    <input class="search" id="search" type="search" placeholder="Search id, title, text, labels  ( / )" aria-label="Search" />
+    <button class="btn subtle" id="themeBtn" title="Toggle theme">Theme: auto</button>
+  </div>
+  <div class="hrow">
+    <details class="fd" id="fdPhase"><summary>Phase <span class="count" hidden>0</span></summary><div class="menu"></div></details>
+    <details class="fd" id="fdArea"><summary>Area <span class="count" hidden>0</span></summary><div class="menu"></div></details>
+    <details class="fd" id="fdPrio"><summary>Priority <span class="count" hidden>0</span></summary><div class="menu"></div></details>
+    <details class="fd" id="fdStatus"><summary>Status <span class="count" hidden>0</span></summary><div class="menu"></div></details>
+    <label class="inline"><input type="checkbox" id="fReady" /> Ready to start only</label>
+    <label class="inline"><input type="checkbox" id="fHideDone" /> Hide done</label>
+    <label class="inline" id="sortWrap">Sort
+      <select id="sort" class="status">
+        <option value="rank">rank</option>
+        <option value="priority">priority</option>
+        <option value="id">id</option>
+      </select>
+    </label>
+    <button class="btn subtle" id="clearFilters" hidden>Clear filters (<span id="fcount">0</span>)</button>
+    <button class="btn subtle" id="removedBtn" hidden>Removed (0)</button>
+    <button class="btn subtle" id="historyBtn" hidden>Board history</button>
+    <span class="spacer"></span>
+    <span class="pill" id="dirty">0 local changes</span>
+    <button class="btn" id="copyCmdsBtn" hidden>Copy as board.py commands</button>
+    <button class="btn" id="exportBtn">Export tickets.json</button>
+    <button class="btn subtle" id="resetBtn">Reset local changes</button>
+  </div>
+</header>
+
+<div id="bannerHost"></div>
+<main id="main"></main>
+<footer class="site" id="siteFoot">Slate v0.4.0</footer>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<div id="drawerHost"></div>
+<div id="modalHost"></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ * Slate board. Vanilla JS, no dependencies.
+ * Loaded ticket data is never mutated. All local edits live in an
+ * overlay object persisted to localStorage and keyed by ticket id.
+ * kanban/preview.json (when present) is shown for display only: it is
+ * never exported and never written to the overlay.
+ * ------------------------------------------------------------------ */
+
+var SLATE_VERSION = "0.4.0";
+var POLL_FAST_MS = 5000;        // while things change or the viewer is active
+var POLL_SLOW_MS = 30000;       // after IDLE_MS without a change or an interaction
+var IDLE_MS = 180000;
+var SAFETY_MS = 30000;          // full fetch + content compare, whatever Last-Modified says
+var BOARD_CMD = "python3 kanban/board.py";
+var NAME_KEY = "slate.claim.name";
+var HANDOFF_PLACEHOLDER = "<note for the ticket's history>";
+var THEME_KEY = "slate.theme";
+var OVERLAY_KEY = "slate.board.overlay.v1";   // replaced in boot() with slate.<prefix>.overlay.v1
+var DEFAULT_STATUSES = ["draft", "backlog", "ready", "in_progress", "review", "user_testing", "merge_ready", "done", "cancelled"];
+var DEFAULT_USER_TEST_AREAS = ["frontend", "ui"];
+// Every status has a role (one of the built-in names); behaviour keys off roles, never names.
+var ROLES = DEFAULT_STATUSES;
+var HANDOFF_ROLES = ["review", "user_testing", "merge_ready", "done", "cancelled"];
+var STATUS_LABELS = {
+  draft: "Draft", backlog: "Backlog", ready: "Ready", in_progress: "In Progress",
+  review: "Review", user_testing: "User testing", merge_ready: "Waiting for merge", done: "Done",
+  cancelled: "Cancelled", blocked: "Blocked"
+};
+// State behaviours ("flags"). /api/info gives the effective values per status; without them (older
+// server, view only) they come from the role, then meta.status_flags overrides per status.
+var FLAG_KEYS = ["resolves_deps", "from_any", "progress", "terminal", "notify_dependents", "folded"];
+var PROGRESS_VALUES = ["done", "excluded", "open"];
+function roleFlags(role) {
+  if (role === "done") return { resolves_deps: true, from_any: false, progress: "done", terminal: true, notify_dependents: false, folded: false };
+  if (role === "cancelled") return { resolves_deps: true, from_any: true, progress: "excluded", terminal: true, notify_dependents: true, folded: true };
+  return { resolves_deps: false, from_any: false, progress: "open", terminal: false, notify_dependents: false, folded: false };
+}
+
+var state = {
+  raw: null,          // exact parsed tickets.json, never mutated
+  previewRaw: null,   // parsed preview.json when present
+  previewCount: 0,
+  tickets: [],        // normalised copies (unlocks filled in), preview tickets included
+  byId: {},
+  phases: [],
+  filterPhases: [],
+  statuses: [],
+  areas: [],
+  priorities: [],
+  userTestAreas: DEFAULT_USER_TEST_AREAS.slice(),
+  repoUrl: "",
+  overlay: {},
+  view: "board",
+  sort: "rank",
+  search: "",
+  filters: { phase: [], area: [], priority: [], status: [] },
+  readyOnly: false,
+  hideDone: false,
+  openId: null,
+  techOpen: {},
+  phaseOpen: {},      // phase id -> true/false once the viewer toggles it (implementation view)
+  source: null,       // "fetch" (served folder, polled) or "file" (file picker, not polled)
+  lastSig: null,      // tickets.json + preview.json text last shown, to spot changes
+  lastText: { t: null, p: null },
+  lastMod: {},        // url -> Last-Modified of the response last shown (for If-Modified-Since)
+  lastFull: 0,        // time of the last full (unconditional) fetch
+  lastActivity: 0,    // last change seen or viewer interaction (drives the 5 s / 30 s poll)
+  pollTimer: null,
+  polling: false,
+  statusLabels: {},   // meta.status_labels
+  statusRoles: {},    // meta.status_roles
+  statusFrom: {},     // meta.status_from (path rules)
+  statusFlags: {},    // meta.status_flags (per-status behaviour overrides, view only)
+  colFold: {},        // status -> true/false once the viewer folds/unfolds a column (this session)
+  live: null,         // /api/info answer when served by `board.py serve`, else null (view only)
+  token: "",
+  infoFails: 0,
+  allowed: {},        // id -> { allowed: [...], reasons: {status: text} } from /api/allowed (live)
+  unlockFile: null,   // view only: kanban/.slate-unlock.json when it is active
+  saving: false
+};
+
+/* ---------------- helpers ---------------- */
+
+function $(sel, root) { return (root || document).querySelector(sel); }
+
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = String(text);
+  return n;
+}
+
+function esc(s) {
+  return String(s === undefined || s === null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function titleCase(s) { return s.replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }); }
+function labelStatus(s) {
+  var l = state.statusLabels[s];
+  if (typeof l === "string" && l.trim()) return l;
+  return STATUS_LABELS[s] || titleCase(String(s || "").replace(/_/g, " "));
+}
+// meta.status_roles wins; a built-in status name is its own role; other statuses have none.
+function roleOf(s) {
+  var r = state.statusRoles[s];
+  if (ROLES.indexOf(r) !== -1) return r;
+  return ROLES.indexOf(s) !== -1 ? s : null;
+}
+function statusesWithRole(r) { return state.statuses.filter(function (s) { return roleOf(s) === r; }); }
+function useOverlay() { return !state.live; }
+// The /api/info entry for a status (live mode), or null.
+function liveStatusInfo(st) {
+  if (!state.live) return null;
+  return arr(state.live.statuses).filter(function (x) {
+    return x && typeof x === "object" && x.name === st;
+  })[0] || null;
+}
+function cleanFlags(base, over) {
+  if (!over || typeof over !== "object" || Array.isArray(over)) return base;
+  FLAG_KEYS.forEach(function (k) {
+    if (!Object.prototype.hasOwnProperty.call(over, k)) return;
+    var v = over[k];
+    if (k === "progress") { if (PROGRESS_VALUES.indexOf(v) !== -1) base[k] = v; }
+    else if (typeof v === "boolean") base[k] = v;
+  });
+  return base;
+}
+// Effective behaviours of a status: /api/info flags (live) win; else role defaults + meta.status_flags.
+function flagsOf(st) {
+  var info = liveStatusInfo(st);
+  if (info && info.flags && typeof info.flags === "object") return cleanFlags(roleFlags(roleOf(st)), info.flags);
+  return cleanFlags(roleFlags(roleOf(st)), state.statusFlags[st]);
+}
+function flagsNow(t) { return flagsOf(statusOf(t)); }
+function isTerminal(t) { return !!t && flagsNow(t).terminal; }
+function progressOf(t) { return flagsNow(t).progress; }
+// Cancelled-like: finished without counting as done (terminal + progress "excluded").
+function isExcludedStatus(st) { var f = flagsOf(st); return f.terminal && f.progress === "excluded"; }
+function isCancelled(t) { return !!t && isExcludedStatus(statusOf(t)); }
+// The status `board.py cancel` moves a ticket to: "cancelled" when it has the cancelled role,
+// else the first status with that role; null when the board has none.
+function cancelStatus() {
+  if (state.statuses.indexOf("cancelled") !== -1 && roleOf("cancelled") === "cancelled") return "cancelled";
+  return statusesWithRole("cancelled")[0] || null;
+}
+// "3/15 done · 1 cancelled": the total leaves out tickets in an "excluded" state, which are
+// listed per state instead.
+function progressSummary(list) {
+  var done = 0, total = 0, excl = {};
+  list.forEach(function (t) {
+    var p = progressOf(t);
+    if (p === "excluded") { var st = statusOf(t); excl[st] = (excl[st] || 0) + 1; return; }
+    total++;
+    if (p === "done") done++;
+  });
+  var text = done + "/" + total + " done";
+  var extra = "";
+  state.statuses.concat(Object.keys(excl).filter(function (s) { return state.statuses.indexOf(s) === -1; }))
+    .forEach(function (st) {
+      if (excl[st]) extra += " · " + excl[st] + " " + labelStatus(st).toLowerCase();
+    });
+  return { done: done, total: total, excluded: excl, text: text + extra, extra: extra };
+}
+
+function loadOverlay() {
+  try {
+    var v = JSON.parse(localStorage.getItem(OVERLAY_KEY) || "{}");
+    return (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+  } catch (e) { return {}; }
+}
+
+function saveOverlay() {
+  try { localStorage.setItem(OVERLAY_KEY, JSON.stringify(state.overlay)); } catch (e) { /* private mode */ }
+}
+
+function entry(id) {
+  if (!state.overlay[id]) state.overlay[id] = {};
+  return state.overlay[id];
+}
+
+function tidyEntry(id) {
+  var e = state.overlay[id];
+  if (!e) return;
+  if (e.checks && !Object.keys(e.checks).length) delete e.checks;
+  if (e.note !== undefined && !e.status) delete e.note;   // a local move's note/reason goes with it
+  if (!Object.keys(e).length) delete state.overlay[id];
+}
+
+function isPreview(t) { return !!(t && t._preview); }
+function isLegacy(t) { return !t.summary && !t.story; }
+
+function statusOf(t) {
+  if (isPreview(t) || !useOverlay()) return t.status;
+  var o = state.overlay[t.id];
+  return (o && o.status) ? o.status : t.status;
+}
+function roleNow(t) { return t ? roleOf(statusOf(t)) : null; }
+function isDone(t) { return roleNow(t) === "done"; }
+function isDraft(t) { return roleNow(t) === "draft"; }
+function needsYou(t) { return roleNow(t) === "user_testing"; }
+function isMergeReady(t) { return roleNow(t) === "merge_ready"; }
+function isInProgress(t) { return roleNow(t) === "in_progress"; }
+// A status change kept only in this browser (view-only mode).
+function localStatus(t) {
+  if (!t || isPreview(t) || !useOverlay()) return null;
+  var o = state.overlay[t.id];
+  return (o && o.status && o.status !== t.status) ? o.status : null;
+}
+// Unscheduled phases hold "someday" tickets: next/list never offer them.
+function isUnscheduledPhase(pid) {
+  var p = phaseById(pid);
+  return !!(p && p.unscheduled === true);
+}
+function isUnscheduled(t) { return !!t && isUnscheduledPhase(t.phase); }
+// dep_exceptions: { DEP_ID: reason } - dependencies the ticket may go on without.
+function depException(t, d) {
+  var ex = t && t.dep_exceptions;
+  if (!ex || typeof ex !== "object" || Array.isArray(ex) || !Object.prototype.hasOwnProperty.call(ex, d)) return null;
+  return typeof ex[d] === "string" && ex[d] ? ex[d] : "exception";
+}
+// A dependency is resolved when it sits in a state that resolves_deps (Done, Cancelled, ...) or
+// the ticket lists it in dep_exceptions.
+function depResolved(t, d) {
+  if (depException(t, d) !== null) return true;
+  var dep = state.byId[d];
+  return !!dep && !!flagsNow(dep).resolves_deps;
+}
+function openDeps(t) {
+  return (t.depends_on || []).filter(function (d) { return !depResolved(t, d); });
+}
+function isBlocked(t) { return openDeps(t).length > 0; }
+// Shown as "blocked" (chips, red edge): open deps on a ticket that isn't finished, a draft or a preview.
+function showsBlocked(t) { return isBlocked(t) && !isDone(t) && !isTerminal(t) && !isDraft(t) && !isPreview(t); }
+// Ready = saved, unfinished ticket in backlog/ready with every dependency resolved.
+function isReady(t) {
+  if (isPreview(t) || isUnscheduled(t) || isTerminal(t)) return false;
+  var r = roleNow(t);
+  return (r === "backlog" || r === "ready") && !isBlocked(t);
+}
+
+function checkKey(kind, i) { return kind + ":" + i; }
+// A tick saved on the board (item_checks, written by board.py check-item) wins over the
+// browser overlay. Every item of a ticket that is done in the file counts as ticked.
+function fileItemCheck(t, kind, i) {
+  if (!t || isPreview(t)) return null;
+  var ic = t.item_checks;
+  if (ic && typeof ic === "object" && !Array.isArray(ic)) {
+    var r = ic[checkKey(kind, i)];
+    if (r && typeof r === "object") return r;
+    if (r === true) return {};
+  }
+  if (roleOf(t.status) === "done") return { done: true };
+  return null;
+}
+function isTicked(t, kind, i) { return !!fileItemCheck(t, kind, i) || checked(t.id, kind, i); }
+function checked(id, kind, i) {
+  if (!useOverlay()) return false;
+  var o = state.overlay[id];
+  return !!(o && o.checks && o.checks[checkKey(kind, i)]);
+}
+function setChecked(id, kind, i, on) {
+  if (isPreview(state.byId[id])) return;
+  var e = entry(id);
+  if (!e.checks) e.checks = {};
+  if (on) e.checks[checkKey(kind, i)] = true;
+  else delete e.checks[checkKey(kind, i)];
+  tidyEntry(id);
+  saveOverlay();
+}
+
+/* Local Pass/Fail clicks: overlay checks["usertest:<i>"] = "pass" | "fail" | "reset" (clear a recorded result). */
+function localUserTest(id, i) {
+  if (!useOverlay()) return null;
+  var o = state.overlay[id];
+  var v = o && o.checks && o.checks[checkKey("usertest", i)];
+  return (v === "pass" || v === "fail" || v === "reset") ? v : null;
+}
+function setUserTest(id, i, result) {
+  if (isPreview(state.byId[id])) return;
+  var e = entry(id);
+  if (!e.checks) e.checks = {};
+  var k = checkKey("usertest", i);
+  if (e.checks[k] === result) delete e.checks[k]; else e.checks[k] = result;
+  tidyEntry(id);
+  saveOverlay();
+}
+function recordedUserTest(t, i) {
+  var uc = t.user_checks;
+  if (!uc || typeof uc !== "object") return null;
+  var r = uc[String(i)];
+  return (r && typeof r === "object") ? r : null;
+}
+
+// Is this local overlay mark already true in tickets.json? Then it is not a pending change.
+function markInFile(t, key, value) {
+  var m = /^(acceptance|test):(\d+)$/.exec(key);
+  if (m) return !!fileItemCheck(t, m[1], Number(m[2]));
+  var u = /^usertest:(\d+)$/.exec(key);
+  if (u) {
+    var rec = recordedUserTest(t, Number(u[1]));
+    var res = rec && rec.result;
+    return value === "reset" ? !res : res === value;
+  }
+  return false;
+}
+
+// Drop local marks the file already reflects (someone ran the board.py command).
+function pruneOverlay() {
+  var changed = false;
+  Object.keys(state.overlay).forEach(function (id) {
+    var o = state.overlay[id], t = state.byId[id];
+    if (!t || isPreview(t)) return;
+    if (o.status && o.status === t.status) { delete o.status; changed = true; }
+    if (o.checks) Object.keys(o.checks).forEach(function (k) {
+      if (markInFile(t, k, o.checks[k])) { delete o.checks[k]; changed = true; }
+    });
+    tidyEntry(id);
+  });
+  if (changed) saveOverlay();
+}
+
+function changeCount() {
+  if (!useOverlay()) return 0;
+  var n = 0;
+  Object.keys(state.overlay).forEach(function (id) {
+    var o = state.overlay[id], t = state.byId[id];
+    if (!t || isPreview(t)) return;
+    if (o.status && o.status !== t.status) n++;
+    if (o.checks) Object.keys(o.checks).forEach(function (k) {
+      if (!markInFile(t, k, o.checks[k])) n++;
+    });
+  });
+  return n;
+}
+
+/* ---------------- minimal markdown renderer ---------------- */
+
+function mdInline(s) {
+  var codes = [];
+  s = s.replace(/`([^`]+)`/g, function (m, c) {
+    codes.push(c);
+    return "%%MDCODE" + (codes.length - 1) + "%%";
+  });
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, txt, url) {
+    if (/^\s*(javascript|data|vbscript):/i.test(url)) return txt;
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + txt + "</a>";
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^\w*])\*([^\s*][^*]*?[^\s*]|[^\s*])\*(?=[^\w*]|$)/g, "$1<em>$2</em>");
+  s = s.replace(/%%MDCODE(\d+)%%/g, function (m, i) {
+    return '<code class="md-code">' + codes[Number(i)] + "</code>";
+  });
+  return s;
+}
+
+function splitRow(line) {
+  var s = line.trim();
+  if (s.charAt(0) === "|") s = s.slice(1);
+  if (s.charAt(s.length - 1) === "|" && s.charAt(s.length - 2) !== "\\") s = s.slice(0, -1);
+  var cells = [], cur = "";
+  for (var i = 0; i < s.length; i++) {
+    var ch = s.charAt(i);
+    if (ch === "\\" && s.charAt(i + 1) === "|") { cur += "|"; i++; continue; }
+    if (ch === "|") { cells.push(cur.trim()); cur = ""; continue; }
+    cur += ch;
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+var TABLE_SEP = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/;
+
+function mdToHtml(src) {
+  if (!src) return "";
+  var lines = String(src).replace(/\r\n?/g, "\n").split("\n");
+  var out = [], i = 0;
+  var isBullet = function (l) { return /^\s*[-*+]\s+/.test(l); };
+  var isNum = function (l) { return /^\s*\d+[.)]\s+/.test(l); };
+  var isHead = function (l) { return /^#{1,6}\s+/.test(l); };
+  var isFence = function (l) { return /^\s*(```|~~~)/.test(l); };
+  var isQuote = function (l) { return /^\s*>/.test(l); };
+  var isTableAt = function (k) {
+    return k + 1 < lines.length && /\|/.test(lines[k]) && TABLE_SEP.test(lines[k + 1]) && /-/.test(lines[k + 1]);
+  };
+
+  while (i < lines.length) {
+    var line = lines[i];
+
+    if (isFence(line)) {
+      var fence = line.trim().slice(0, 3);
+      i++;
+      var buf = [];
+      while (i < lines.length && lines[i].trim().indexOf(fence) !== 0) { buf.push(lines[i]); i++; }
+      i++;
+      out.push('<pre class="md-pre"><code>' + esc(buf.join("\n")) + "</code></pre>");
+      continue;
+    }
+    if (/^\s*$/.test(line)) { i++; continue; }
+
+    var h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) {
+      var n = Math.min(4, h[1].length);
+      var tag = "h" + Math.min(6, n + 3);
+      out.push("<" + tag + ' class="md-h md-h' + n + '">' + mdInline(esc(h[2].replace(/\s+#+\s*$/, ""))) + "</" + tag + ">");
+      i++;
+      continue;
+    }
+    if (isTableAt(i)) {
+      var head = splitRow(lines[i]);
+      var aligns = splitRow(lines[i + 1]).map(function (c) {
+        var l = c.charAt(0) === ":", r = c.charAt(c.length - 1) === ":";
+        return (l && r) ? "center" : (r ? "right" : "");
+      });
+      i += 2;
+      var cellAttr = function (k) { return aligns[k] ? ' style="text-align:' + aligns[k] + '"' : ""; };
+      var html = '<div class="md-table-wrap"><table class="md-table"><thead><tr>';
+      head.forEach(function (c, k) { html += "<th" + cellAttr(k) + ">" + mdInline(esc(c)) + "</th>"; });
+      html += "</tr></thead><tbody>";
+      while (i < lines.length && /\|/.test(lines[i]) && !/^\s*$/.test(lines[i])) {
+        var cells = splitRow(lines[i]);
+        html += "<tr>";
+        for (var k = 0; k < head.length; k++) html += "<td" + cellAttr(k) + ">" + mdInline(esc(cells[k] || "")) + "</td>";
+        html += "</tr>";
+        i++;
+      }
+      out.push(html + "</tbody></table></div>");
+      continue;
+    }
+    if (isQuote(line)) {
+      var q = [];
+      while (i < lines.length && isQuote(lines[i])) { q.push(lines[i].replace(/^\s*>\s?/, "")); i++; }
+      out.push('<blockquote class="md-quote">' + mdToHtml(q.join("\n")) + "</blockquote>");
+      continue;
+    }
+    if (isBullet(line)) {
+      var ul = [];
+      while (i < lines.length && isBullet(lines[i])) {
+        ul.push("<li>" + mdInline(esc(lines[i].replace(/^\s*[-*+]\s+/, ""))) + "</li>");
+        i++;
+      }
+      out.push('<ul class="md-ul">' + ul.join("") + "</ul>");
+      continue;
+    }
+    if (isNum(line)) {
+      var ol = [];
+      while (i < lines.length && isNum(lines[i])) {
+        ol.push("<li>" + mdInline(esc(lines[i].replace(/^\s*\d+[.)]\s+/, ""))) + "</li>");
+        i++;
+      }
+      out.push('<ol class="md-ol">' + ol.join("") + "</ol>");
+      continue;
+    }
+    var para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !isFence(lines[i]) && !isHead(lines[i])
+           && !isBullet(lines[i]) && !isNum(lines[i]) && !isQuote(lines[i]) && !isTableAt(i)) {
+      para.push(lines[i]);
+      i++;
+    }
+    out.push('<p class="md-p">' + mdInline(esc(para.join(" "))) + "</p>");
+  }
+  return out.join("");
+}
+
+/* ---------------- data normalisation ---------------- */
+
+function uniq(a) {
+  var s = [];
+  for (var i = 0; i < a.length; i++) if (a[i] && s.indexOf(a[i]) === -1) s.push(a[i]);
+  return s;
+}
+function flat(a) { return a.reduce(function (x, y) { return x.concat(y || []); }, []); }
+function arr(v) { return Array.isArray(v) ? v : []; }
+
+function normTicket(t, idx, preview) {
+  var c = {};
+  for (var k in t) if (Object.prototype.hasOwnProperty.call(t, k)) c[k] = t[k];
+  c.id = String(c.id || ("?" + (idx + 1)));
+  c.title = c.title || c.id;
+  c.areas = arr(c.areas);
+  c.labels = arr(c.labels);
+  c.depends_on = arr(c.depends_on);
+  c.acceptance = arr(c.acceptance);
+  c.test_scenarios = arr(c.test_scenarios);
+  c.user_tests = arr(c.user_tests);
+  c.rank = (typeof c.rank === "number") ? c.rank : idx + 1;
+  c.status = c.status || (preview ? "backlog" : state.statuses[0]);
+  c.unlocksGiven = Array.isArray(t.unlocks);
+  c.unlocks = c.unlocksGiven ? t.unlocks.slice() : [];
+  c._preview = !!preview;
+  return c;
+}
+
+function normalise(data, preview) {
+  state.raw = data;
+  state.previewRaw = preview || null;
+  var meta = data.meta || {};
+  state.statuses = (meta.statuses && meta.statuses.length) ? meta.statuses.slice() : DEFAULT_STATUSES.slice();
+  var objOr = function (v) { return (v && typeof v === "object" && !Array.isArray(v)) ? v : {}; };
+  state.statusLabels = objOr(meta.status_labels);
+  state.statusRoles = objOr(meta.status_roles);
+  state.statusFrom = objOr(meta.status_from);
+  state.statusFlags = objOr(meta.status_flags);
+  state.userTestAreas = Array.isArray(meta.user_test_areas) ? meta.user_test_areas.slice() : DEFAULT_USER_TEST_AREAS.slice();
+  state.repoUrl = (typeof meta.repo_url === "string" && /^https?:\/\//i.test(meta.repo_url)) ? meta.repo_url : "";
+  state.phases = arr(data.phases).map(function (p) { var c = {}; for (var k in p) c[k] = p[k]; return c; });
+
+  state.tickets = arr(data.tickets).map(function (t, idx) { return normTicket(t, idx, false); });
+  state.byId = {};
+  state.tickets.forEach(function (t) { state.byId[t.id] = t; });
+
+  // Preview tickets: display only. Ids that already exist in tickets.json win.
+  state.previewCount = 0;
+  if (preview) {
+    var known = {};
+    state.phases.forEach(function (p) { known[p.id] = true; });
+    arr(preview.phases).forEach(function (p) {
+      if (p && p.id && !known[p.id]) {
+        var c = {}; for (var k in p) c[k] = p[k];
+        c._preview = true;
+        state.phases.push(c);
+        known[p.id] = true;
+      }
+    });
+    arr(preview.tickets).forEach(function (t, idx) {
+      if (!t || !t.id || state.byId[t.id]) return;
+      var c = normTicket(t, state.tickets.length + idx, true);
+      state.tickets.push(c);
+      state.byId[c.id] = c;
+      state.previewCount++;
+    });
+  }
+
+  // Columns come from meta.statuses; a status used by a ticket but missing there still gets one.
+  state.tickets.forEach(function (t) {
+    var s = t.status;
+    if (state.statuses.indexOf(s) !== -1) return;
+    if (s === "draft") state.statuses.unshift(s);
+    else if (s === "user_testing" && state.statuses.indexOf("merge_ready") !== -1) state.statuses.splice(state.statuses.indexOf("merge_ready"), 0, s);
+    else if ((s === "user_testing" || s === "merge_ready") && state.statuses.indexOf("done") !== -1) state.statuses.splice(state.statuses.indexOf("done"), 0, s);
+    else state.statuses.push(s);
+  });
+
+  // Derive unlocks from depends_on for tickets that did not declare them, and show
+  // preview dependants on saved tickets (display only; export never includes them).
+  var derived = {};
+  state.tickets.forEach(function (t) {
+    t.depends_on.forEach(function (d) {
+      if (!derived[d]) derived[d] = [];
+      if (derived[d].indexOf(t.id) === -1) derived[d].push(t.id);
+    });
+  });
+  state.tickets.forEach(function (t) {
+    var dd = derived[t.id] || [];
+    if (!t.unlocksGiven) t.unlocks = dd.slice();
+    else dd.forEach(function (x) {
+      if (isPreview(state.byId[x]) && t.unlocks.indexOf(x) === -1) t.unlocks.push(x);
+    });
+  });
+
+  var phaseIds = state.phases.map(function (p) { return p.id; });
+  state.tickets.forEach(function (t) {
+    if (t.phase && phaseIds.indexOf(t.phase) === -1) phaseIds.push(t.phase);
+  });
+  state.filterPhases = phaseIds;
+  state.areas = uniq((meta.areas || []).concat(flat(state.tickets.map(function (t) { return t.areas; }))));
+  state.priorities = uniq((meta.priorities || [])
+    .concat(state.tickets.map(function (t) { return t.priority; })).filter(Boolean));
+}
+
+function savedTickets() { return state.tickets.filter(function (t) { return !isPreview(t); }); }
+function phaseById(id) { return state.phases.filter(function (p) { return p.id === id; })[0]; }
+
+/* ---------------- filtering and sorting ---------------- */
+
+function matchesSearch(t, q) {
+  if (!q) return true;
+  var hay = [t.id, t.title, t.summary, t.story, t.description, (t.labels || []).join(" ")]
+    .join(" ").toLowerCase();
+  return hay.indexOf(q) !== -1;
+}
+
+function passes(t) {
+  var f = state.filters;
+  if (!matchesSearch(t, state.search)) return false;
+  if (f.phase.length && f.phase.indexOf(t.phase) === -1) return false;
+  if (f.priority.length && f.priority.indexOf(t.priority) === -1) return false;
+  if (f.status.length && f.status.indexOf(statusOf(t)) === -1) return false;
+  if (f.area.length) {
+    var hit = (t.areas || []).some(function (a) { return f.area.indexOf(a) !== -1; });
+    if (!hit) return false;
+  }
+  if (state.readyOnly && !isReady(t)) return false;
+  if (state.hideDone && (isDone(t) || isTerminal(t))) return false;
+  return true;
+}
+
+function visible() { return state.tickets.filter(passes); }
+
+function activeFilterCount() {
+  var f = state.filters;
+  return f.phase.length + f.area.length + f.priority.length + f.status.length
+    + (state.readyOnly ? 1 : 0) + (state.hideDone ? 1 : 0);
+}
+
+function cmp(a, b) { return a < b ? -1 : (a > b ? 1 : 0); }
+
+function sortTickets(list) {
+  var mode = state.sort;
+  var pIdx = function (t) {
+    var i = state.priorities.indexOf(t.priority);
+    return i === -1 ? 99 : i;
+  };
+  return list.slice().sort(function (a, b) {
+    if (mode === "priority") return pIdx(a) - pIdx(b) || a.rank - b.rank || cmp(a.id, b.id);
+    if (mode === "id") return cmp(a.id, b.id);
+    return a.rank - b.rank || cmp(a.id, b.id);
+  });
+}
+
+function byRank() {
+  return state.tickets.slice().sort(function (a, b) { return a.rank - b.rank || cmp(a.id, b.id); });
+}
+
+/* ---------------- mutation: board API (live) or overlay (view only) ---------------- */
+
+// Path rules from meta.status_from, checked in the browser for view-only mode (the server checks
+// every gate in live mode). Only forward moves are restricted, as in board.py.
+function localAllowed(t) {
+  var cur = statusOf(t), sts = state.statuses, out = { allowed: [], reasons: {} };
+  sts.forEach(function (s) {
+    var from = state.statusFrom[s];
+    var fwd = sts.indexOf(s) > sts.indexOf(cur);
+    if (s !== cur && fwd && !flagsOf(s).from_any && Array.isArray(from) && from.length && from.indexOf(cur) === -1) {
+      out.reasons[s] = labelStatus(s) + " can only be reached from: " + from.map(labelStatus).join(", ");
+    } else out.allowed.push(s);
+  });
+  return out;
+}
+
+// { allowed: [...], reasons: {...} } for a ticket, or null while not known yet (live mode).
+function allowedFor(t) {
+  if (!t || isPreview(t)) return null;
+  if (!state.live) return localAllowed(t);
+  var a = state.allowed[t.id];
+  return (a && Array.isArray(a.allowed)) ? a : null;
+}
+function moveReason(t, st) {
+  // A state reachable from any state (Cancelled, Won't fix, ...) is never greyed out.
+  if (flagsOf(st).from_any) return null;
+  var a = allowedFor(t);
+  if (!a || st === statusOf(t) || a.allowed.indexOf(st) !== -1) return null;
+  return (a.reasons && a.reasons[st]) || ("Not allowed from " + labelStatus(statusOf(t)));
+}
+
+function setStatus(id, status) {
+  var t = state.byId[id];
+  if (!t || isPreview(t)) return;
+  if (status === statusOf(t)) return;
+  var why = moveReason(t, status);
+  if (why) {
+    showRefusal("Can't move " + id + " to " + labelStatus(status),
+      { errors: [{ id: id, field: "status", message: why, fix: [] }] });
+    renderKeepScroll();
+    return;
+  }
+  if (state.live) { liveSetStatus(t, status); return; }
+  var cur = statusOf(t);
+  // View only: moving to a from-any state (Cancelled, ...) or out of a cancelled one asks for the
+  // note/reason now, so "Copy as board.py commands" can carry it.
+  var leaving = isExcludedStatus(cur) && !flagsOf(status).terminal && status !== t.status;
+  if (status !== t.status && (flagsOf(status).from_any || leaving)) {
+    askMoveNote(t, cur, status).then(function (note) {
+      if (note === null) { renderKeepScroll(); return; }
+      var e2 = entry(id);
+      e2.status = status;
+      e2.note = note;
+      tidyEntry(id);
+      saveOverlay();
+      render();
+    });
+    return;
+  }
+  var e = entry(id);
+  if (status === t.status) delete e.status; else { e.status = status; delete e.note; }
+  tidyEntry(id);
+  saveOverlay();
+  render();
+}
+
+// The note box for a move: a reason for a cancel-like state, a history note otherwise.
+function askMoveNote(t, from, status) {
+  var cancelling = isExcludedStatus(status) && !isExcludedStatus(from);
+  var back = isBackward(from, status);
+  return askText({
+    title: t.id + " → " + labelStatus(status),
+    message: cancelling
+      ? "Why is " + t.id + " moving to " + labelStatus(status) + "? The reason is saved in the ticket's history, and tickets that depend on it are no longer blocked."
+      : (isExcludedStatus(from)
+        ? "Bringing " + t.id + " back from " + labelStatus(from) + " needs a short note for the ticket's history: why it's back."
+        : (back ? "Moving back to " + labelStatus(status) + " needs a short note for the ticket's history: why it's going back."
+          : "Moving to " + labelStatus(status) + " needs a short note for the ticket's history: what was done, or why it moves on.")),
+    placeholder: cancelling ? "Reason (saved in the history)" : "Note for the ticket's history",
+    okLabel: cancelling ? labelStatus(status) : "Move", cancelLabel: cancelling ? "Keep it" : "Cancel", multiline: true
+  });
+}
+
+// Does moving to this status need a note for the ticket's history? A from-any state always
+// does. /api/info statuses may carry note: "required" | "optional"; without that, fall back to
+// the built-in rule (review, user testing, waiting for merge, done and cancelled roles need one).
+function noteRequired(st) {
+  if (flagsOf(st).from_any) return true;
+  var info = liveStatusInfo(st);
+  if (info && (info.note === "required" || info.note === "optional")) return info.note === "required";
+  return HANDOFF_ROLES.indexOf(roleOf(st)) !== -1;
+}
+function hasPathRules() {
+  return Object.keys(state.statusFrom).some(function (k) { return arr(state.statusFrom[k]).length > 0; });
+}
+
+function isBackward(from, to) {
+  var i = state.statuses.indexOf(from), j = state.statuses.indexOf(to);
+  return i !== -1 && j !== -1 && j < i;
+}
+
+function needsHandoff(res) {
+  if (!res) return false;
+  if (res.code === "needs_handoff") return true;
+  return arr(res.errors).some(function (e) { return e && e.code === "needs_handoff"; });
+}
+
+function liveSetStatus(t, status) {
+  var from = t.status;
+  // Out of a cancelled state: that's "uncancel" (it notes the dependents), with this target.
+  if (isExcludedStatus(from) && !flagsOf(status).terminal) { undoCancel(t, status); return; }
+  // Into the state `board.py cancel` uses: that's "cancel" (a reason is required).
+  if (status === cancelStatus() && !isExcludedStatus(from)) {
+    askMoveNote(t, from, status).then(function (reason) {
+      if (reason === null) { renderKeepScroll(); return; }
+      sendCancel(t, reason);
+    });
+    return;
+  }
+  var go = function (handoff) {
+    var body = { id: t.id, status: status };
+    if (handoff) body.handoff = handoff;
+    return api("set", body).then(function (res) {
+      if (res.ok) return afterSave("Saved: " + t.id + " → " + labelStatus(status), res);
+      if (!handoff && needsHandoff(res)) return ask();
+      refused("Can't move " + t.id + " to " + labelStatus(status), res);
+    });
+  };
+  var ask = function () {
+    return askMoveNote(t, from, status).then(function (note) {
+      if (note === null) { renderKeepScroll(); return; }
+      return go(note);
+    });
+  };
+  // Pre-open the note box when the target needs a note (from /api/info, or a from-any state) or
+  // the move goes back; otherwise try without one and ask only if the server answers needs_handoff.
+  if (isBackward(from, status) || noteRequired(status)) ask(); else go("");
+}
+
+// POST cancel {id, reason}.
+function sendCancel(t, reason) {
+  return api("cancel", { id: t.id, reason: reason }).then(function (res) {
+    if (res.ok) return afterSave("Cancelled " + t.id, res);
+    refused("Can't cancel " + t.id, res);
+  });
+}
+
+// Does a refusal ask whether to keep the dependents as they are (uncancel --keep-dependents)?
+function asksKeepDependents(res) {
+  return arr(res && res.errors).some(function (e) {
+    if (!e || typeof e !== "object") return false;
+    var fx = typeof e.fix === "string" ? [e.fix] : arr(e.fix);
+    return [String(e.message || ""), String(e.code || "")].concat(fx.map(String)).some(function (s) {
+      return /keep[-_]dependents/i.test(s);
+    });
+  });
+}
+
+// "Undo cancel": a note, an optional "back to" state (default cancelled_from), then
+// POST uncancel {id, to?, handoff, keep_dependents?}. When the server refuses because dependents
+// already moved on, the dialog comes back with the errors and a "Keep dependents as they are" box.
+function undoCancel(t, to, prev) {
+  prev = prev || {};
+  var targets = state.statuses.filter(function (s) { return !flagsOf(s).terminal; });
+  var def = to || prev.to || t.cancelled_from;
+  if (targets.indexOf(def) === -1) def = statusesWithRole("backlog")[0] || targets[0];
+  var nodes = [];
+  if (prev.res) {
+    var errs = el("ul", "errlist");
+    arr(prev.res.errors).forEach(function (e) {
+      e = (e && typeof e === "object") ? e : { message: String(e) };
+      var li = el("li");
+      li.appendChild(el("div", null, String(e.message || "")));
+      var fx = typeof e.fix === "string" ? [e.fix] : arr(e.fix);
+      fx.forEach(function (f) { li.appendChild(el(/^ask the user:/i.test(String(f)) ? "div" : "code", "plain", String(f))); });
+      errs.appendChild(li);
+    });
+    nodes.push(errs);
+  }
+  nodes.push(el("p", null, "Bring " + t.id + " back from " + labelStatus(statusOf(t))
+    + ". Tickets that depend on it get a note that it's back."));
+  var lab = el("label", "field", "Back to");
+  var sel = el("select");
+  sel.id = "uncancelTo";
+  targets.forEach(function (s) {
+    var o = el("option", null, labelStatus(s) + (s === t.cancelled_from ? " (where it was)" : ""));
+    o.value = s;
+    if (s === def) o.selected = true;
+    sel.appendChild(o);
+  });
+  lab.appendChild(document.createElement("br"));
+  lab.appendChild(sel);
+  nodes.push(lab);
+  var ta = el("textarea");
+  ta.id = "uncancelNote";
+  ta.placeholder = "Note for the ticket's history: why it's back";
+  ta.setAttribute("aria-label", "Note for the ticket's history");
+  if (prev.note) ta.value = prev.note;
+  nodes.push(ta);
+  var keep = null;
+  if (prev.res && asksKeepDependents(prev.res)) {
+    var kl = el("label", "keep");
+    keep = el("input");
+    keep.type = "checkbox";
+    keep.id = "keepDependents";
+    kl.appendChild(keep);
+    kl.appendChild(el("span", null, "Keep dependents as they are"));
+    nodes.push(kl);
+  }
+  var send = function (btn) {
+    var note = ta.value.trim();
+    if (!note) { ta.focus(); return; }
+    btn.disabled = true;
+    var body = { id: t.id, handoff: note };
+    if (sel.value) body.to = sel.value;
+    if (keep && keep.checked) body.keep_dependents = true;
+    closeModal();
+    api("uncancel", body).then(function (res) {
+      if (res.ok) return afterSave(t.id + " is back in " + labelStatus(sel.value), res);
+      if (!body.keep_dependents && asksKeepDependents(res)) {
+        undoCancel(t, sel.value, { res: res, note: note, to: sel.value });
+        return;
+      }
+      refused("Can't undo the cancel of " + t.id, res);
+    });
+  };
+  var m = openModal("Undo cancel: " + t.id, nodes,
+    [["Keep it cancelled", "btn subtle", function () { closeModal(); renderKeepScroll(); }], ["Undo cancel", "btn primary", send]],
+    function () { renderKeepScroll(); });
+  m.id = "uncancelModal";
+  setTimeout(function () { ta.focus(); }, 0);
+}
+
+/* ---------------- board API (live mode: `board.py serve`) ---------------- */
+
+// POST ./api/<path> with the per-run token. Always resolves to the parsed answer:
+// { ok: true, ... } or { ok: false, code?, errors: [{ id, field, message, fix: [...] }] }.
+// Every write carries the viewer's saved name ("as") — the same name "Take" claims with — so a
+// ticket this viewer took from the page can be moved, ticked and noted by them. A body that
+// already says who (claim, take-over) keeps its own "as".
+function withActor(body) {
+  var b = body || {};
+  var n = myName();
+  if (n && b.as === undefined) {
+    var copy = {};
+    for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k)) copy[k] = b[k];
+    copy.as = n;
+    return copy;
+  }
+  return b;
+}
+function allowedUrl(id) {
+  var n = myName();
+  return "./api/allowed?id=" + encodeURIComponent(id) + (n ? "&as=" + encodeURIComponent(n) : "");
+}
+
+function api(path, body) {
+  state.saving = true;
+  return fetch("./api/" + path, {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", "X-Slate-Token": state.token },
+    body: JSON.stringify(withActor(body))
+  }).then(function (r) {
+    return r.text().then(function (txt) {
+      var j = null;
+      try { j = JSON.parse(txt); } catch (e) { j = null; }
+      if (!j || typeof j !== "object") {
+        j = { ok: false, errors: [{ message: "The board server answered HTTP " + r.status
+          + (txt ? ": " + txt.slice(0, 200) : ""), fix: [] }] };
+      }
+      if (!r.ok && j.ok === undefined) j.ok = false;
+      if (j.ok === undefined) j.ok = r.ok;
+      return j;
+    });
+  }).catch(function (err) {
+    return { ok: false, errors: [{ message: "Could not reach the board server (" + (err && err.message ? err.message : err) + ").",
+      fix: [BOARD_CMD + " serve --ensure"] }] };
+  }).then(function (j) { state.saving = false; return j; });
+}
+
+function afterSave(msg, res) {
+  noteActivity();
+  return refreshNow().then(function () {
+    showToast((res && typeof res.message === "string" && res.message) ? res.message : msg);
+  });
+}
+function refused(title, res) {
+  showRefusal(title, res);
+  refreshNow();
+}
+
+function getJson(url) {
+  return fetch(url, { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
+}
+
+// /api/allowed for every saved ticket (a few at a time), then grey out options in place.
+var allowedRun = 0;
+function loadAllowed() {
+  if (!state.live) return;
+  var run = ++allowedRun;
+  var ids = savedTickets().map(function (t) { return t.id; });
+  var fresh = {};
+  var i = 0;
+  var worker = function () {
+    if (run !== allowedRun || i >= ids.length) return Promise.resolve();
+    var id = ids[i++];
+    return getJson(allowedUrl(id)).then(function (a) {
+      if (a && Array.isArray(a.allowed)) fresh[id] = { allowed: a.allowed, reasons: (a.reasons && typeof a.reasons === "object") ? a.reasons : {} };
+      return worker();
+    });
+  };
+  var pool = [];
+  for (var k = 0; k < 6; k++) pool.push(worker());
+  return Promise.all(pool).then(function () {
+    if (run !== allowedRun) return;
+    state.allowed = fresh;
+    applyAllowedToSelects();
+  });
+}
+
+function decorateOptions(sel, t) {
+  var a = allowedFor(t);
+  Array.prototype.forEach.call(sel.options, function (o) {
+    var why = a ? moveReason(t, o.value) : null;
+    o.disabled = !!why;
+    o.title = why || "";
+    o.textContent = labelStatus(o.value) + (why ? " (not allowed)" : "");
+  });
+}
+function applyAllowedToSelects() {
+  Array.prototype.forEach.call(document.querySelectorAll("select.status[data-id]"), function (s) {
+    var t = state.byId[s.dataset.id];
+    if (t && document.activeElement !== s) decorateOptions(s, t);
+  });
+}
+
+function myName() {
+  try { return localStorage.getItem(NAME_KEY) || ""; } catch (e) { return ""; }
+}
+function ensureName() {
+  var n = myName();
+  if (n) return Promise.resolve(n);
+  return askText({
+    title: "Who is taking this?",
+    message: "Your name (or branch) is shown on the card as “on: <name>”. It is remembered in this browser.",
+    placeholder: "Your name", okLabel: "Save"
+  }).then(function (v) {
+    v = v === null ? null : v.trim();
+    if (v) { try { localStorage.setItem(NAME_KEY, v); } catch (e) { /* private mode */ } }
+    return v || null;
+  });
+}
+
+function claimTicket(t) {
+  var c = claimOf(t);
+  ensureName().then(function (name) {
+    if (!name) return;
+    var body = { id: t.id, as: name };
+    var send = function () {
+      return api("claim", body).then(function (res) {
+        if (res.ok) return afterSave("You are on " + t.id, res);
+        refused("Can't take " + t.id, res);
+      });
+    };
+    if (c && c.by !== name) {
+      return askText({
+        title: "Take over " + t.id + "?",
+        message: c.by + " is on it (since " + (c.since || "?") + "). Only take over when they agree. Why?",
+        placeholder: "Reason (saved in the history)", okLabel: "Take over"
+      }).then(function (why) {
+        if (why === null) return;
+        body.take_over = why;
+        return send();
+      });
+    }
+    return send();
+  });
+}
+
+function releaseTicket(t) {
+  var c = claimOf(t), body = { id: t.id };
+  if (c && c.by === myName()) body.as = c.by;
+  api("release", body).then(function (res) {
+    if (res.ok) return afterSave("Released " + t.id, res);
+    refused("Can't release " + t.id, res);
+  });
+}
+
+function claimOf(t) {
+  var c = t && t.claimed_by;
+  return (c && typeof c === "object" && typeof c.by === "string" && c.by) ? c : null;
+}
+
+/* ---------------- small builders ---------------- */
+
+function prioBadge(p) { return el("span", "badge b-prio prio-" + (p || "P3"), p || "n/a"); }
+
+function areaBadges(t) {
+  return (t.areas || []).map(function (a) { return el("span", "badge b-area", a); });
+}
+
+// owner: the ticket that depends on depId (its dep_exceptions count), or null (Unlocks list).
+function depChip(depId, onOpen, owner) {
+  var dep = state.byId[depId];
+  var ex = owner ? depException(owner, depId) : null;
+  var resolved = owner ? depResolved(owner, depId) : !!(dep && flagsNow(dep).resolves_deps);
+  var cls = dep && isCancelled(dep) ? "cx" : (resolved ? "done" : "open");
+  var c = el("button", "chip " + cls + (isPreview(dep) ? " pv" : ""), depId);
+  c.type = "button";
+  c.title = dep ? dep.title + " (" + (isPreview(dep) ? "preview" : labelStatus(statusOf(dep))) + ")" : "unknown ticket";
+  if (dep && isCancelled(dep)) c.title += ": doesn't block";
+  if (ex !== null && !(dep && flagsNow(dep).resolves_deps)) c.title += " · not waited on: " + ex;
+  c.addEventListener("click", function (ev) { ev.stopPropagation(); if (dep) onOpen(depId); });
+  return c;
+}
+
+function statusSelect(t, small) {
+  var s = el("select", "status");
+  s.setAttribute("aria-label", "Status of " + t.id);
+  s.dataset.id = t.id;
+  state.statuses.forEach(function (st) {
+    var o = el("option", null, labelStatus(st));
+    o.value = st;
+    if (st === statusOf(t)) o.selected = true;
+    s.appendChild(o);
+  });
+  decorateOptions(s, t);
+  if (isPreview(t)) { s.disabled = true; s.title = "Preview tickets are not saved yet"; }
+  else if (localStatus(t)) s.title = "Local only: the board still says " + labelStatus(t.status);
+  s.addEventListener("click", function (e) { e.stopPropagation(); });
+  s.addEventListener("change", function (e) { e.stopPropagation(); setStatus(t.id, s.value); });
+  if (small) s.style.fontSize = "11px";
+  return s;
+}
+
+// The one "state" badge a card or row shows, most important first.
+function stateBadge(t) {
+  if (isPreview(t)) return el("span", "badge b-preview", "preview");
+  if (isCancelled(t)) {
+    var cx = el("span", "badge b-cancel", labelStatus(statusOf(t)).toLowerCase());
+    cx.title = "Finished without doing it: not counted as done, doesn't block the tickets that depend on it";
+    return cx;
+  }
+  if (isTerminal(t)) return null;
+  if (isDraft(t)) return el("span", "badge b-draft", "not ready");
+  if (needsYou(t)) return el("span", "badge b-needs", "needs you");
+  if (isMergeReady(t)) return el("span", "badge b-merge", "waiting for merge");
+  if (isDone(t)) return null;
+  if (isUnscheduled(t)) {
+    var u = el("span", "badge b-unsched", "unscheduled");
+    u.title = "In an unscheduled phase: not offered by next; move it to a scheduled phase to work on it";
+    return u;
+  }
+  if (isBlocked(t)) return el("span", "badge b-blocked", "blocked");
+  if (isReady(t)) return el("span", "badge b-ready", "ready");
+  return null;
+}
+
+function prChip(pr) {
+  var st = String(pr.state || "draft");
+  var known = /^(draft|open|merged|closed)$/.test(st);
+  var a = extLink(pr.url, "PR" + (typeof pr.number === "number" ? " #" + pr.number : "") + " · " + st,
+    "chip prchip pr-" + (known ? st : "draft"));
+  a.title = (pr.title ? pr.title + " · " : "") + pr.url;
+  a.draggable = false;
+  a.addEventListener("click", function (ev) { ev.stopPropagation(); });
+  a.addEventListener("keydown", function (ev) { ev.stopPropagation(); });
+  return a;
+}
+
+function fixesOf(t) {
+  return (t.labels || []).filter(function (l) { return /^fixes-/.test(l); })
+    .map(function (l) { return l.slice(6); });
+}
+function isBug(t) { return (t.labels || []).indexOf("bug") !== -1; }
+
+function jumpChip(cls, text, targetId, title) {
+  var c = el("button", "chip " + cls, text);
+  c.type = "button";
+  var target = state.byId[targetId];
+  c.title = title || (target ? target.title + " (" + labelStatus(statusOf(target)) + ")" : "unknown ticket");
+  c.addEventListener("click", function (ev) { ev.stopPropagation(); if (target) openDrawer(targetId); });
+  return c;
+}
+
+// PR link, bug / fixes-<ID> labels and "blocked by <ID>" chips shown on cards.
+function cardChips(t) {
+  var box = el("div", "chips");
+  var pr = prOf(t);
+  if (pr) box.appendChild(prChip(pr));
+  if (isBug(t)) {
+    var b = el("span", "chip bug", "bug");
+    b.title = "A bug found in other work";
+    box.appendChild(b);
+  }
+  fixesOf(t).forEach(function (id) { box.appendChild(jumpChip("fix", "fixes " + id, id)); });
+  var cl = claimOf(t);
+  if (cl) {
+    var ch = el("span", "chip claim", "on: " + cl.by);
+    ch.title = cl.by + " is on it" + (cl.since ? " since " + cl.since : "");
+    box.appendChild(ch);
+  }
+  if (showsBlocked(t)) {
+    var open = openDeps(t);
+    open.slice(0, 3).forEach(function (id) { box.appendChild(jumpChip("open", "blocked by " + id, id)); });
+    if (open.length > 3) {
+      var more = el("span", "chip open", "+" + (open.length - 3) + " more");
+      more.title = open.slice(3).join(", ");
+      box.appendChild(more);
+    }
+  }
+  return box.childNodes.length ? box : null;
+}
+
+/* ---------------- board view ---------------- */
+
+function cardFor(t) {
+  var blocked = showsBlocked(t);
+  var cls = "card";
+  if (blocked) cls += " is-blocked";
+  if (isDraft(t)) cls += " is-draft";
+  if (isCancelled(t)) cls += " is-cancelled";
+  if (needsYou(t)) cls += " needs-you";
+  if (isPreview(t)) cls += " is-preview";
+  var loc = localStatus(t);
+  if (loc) cls += " is-local";
+  var c = el("div", cls);
+  c.dataset.id = t.id;
+  c.tabIndex = 0;
+  if (!isPreview(t)) {
+    c.draggable = true;
+    c.addEventListener("dragstart", function (e) {
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+      c.classList.add("dragging");
+      markDropTargets(t);
+    });
+    c.addEventListener("dragend", function () { c.classList.remove("dragging"); markDropTargets(null); });
+  }
+  c.addEventListener("click", function () { openDrawer(t.id); });
+  c.addEventListener("keydown", function (e) { if (e.key === "Enter") openDrawer(t.id); });
+
+  var top = el("div", "top");
+  top.appendChild(el("span", "cid", t.id));
+  top.appendChild(el("span", "rank", "#" + t.rank));
+  top.appendChild(el("span", "spacer"));
+  top.appendChild(prioBadge(t.priority));
+  c.appendChild(top);
+
+  c.appendChild(el("div", "title", t.title));
+  if (t.summary) {
+    var sm = el("div", "summary", t.summary);
+    sm.title = t.summary;
+    c.appendChild(sm);
+  }
+
+  var meta = el("div", "meta");
+  if (t.phase) meta.appendChild(el("span", "badge b-phase", t.phase));
+  areaBadges(t).forEach(function (b) { meta.appendChild(b); });
+  c.appendChild(meta);
+
+  var chips = cardChips(t);
+  if (chips) c.appendChild(chips);
+
+  var foot = el("div", "foot");
+  if (t.estimate) foot.appendChild(el("span", null, t.estimate));
+  var dn = (t.depends_on || []).length;
+  if (dn && !blocked) {
+    foot.appendChild(el("span", null, dn + (dn > 1 ? " deps" : " dep")));
+  }
+  var b = stateBadge(t);
+  if (b) foot.appendChild(b);
+  if (loc) {
+    var lt = el("span", "tag-local", "local only");
+    lt.title = "Moved in this browser only; the board still says " + labelStatus(t.status)
+      + ". Use “Copy as board.py commands” to save it.";
+    foot.appendChild(lt);
+  }
+  if (foot.childNodes.length) c.appendChild(foot);
+  return c;
+}
+
+// While a card is dragged: dim the columns it can't move to (reason in the tooltip).
+function markDropTargets(t) {
+  Array.prototype.forEach.call(document.querySelectorAll(".col[data-status]"), function (col) {
+    var why = t ? moveReason(t, col.dataset.status) : null;
+    col.classList.toggle("no-drop", !!why);
+    if (why) col.title = why; else col.removeAttribute("title");
+  });
+}
+
+function renderBoard(root) {
+  var list = sortTickets(visible());
+  var board = el("div", "board");
+  state.statuses.forEach(function (st) {
+    // Columns whose state has the "folded" flag (Cancelled by default) start folded: a slim strip
+    // with the title and count. Click to unfold / fold; remembered for this page visit only.
+    var foldable = flagsOf(st).folded;
+    var folded = foldable && (Object.prototype.hasOwnProperty.call(state.colFold, st) ? state.colFold[st] : true);
+    var col = el("div", "col col-" + st + (roleOf(st) ? " role-" + roleOf(st) : "") + (folded ? " folded" : ""));
+    col.dataset.status = st;
+    var toggleFold = function () { state.colFold[st] = !folded; renderKeepScroll(); };
+
+    var head = el("h2", foldable ? "foldable" : null);
+    head.appendChild(el("span", null, labelStatus(st)));
+    var items = list.filter(function (t) { return statusOf(t) === st; });
+    if (foldable && !folded) head.appendChild(el("span", "fold", "‹ fold"));
+    head.appendChild(el("span", "n", items.length));
+    col.appendChild(head);
+    if (foldable) {
+      var target = folded ? col : head;
+      target.tabIndex = 0;
+      target.setAttribute("role", "button");
+      target.setAttribute("aria-expanded", String(!folded));
+      target.title = folded ? "Show " + labelStatus(st) + " (" + items.length + ")" : "Fold " + labelStatus(st);
+      target.addEventListener("click", toggleFold);
+      target.addEventListener("keydown", function (e) {
+        if (e.target === target && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleFold(); }
+      });
+    }
+
+    if (!folded) {
+      var stack = el("div", "stack");
+      if (!items.length) stack.appendChild(el("div", "empty", "Nothing here"));
+      items.forEach(function (t) { stack.appendChild(cardFor(t)); });
+      col.appendChild(stack);
+    }
+
+    col.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      col.classList.add("drop");
+    });
+    col.addEventListener("dragleave", function (e) {
+      if (!col.contains(e.relatedTarget)) col.classList.remove("drop");
+    });
+    col.addEventListener("drop", function (e) {
+      e.preventDefault();
+      col.classList.remove("drop");
+      var id = e.dataTransfer.getData("text/plain");
+      markDropTargets(null);
+      if (id && state.byId[id]) setStatus(id, st);
+    });
+
+    board.appendChild(col);
+  });
+  root.appendChild(board);
+}
+
+/* ---------------- implementation order view ---------------- */
+
+function orderRow(t) {
+  var muted = showsBlocked(t) || isDraft(t);
+  var r = el("div", "row" + (muted ? " muted" : "") + (isCancelled(t) ? " is-cancelled" : "") + (isPreview(t) ? " is-preview" : "")
+    + (localStatus(t) ? " is-local" : ""));
+  r.appendChild(el("div", "rank", "#" + t.rank));
+  r.appendChild(el("div", "rid", t.id));
+  var tt = el("div", "rtitle", t.title);
+  if (t.summary) tt.appendChild(el("span", "rsum", t.summary));
+  r.appendChild(tt);
+
+  var areas = el("div", "rareas");
+  areaBadges(t).forEach(function (b) { areas.appendChild(b); });
+  r.appendChild(areas);
+
+  var pr = el("div", "rprio");
+  pr.appendChild(prioBadge(t.priority));
+  r.appendChild(pr);
+
+  var deps = el("div", "deps");
+  if ((t.depends_on || []).length) {
+    t.depends_on.forEach(function (d) { deps.appendChild(depChip(d, openDrawer, t)); });
+  } else {
+    deps.appendChild(el("span", "rank", "no deps"));
+  }
+  var b = isDone(t) ? el("span", "badge b-ready", "done") : stateBadge(t);
+  if (b) deps.appendChild(b);
+  var prr = prOf(t);
+  if (prr) deps.appendChild(prChip(prr));
+  if (isBug(t)) deps.appendChild(el("span", "chip bug", "bug"));
+  fixesOf(t).forEach(function (id) { deps.appendChild(jumpChip("fix", "fixes " + id, id)); });
+  var rcl = claimOf(t);
+  if (rcl) deps.appendChild(el("span", "chip claim", "on: " + rcl.by));
+  if (localStatus(t)) deps.appendChild(el("span", "tag-local", "local only"));
+  r.appendChild(deps);
+
+  var sc = el("div");
+  sc.appendChild(statusSelect(t, true));
+  r.appendChild(sc);
+
+  r.addEventListener("click", function () { openDrawer(t.id); });
+  return r;
+}
+
+// opts: { open, empty, toggle } - collapsed phases show only their header.
+function phaseBlock(p, all, rows, opts) {
+  opts = opts || {};
+  var unsched = p.unscheduled === true;
+  var cls = "phase" + (p._preview ? " is-preview" : "") + (unsched ? " is-unsched" : "")
+    + (opts.empty ? " is-empty" : "") + (opts.open ? " open" : " collapsed");
+  var box = el("div", cls);
+  box.dataset.phase = p.id;
+  var head = el("header", opts.toggle ? "toggle" : null);
+
+  var h = el("h2");
+  if (opts.toggle) h.appendChild(el("span", "caret", "\u25B6"));
+  h.appendChild(el("span", "badge b-phase", p.id));
+  h.appendChild(el("span", null, p.name || p.id));
+  if (p._preview) h.appendChild(el("span", "badge b-preview", "preview"));
+  if (unsched) {
+    var ub = el("span", "badge b-unsched", "unscheduled");
+    ub.title = "Someday ideas: board.py next and /slate:work skip these tickets";
+    h.appendChild(ub);
+  }
+  if (opts.empty) h.appendChild(el("span", "note", "no tickets yet"));
+  else if (!opts.open) h.appendChild(el("span", "note", rows.length + (rows.length === 1 ? " ticket" : " tickets") + " hidden, click to show"));
+  // "3/15 done · 1 cancelled": excluded states (Cancelled, ...) are left out of the total.
+  var prog = progressSummary(all);
+  var doneN = prog.done;
+  var pill = el("span", "pill phase-progress", prog.text);
+  pill.style.marginLeft = "auto";
+  h.appendChild(pill);
+  head.appendChild(h);
+
+  if (opts.open) {
+    if (p.goal) head.appendChild(el("p", "goal", "Goal: " + p.goal));
+    if (p.demo) head.appendChild(el("p", "demo", "Demo: " + p.demo));
+  } else if (p.goal || p.demo) {
+    head.title = (p.goal ? "Goal: " + p.goal : "") + (p.goal && p.demo ? "\n" : "") + (p.demo ? "Demo: " + p.demo : "");
+  }
+  if (unsched && opts.open) {
+    head.appendChild(el("p", "demo", "Not scheduled: move a ticket to a scheduled phase "
+      + "(board.py edit ID phase=P2) before working on it."));
+  }
+  if (opts.open) {
+    var bar = el("div", "bar");
+    var fill = el("i");
+    fill.style.width = (prog.total ? Math.round(doneN / prog.total * 100) : 0) + "%";
+    bar.appendChild(fill);
+    head.appendChild(bar);
+  }
+  if (opts.toggle) {
+    head.tabIndex = 0;
+    head.setAttribute("role", "button");
+    head.setAttribute("aria-expanded", String(!!opts.open));
+    var toggle = function () {
+      state.phaseOpen[p.id] = !opts.open;
+      renderKeepScroll();
+    };
+    head.addEventListener("click", toggle);
+    head.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+    });
+  }
+  box.appendChild(head);
+
+  if (opts.open) {
+    var body = el("div", "rows");
+    rows.forEach(function (t) { body.appendChild(orderRow(t)); });
+    box.appendChild(body);
+  }
+  return box;
+}
+
+function renderOrder(root) {
+  var vis = visible();
+  var filtering = !!state.search || activeFilterCount() > 0;
+  var groups = [], seen = {};
+  state.phases.forEach(function (p) { groups.push(p); seen[p.id] = true; });
+  (state.filterPhases || []).forEach(function (pid) {
+    if (!seen[pid]) { groups.push({ id: pid, name: pid }); seen[pid] = true; }
+  });
+  // Phases keep their file order; unscheduled ones go last.
+  groups = groups.filter(function (p) { return p.unscheduled !== true; })
+    .concat(groups.filter(function (p) { return p.unscheduled === true; }));
+
+  var any = false;
+  groups.forEach(function (p) {
+    var all = savedTickets().filter(function (t) { return t.phase === p.id; });
+    var rows = vis.filter(function (t) { return t.phase === p.id; })
+      .sort(function (a, b) { return a.rank - b.rank || cmp(a.id, b.id); });
+    if (!rows.length) {
+      // No tickets at all: a collapsed header so the phase is still visible. Hidden by filters: skip.
+      if (filtering || all.length) return;
+      root.appendChild(phaseBlock(p, all, rows, { empty: true, open: false, toggle: false }));
+      return;
+    }
+    any = true;
+    var open = Object.prototype.hasOwnProperty.call(state.phaseOpen, p.id)
+      ? state.phaseOpen[p.id] : p.unscheduled !== true;
+    root.appendChild(phaseBlock(p, all, rows, { open: open, toggle: true }));
+  });
+  if (!any) root.appendChild(el("div", "empty", filtering ? "No tickets match the current filters." : "No tickets yet."));
+}
+
+/* ---------------- ticket drawer ---------------- */
+
+function openDrawer(id) {
+  if (!state.byId[id]) return;
+  var fresh = state.openId !== id;
+  state.openId = id;
+  renderDrawer(fresh);
+}
+
+function closeDrawer() {
+  state.openId = null;
+  $("#drawerHost").innerHTML = "";
+}
+
+function sect(title, hint) {
+  var s = el("section", "dsect");
+  var h = el("h3", null, title);
+  if (hint) h.appendChild(el("span", "hint", hint));
+  s.appendChild(h);
+  return s;
+}
+
+function prose(md, cls) {
+  var d = el("div", cls || "prose");
+  d.innerHTML = mdToHtml(md);
+  return d;
+}
+
+function checklist(t, kind, title, items) {
+  var doneN = 0;
+  (items || []).forEach(function (_, i) { if (isTicked(t, kind, i)) doneN++; });
+  var s = sect(title, (items && items.length) ? doneN + " / " + items.length + " ticked" : null);
+  if (!items || !items.length) { s.appendChild(el("div", "plain", "None listed yet.")); return s; }
+  items.forEach(function (txt, i) {
+    var rec = fileItemCheck(t, kind, i);
+    var loc = !rec && checked(t.id, kind, i);
+    var on = !!rec || loc;
+    var lab = el("label", "check" + (on ? " on" : "") + (loc ? " local" : ""));
+    var cb = el("input");
+    cb.type = "checkbox";
+    cb.checked = on;
+    // View only: a tick saved in tickets.json is locked here (only board.py uncheck-item undoes it).
+    // Live: ticks and unticks go to the board; a done ticket's items stay ticked.
+    cb.disabled = isPreview(t) || (rec && (rec.done || !state.live));
+    if (rec) lab.title = rec.done ? "The ticket is done" : (state.live ? "Ticked on the board; untick to undo it"
+      : "Ticked on the board (board.py check-item)");
+    cb.addEventListener("change", function () {
+      if (state.live) {
+        var path = cb.checked ? "check-item" : "uncheck-item";
+        cb.disabled = true;
+        api(path, { id: t.id, kind: kind, index: i }).then(function (res) {
+          if (res.ok) return afterSave((cb.checked ? "Ticked " : "Unticked ") + t.id + " " + kind + " " + (i + 1), res);
+          refused("Can't " + (cb.checked ? "tick" : "untick") + " this item", res);
+        });
+        return;
+      }
+      setChecked(t.id, kind, i, cb.checked);
+      renderDrawer(false);
+      updateChrome();
+    });
+    lab.appendChild(cb);
+    var box = el("div", "ctext");
+    var span = el("span");
+    span.innerHTML = mdInline(esc(txt));
+    box.appendChild(span);
+    if (loc) {
+      var lt = el("span", "tag-local", "local only");
+      lt.title = "Ticked in this browser only; copy it as a board.py command to save it";
+      box.appendChild(lt);
+    }
+    if (rec && !rec.done && (rec.date || rec.evidence)) {
+      var ev = el("div", "ev", "Checked" + (rec.date ? " " + fmtDate(rec.date) : "")
+        + (rec.evidence ? ": " + rec.evidence : ""));
+      box.appendChild(ev);
+    }
+    lab.appendChild(box);
+    s.appendChild(lab);
+  });
+  return s;
+}
+
+function fmtDate(d) { return d ? String(d) : ""; }
+
+function userTestsSect(t) {
+  var tests = t.user_tests || [];
+  var passed = 0;
+  var shownOf = function (i) {
+    var rec = recordedUserTest(t, i), loc = localUserTest(t.id, i);
+    if (loc === "reset") return null;
+    return loc || (rec && rec.result) || null;
+  };
+  tests.forEach(function (_, i) { if (shownOf(i) === "pass") passed++; });
+  var s = sect("Try it yourself", tests.length ? passed + " / " + tests.length + " passed" : null);
+  if (!tests.length) {
+    s.appendChild(el("div", "plain", "Nothing to try by hand for this ticket."));
+    return s;
+  }
+  s.appendChild(el("p", "plain", state.live
+    ? "Follow these steps in the app yourself, then click Pass or Fail. The result is saved on the board."
+    : "Follow these steps in the app yourself. In this view-only page your Pass / Fail clicks stay in this "
+      + "browser; copy them as board.py commands or tell Claude how it went so the result is saved."));
+
+  tests.forEach(function (u, i) {
+    u = u || {};
+    var rec = recordedUserTest(t, i);
+    var loc = localUserTest(t.id, i);
+    var shown = shownOf(i);
+    var card = el("div", "ut" + (shown === "pass" ? " passed" : (shown === "fail" ? " failed" : ""))
+      + (loc ? " local" : ""));
+
+    var head = el("div", "ut-head");
+    head.appendChild(el("span", "ut-num", (i + 1) + "."));
+    head.appendChild(el("span", "ut-title", u.title || ("Test " + (i + 1))));
+    head.appendChild(el("span", "badge " + (u.required === false ? "b-area" : "b-phase"),
+      u.required === false ? "optional" : "required"));
+    if (loc) head.appendChild(el("span", "tag-local", "local only"));
+    card.appendChild(head);
+
+    if (u.setup) {
+      card.appendChild(el("div", "subhead", "Before you start"));
+      var su = el("div", "body");
+      su.innerHTML = mdInline(esc(u.setup));
+      card.appendChild(su);
+    }
+    var steps = arr(u.steps);
+    if (steps.length) {
+      card.appendChild(el("div", "subhead", "Steps"));
+      var ol = el("ol", "body");
+      steps.forEach(function (st) {
+        var li = el("li");
+        li.innerHTML = mdInline(esc(st));
+        ol.appendChild(li);
+      });
+      card.appendChild(ol);
+    }
+    if (u.expect) {
+      card.appendChild(el("div", "subhead", "You should see"));
+      var ex = el("div", "body expect");
+      ex.innerHTML = mdInline(esc(u.expect));
+      card.appendChild(ex);
+    }
+
+    if (rec && rec.result) {
+      var rr = el("div", "recorded");
+      rr.appendChild(el("span", "badge " + (rec.result === "pass" ? "b-ready" : "b-fail"),
+        "Recorded: " + (rec.result === "pass" ? "passed" : (rec.result === "fail" ? "failed" : rec.result))));
+      if (rec.date) rr.appendChild(el("span", null, "on " + fmtDate(rec.date)));
+      if (rec.note) rr.appendChild(el("span", null, "· " + rec.note));
+      card.appendChild(rr);
+    }
+
+    var act = el("div", "actions");
+    var noteIn = null;
+    if (state.live) {
+      noteIn = el("input", "utnote");
+      noteIn.type = "text";
+      noteIn.placeholder = "Note (optional): what you saw";
+      noteIn.setAttribute("aria-label", "Note for test " + (i + 1));
+      noteIn.disabled = isPreview(t);
+    }
+    var send = function (result) {
+      var body = { id: t.id, index: i, result: result };
+      var note = noteIn ? noteIn.value.trim() : "";
+      if (note) body.note = note;
+      api("usertest", body).then(function (res) {
+        var what = result === "reset" ? "cleared" : (result === "pass" ? "passed" : "failed");
+        if (res.ok) return afterSave(t.id + " test " + (i + 1) + ": " + what, res);
+        refused("Can't record this result", res);
+      });
+    };
+    [["pass", "Pass"], ["fail", "Fail"]].forEach(function (p) {
+      var b = el("button", "btn " + p[0], p[1]);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(state.live ? (rec && rec.result === p[0]) : loc === p[0]));
+      b.disabled = isPreview(t);
+      b.addEventListener("click", function () {
+        if (state.live) { send(p[0]); return; }
+        setUserTest(t.id, i, p[0]);
+        renderDrawer(false);
+        updateChrome();
+      });
+      act.appendChild(b);
+    });
+    // Clear result: board.py usertest ID N reset (live), or a local "reset" mark (view only).
+    if ((rec && rec.result) || (loc && loc !== "reset")) {
+      var clr = el("button", "btn subtle clear", "Clear result");
+      clr.type = "button";
+      clr.disabled = isPreview(t);
+      clr.title = state.live ? "Remove the recorded result from the board" : "Clear the result (this browser only)";
+      clr.addEventListener("click", function () {
+        if (state.live) { send("reset"); return; }
+        var e = entry(t.id);
+        if (!e.checks) e.checks = {};
+        if (rec && rec.result) e.checks[checkKey("usertest", i)] = "reset";
+        else delete e.checks[checkKey("usertest", i)];
+        tidyEntry(t.id);
+        saveOverlay();
+        renderDrawer(false);
+        updateChrome();
+      });
+      act.appendChild(clr);
+    }
+    if (noteIn) act.appendChild(noteIn);
+    else act.appendChild(el("span", "plain", loc
+      ? (loc === "reset" ? "Cleared in this browser only." : "Your answer (this browser only): "
+        + (loc === "pass" ? "passed" : "failed") + ". Click again to undo.")
+      : (rec && rec.result ? "Try it again if you like." : "Not tried yet.")));
+    card.appendChild(act);
+    s.appendChild(card);
+  });
+  return s;
+}
+
+function linksSect(t) {
+  var s = sect("Needs / Unlocks");
+  var dl = el("dl", "links");
+  function row(label, ids, none, owner) {
+    dl.appendChild(el("dt", null, label));
+    var dd = el("dd");
+    if (ids && ids.length) ids.forEach(function (id) { dd.appendChild(depChip(id, openDrawer, owner)); });
+    else dd.appendChild(el("span", "plain", none));
+    dl.appendChild(dd);
+  }
+  row("Needs", t.depends_on, "No other tickets.", t);
+  row("Unlocks", t.unlocks, "Nothing waits on this.", null);
+  // Dependencies that don't block: cancelled ones and dep_exceptions, each with its reason.
+  var notes = [];
+  t.depends_on.forEach(function (d) {
+    var dep = state.byId[d];
+    if (dep && isCancelled(dep)) notes.push(d + " is " + labelStatus(statusOf(dep)).toLowerCase() + ", so it doesn't block this ticket.");
+    else if (depException(t, d) !== null && !(dep && flagsNow(dep).resolves_deps)) notes.push("Not waiting on " + d + ": " + depException(t, d));
+  });
+  if (notes.length) {
+    dl.appendChild(el("dt", null, ""));
+    var nd = el("dd");
+    nd.appendChild(el("span", "plain", notes.join(" ")));
+    dl.appendChild(nd);
+  }
+  s.appendChild(dl);
+  return s;
+}
+
+function historySect(t) {
+  var h = t.handoff;
+  if (typeof h === "string" && h) h = [{ note: h }];
+  h = arr(h);
+  if (!h.length) return null;
+  var s = sect("History", h.length + (h.length === 1 ? " note" : " notes"));
+  var ul = el("ul", "tl");
+  h.forEach(function (x) {
+    x = (x && typeof x === "object") ? x : { note: String(x) };
+    var li = el("li");
+    var w = el("div", "when");
+    if (x.date) w.appendChild(el("span", null, fmtDate(x.date)));
+    if (x.status) w.appendChild(el("span", "badge b-phase", labelStatus(x.status)));
+    if (x.via) w.appendChild(el("span", "via", "via " + x.via));
+    li.appendChild(w);
+    var note = el("div", "note");
+    note.innerHTML = mdInline(esc(x.note || ""));
+    li.appendChild(note);
+    ul.appendChild(li);
+  });
+  s.appendChild(ul);
+  return s;
+}
+
+function technicalSect(t) {
+  if (!t.technical) return null;
+  var s = el("section", "dsect");
+  var d = el("details", "tech");
+  if (state.techOpen[t.id]) d.open = true;
+  d.addEventListener("toggle", function () { state.techOpen[t.id] = d.open; });
+  d.appendChild(el("summary", null, "Technical notes"));
+  d.appendChild(prose(t.technical));
+  s.appendChild(d);
+  return s;
+}
+
+function isHttp(u) { return typeof u === "string" && /^https?:\/\/\S+$/i.test(u); }
+
+function prOf(t) {
+  return (t.pr && typeof t.pr === "object" && isHttp(t.pr.url)) ? t.pr : null;
+}
+
+// Link to a commit on the repo host: GitLab uses /-/commit/, GitHub and most others /commit/.
+function commitUrl(sha) {
+  if (!state.repoUrl || !/^[0-9a-f]{7,40}$/i.test(sha)) return null;
+  var base = state.repoUrl.replace(/\/+$/, "").replace(/\.git$/, "");
+  var host = "";
+  try { host = new URL(base).hostname; } catch (e) { return null; }
+  return base + (host.indexOf("gitlab") !== -1 ? "/-/commit/" : "/commit/") + sha;
+}
+
+function extLink(href, text, cls) {
+  var a = el("a", cls || null, text);
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  return a;
+}
+
+function codeSect(t) {
+  var pr = prOf(t);
+  var commits = arr(t.commits).filter(function (c) { return c && typeof c.sha === "string"; });
+  var dw = (t.done_without && typeof t.done_without === "object") ? t.done_without : {};
+  if (!pr && !commits.length && !dw.code && !dw.pr) return null;
+  var s = sect("Code changes", commits.length ? commits.length + (commits.length === 1 ? " commit" : " commits") : "");
+  if (pr) {
+    var row = el("div", "prline");
+    row.appendChild(el("span", "lbl", "PR"));
+    var label = (typeof pr.number === "number" ? "#" + pr.number + " " : "") + (pr.title || pr.url);
+    var a = extLink(pr.url, label);
+    a.title = pr.url;
+    row.appendChild(a);
+    var st = String(pr.state || "draft");
+    row.appendChild(el("span", "badge pr-" + (/^(draft|open|merged|closed)$/.test(st) ? st : "draft"), st));
+    s.appendChild(row);
+  }
+  if (commits.length) {
+    var ul = el("ul", "commits");
+    commits.forEach(function (c) {
+      var li = el("li");
+      var shortSha = c.sha.slice(0, 7);
+      var href = commitUrl(c.sha);
+      var shaEl = href ? extLink(href, shortSha, "sha mono") : el("code", "sha mono", shortSha);
+      shaEl.title = c.sha + (c.branch ? " on " + c.branch : "");
+      li.appendChild(shaEl);
+      li.appendChild(el("span", "msg", c.message || "(no message)"));
+      if (c.date) li.appendChild(el("span", "cdate", fmtDate(c.date)));
+      ul.appendChild(li);
+    });
+    s.appendChild(ul);
+  }
+  if (typeof dw.code === "string" && dw.code) s.appendChild(el("div", "nocode", "Closed without code: " + dw.code));
+  if (typeof dw.pr === "string" && dw.pr) s.appendChild(el("div", "nocode", "Closed without a PR: " + dw.pr));
+  return s;
+}
+
+function planSect(t) {
+  if (!t.plan_doc) return null;
+  var s = sect("Plan doc");
+  s.appendChild(el("code", "path", t.plan_doc));
+  return s;
+}
+
+function missingForDraft(t) {
+  var m = [];
+  if (!t.story) m.push("story");
+  if (!t.description) m.push("details");
+  if (!t.acceptance.length) m.push("done-when checks");
+  if (!t.test_scenarios.length) m.push("automated tests");
+  var needsUT = (t.areas || []).some(function (a) { return state.userTestAreas.indexOf(a) !== -1; });
+  if (needsUT && !t.user_tests.some(function (u) { return u && u.required !== false; })) m.push("a try-it-yourself test");
+  if (!t.estimate) m.push("estimate");
+  return m;
+}
+
+// "On it: <by> since <since>" plus Take / Release (live mode).
+function claimLine(t) {
+  if (isPreview(t)) return null;
+  var c = claimOf(t);
+  if (!c && !state.live) return null;
+  var line = el("div", "claimline");
+  if (c) {
+    var sp = el("span");
+    sp.appendChild(document.createTextNode("On it: "));
+    sp.appendChild(el("b", null, c.by));
+    if (c.since) sp.appendChild(document.createTextNode(" since " + c.since));
+    line.appendChild(sp);
+  } else line.appendChild(el("span", null, "Nobody is on this ticket."));
+  if (state.live && !isDone(t) && !isTerminal(t)) {
+    var me = myName();
+    if (!c || c.by !== me) {
+      var take = el("button", "btn", c ? "Take over…" : "Take");
+      take.id = "takeBtn";
+      take.type = "button";
+      take.title = "Show that you are working on it" + (me ? " (as " + me + ")" : "");
+      take.addEventListener("click", function () { claimTicket(t); });
+      line.appendChild(take);
+    }
+    if (c) {
+      var rel = el("button", "btn subtle", "Release");
+      rel.id = "releaseBtn";
+      rel.type = "button";
+      rel.addEventListener("click", function () { releaseTicket(t); });
+      line.appendChild(rel);
+    }
+  }
+  return line;
+}
+
+// Why a ticket is cancelled: the local reason (view only), else the last history note written for
+// its current state (else the last note), without a leading "Cancelled:" label.
+function cancelReason(t) {
+  var o = useOverlay() && state.overlay[t.id];
+  if (o && o.status && o.status !== t.status && typeof o.note === "string") return o.note;
+  var h = t.handoff;
+  if (typeof h === "string" && h) h = [{ note: h }];
+  h = arr(h).filter(function (x) { return x && typeof x === "object" && typeof x.note === "string" && x.note; });
+  if (!h.length) return "";
+  var st = statusOf(t);
+  var mine = h.filter(function (x) { return x.status === st; });
+  var note = (mine.length ? mine[mine.length - 1] : h[h.length - 1]).note;
+  var lab = labelStatus(st).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return note.replace(new RegExp("^\\s*(" + lab + "|cancelled)\\s*:\\s*", "i"), "");
+}
+
+// Drawer banner for a cancelled ticket: the reason, and Undo cancel (live) or the command (view only).
+function cancelledNotice(t) {
+  var n = el("div", "notice cx");
+  n.id = "cancelNotice";
+  n.appendChild(el("b", null, labelStatus(statusOf(t)) + ": "));
+  var why = cancelReason(t);
+  n.appendChild(document.createTextNode(why || "no reason recorded."));
+  n.appendChild(el("div", "plain", "It doesn't count as done, and the tickets that depend on it are not blocked by it."));
+  var row = el("div", "row2");
+  if (state.live) {
+    var u = el("button", "btn", "Undo cancel");
+    u.id = "uncancelBtn";
+    u.type = "button";
+    u.title = "Bring it back (board.py uncancel " + t.id + ")";
+    u.addEventListener("click", function () { undoCancel(t, null); });
+    row.appendChild(u);
+  } else if (localStatus(t)) {
+    row.appendChild(el("span", "tag-local", "local only"));
+    row.appendChild(el("span", "plain", "Use “Copy as board.py commands” to save it, or move it back with the status menu."));
+  } else {
+    row.appendChild(el("span", "plain", "To undo it: "));
+    row.appendChild(el("code", "md-code", BOARD_CMD + " uncancel " + t.id + " --handoff \"why\""));
+  }
+  n.appendChild(row);
+  return n;
+}
+
+// "Cancel ticket…": live -> POST cancel {id, reason}; view only -> a local move with the reason,
+// copied later as `board.py cancel ID --reason "…"`.
+function cancelAction(t) {
+  var cs = cancelStatus();
+  if (!cs || isPreview(t) || isTerminal(t)) return null;
+  var row = el("div", "dactions");
+  var b = el("button", "btn subtle", "Cancel ticket…");
+  b.id = "cancelTicketBtn";
+  b.type = "button";
+  b.title = "Decide not to do it (board.py cancel " + t.id + " --reason …)";
+  b.addEventListener("click", function () {
+    askText({
+      title: "Cancel " + t.id + "?",
+      message: "Why won't this be done? The reason is saved in the ticket's history. It won't count as done, "
+        + "and tickets that depend on it are no longer blocked" + (state.live ? " (each gets a note)." : ".")
+        + (state.live ? "" : " View only: this stays in this browser until you copy it as a board.py command."),
+      placeholder: "Reason (saved in the history)", okLabel: "Cancel ticket", cancelLabel: "Keep it", multiline: true
+    }).then(function (reason) {
+      if (reason === null) return;
+      if (state.live) { sendCancel(t, reason); return; }
+      var e = entry(t.id);
+      e.status = cs;
+      e.note = reason;
+      tidyEntry(t.id);
+      saveOverlay();
+      render();
+    });
+  });
+  row.appendChild(b);
+  return row;
+}
+
+// "Add note": a history note without a status change (board.py note).
+function noteSect(t) {
+  if (isPreview(t)) return null;
+  var s = sect("Add note", state.live ? "saved in the history" : null);
+  if (!state.live) {
+    var p = el("div", "plain");
+    p.appendChild(document.createTextNode("View only. Add a note with "));
+    p.appendChild(el("code", "md-code", BOARD_CMD + " note " + t.id + " \"text\""));
+    p.appendChild(document.createTextNode(" or open the board with "));
+    p.appendChild(el("code", "md-code", BOARD_CMD + " serve"));
+    p.appendChild(document.createTextNode("."));
+    s.appendChild(p);
+    return s;
+  }
+  var box = el("div", "notebox");
+  var ta = el("textarea");
+  ta.id = "noteText";
+  ta.placeholder = "e.g. Waiting on the design review";
+  ta.setAttribute("aria-label", "Note for " + t.id);
+  var row = el("div", "row2");
+  var b = el("button", "btn primary", "Add note");
+  b.id = "noteBtn";
+  b.type = "button";
+  b.addEventListener("click", function () {
+    var text = ta.value.trim();
+    if (!text) { ta.focus(); return; }
+    b.disabled = true;
+    api("note", { id: t.id, text: text }).then(function (res) {
+      if (res.ok) { ta.value = ""; return afterSave("Note added to " + t.id, res); }
+      b.disabled = false;
+      showRefusal("Can't add the note", res);
+    });
+  });
+  row.appendChild(b);
+  box.appendChild(ta);
+  box.appendChild(row);
+  s.appendChild(box);
+  return s;
+}
+
+function renderDrawer(fresh) {
+  var host = $("#drawerHost");
+  var oldBody = $(".dbody", host);
+  var keepScroll = (!fresh && oldBody) ? oldBody.scrollTop : 0;
+  host.innerHTML = "";
+  var t = state.byId[state.openId];
+  if (!t) return;
+
+  var scrim = el("div", "scrim");
+  scrim.addEventListener("click", closeDrawer);
+  host.appendChild(scrim);
+
+  var d = el("aside", "drawer");
+  d.setAttribute("role", "dialog");
+  d.setAttribute("aria-modal", "true");
+  d.setAttribute("aria-label", t.id + " " + t.title);
+
+  var head = el("header");
+  var top = el("div", "dtop");
+  top.appendChild(el("span", "cid mono", t.id));
+  top.appendChild(el("span", "rank", "#" + t.rank));
+  var sb = stateBadge(t);
+  if (sb) top.appendChild(sb);
+  top.appendChild(el("span", "spacer"));
+
+  var order = byRank();
+  var pos = -1;
+  order.forEach(function (x, i) { if (x.id === t.id) pos = i; });
+
+  var prev = el("button", "btn subtle", "← Prev");
+  prev.id = "drawerPrev";
+  prev.disabled = pos <= 0;
+  prev.addEventListener("click", function () { openDrawer(order[pos - 1].id); });
+  var next = el("button", "btn subtle", "Next →");
+  next.id = "drawerNext";
+  next.disabled = pos < 0 || pos >= order.length - 1;
+  next.addEventListener("click", function () { openDrawer(order[pos + 1].id); });
+  var close = el("button", "btn", "Close");
+  close.addEventListener("click", closeDrawer);
+  top.appendChild(prev);
+  top.appendChild(next);
+  top.appendChild(close);
+  head.appendChild(top);
+  head.appendChild(el("h2", isCancelled(t) ? "struck" : null, t.title));
+
+  var meta = el("div", "dmeta");
+  function sep() { meta.appendChild(el("span", "sep", "·")); }
+  meta.appendChild(statusSelect(t));
+  var phase = phaseById(t.phase);
+  sep();
+  meta.appendChild(el("span", "badge b-phase", "Phase " + (t.phase || "n/a")));
+  if (phase && phase.name) meta.appendChild(el("span", null, phase.name));
+  if (isUnscheduled(t)) meta.appendChild(el("span", "badge b-unsched", "unscheduled"));
+  sep();
+  meta.appendChild(prioBadge(t.priority));
+  if (t.estimate) { sep(); meta.appendChild(el("span", null, t.estimate)); }
+  if ((t.areas || []).length) { sep(); areaBadges(t).forEach(function (b) { meta.appendChild(b); }); }
+  if ((t.labels || []).length) {
+    sep();
+    t.labels.forEach(function (l) {
+      if (l === "bug") meta.appendChild(el("span", "badge b-bug", "bug"));
+      else if (/^fixes-/.test(l)) meta.appendChild(jumpChip("fix", "fixes " + l.slice(6), l.slice(6)));
+      else meta.appendChild(el("span", "badge b-area", "#" + l));
+    });
+  }
+  if (!isDone(t) && !isTerminal(t) && !isDraft(t) && !isPreview(t) && (isBlocked(t) || isReady(t))) {
+    sep();
+    var nOpen = openDeps(t).length;
+    meta.appendChild(el("span", "badge " + (nOpen ? "b-blocked" : "b-ready"),
+      nOpen ? "waiting on " + nOpen + (nOpen === 1 ? " ticket" : " tickets") : "ready to start"));
+  }
+  head.appendChild(meta);
+  var cline = claimLine(t);
+  if (cline) head.appendChild(cline);
+  var cact = cancelAction(t);
+  if (cact) head.appendChild(cact);
+  d.appendChild(head);
+
+  var body = el("div", "dbody");
+
+  if (isCancelled(t) && !isPreview(t)) {
+    body.appendChild(cancelledNotice(t));
+  } else if (isPreview(t)) {
+    var pv = el("div", "notice pv");
+    pv.innerHTML = "<b>Preview.</b> This ticket is not saved yet. It is on the board so you can look it over; "
+      + "nothing is written until Claude runs <code>board.py add</code>. It is left out of Export.";
+    body.appendChild(pv);
+  } else if (isMergeReady(t)) {
+    var mr = el("div", "notice pv");
+    var prm = prOf(t);
+    mr.appendChild(el("b", null, "Waiting for merge. "));
+    mr.appendChild(document.createTextNode("Built, reviewed and tested. It moves to Done once you "
+      + "tell Claude the pull request is merged" + (prm ? ": " : ".")));
+    if (prm) mr.appendChild(extLink(prm.url, (typeof prm.number === "number" ? "#" + prm.number + " " : "")
+      + (prm.title || prm.url)));
+    body.appendChild(mr);
+  } else if (isUnscheduled(t) && !isDone(t)) {
+    var us = el("div", "notice dr");
+    us.innerHTML = "<b>Unscheduled.</b> This ticket sits in a someday phase, so <code>board.py next</code> "
+      + "and <code>/slate:work</code> skip it. Move it to a scheduled phase first "
+      + "(<code>board.py edit " + esc(t.id) + " phase=&lt;phase&gt;</code>).";
+    body.appendChild(us);
+  } else if (isDraft(t)) {
+    var miss = missingForDraft(t);
+    var dr = el("div", "notice dr");
+    dr.innerHTML = "<b>Draft: not ready to work on.</b> "
+      + (miss.length ? "Still missing: " + esc(miss.join(", ")) + "." : "It looks complete; promote it when you agree.");
+    var pb = el("div", "row2");
+    pb.style.marginTop = "8px";
+    if (state.live) {
+      var prom = el("button", "btn primary", "Promote");
+      prom.id = "promoteBtn";
+      prom.type = "button";
+      prom.title = "Turn this draft into a backlog ticket (board.py promote " + t.id + ")";
+      prom.addEventListener("click", function () {
+        prom.disabled = true;
+        api("promote", { id: t.id }).then(function (res) {
+          if (res.ok) return afterSave("Promoted " + t.id, res);
+          refused("Can't promote " + t.id, res);
+        });
+      });
+      pb.appendChild(prom);
+    } else {
+      pb.appendChild(el("span", "plain", "To promote it: "));
+      pb.appendChild(el("code", "md-code", BOARD_CMD + " promote " + t.id));
+    }
+    dr.appendChild(pb);
+    body.appendChild(dr);
+  }
+
+  function add(node) { if (node) body.appendChild(node); }
+
+  if (isLegacy(t)) {
+    // Older tickets without summary/story: description first, as the original board did.
+    if (t.description) { var s0 = sect("Details"); s0.appendChild(prose(t.description)); add(s0); }
+    add(checklist(t, "acceptance", "Done when", t.acceptance));
+    add(checklist(t, "test", "Automated tests", t.test_scenarios));
+    if (t.user_tests.length) add(userTestsSect(t));
+    add(technicalSect(t));
+    add(linksSect(t));
+    add(planSect(t));
+    add(codeSect(t));
+    add(historySect(t));
+  } else {
+    if (t.summary) { var s1 = sect("Summary"); s1.appendChild(prose(t.summary, "lead")); add(s1); }
+    if (t.story) { var s2 = sect("Story"); s2.appendChild(prose(t.story, "story")); add(s2); }
+    if (t.visual) {
+      var s3 = sect("Picture", "scroll sideways if it is wide");
+      s3.appendChild(prose(t.visual));
+      add(s3);
+    }
+    if (!isDraft(t) || t.acceptance.length) add(checklist(t, "acceptance", "Done when", t.acceptance));
+    if (t.user_tests.length || !isDraft(t)) add(userTestsSect(t));
+    if (!isDraft(t) || t.test_scenarios.length) add(checklist(t, "test", "Automated tests", t.test_scenarios));
+    if (t.description) { var s4 = sect("Details"); s4.appendChild(prose(t.description)); add(s4); }
+    add(technicalSect(t));
+    add(linksSect(t));
+    add(planSect(t));
+    add(codeSect(t));
+    add(historySect(t));
+  }
+  add(noteSect(t));
+
+  d.appendChild(body);
+  host.appendChild(d);
+  if (fresh) close.focus(); else body.scrollTop = keepScroll;
+}
+
+/* ---------------- header chrome ---------------- */
+
+function buildMenu(detailsId, key, values, labelFn) {
+  var d = $("#" + detailsId);
+  var menu = $(".menu", d);
+  menu.innerHTML = "";
+  values.forEach(function (v) {
+    var lab = el("label");
+    var cb = el("input");
+    cb.type = "checkbox";
+    cb.checked = state.filters[key].indexOf(v) !== -1;
+    cb.addEventListener("change", function () {
+      var a = state.filters[key];
+      var i = a.indexOf(v);
+      if (cb.checked && i === -1) a.push(v);
+      if (!cb.checked && i !== -1) a.splice(i, 1);
+      render();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(el("span", null, labelFn ? labelFn(v) : v));
+    var n = state.tickets.filter(function (t) {
+      if (key === "area") return (t.areas || []).indexOf(v) !== -1;
+      if (key === "status") return statusOf(t) === v;
+      if (key === "priority") return t.priority === v;
+      return t.phase === v;
+    }).length;
+    lab.appendChild(el("span", "dim", n));
+    menu.appendChild(lab);
+  });
+  var badge = $(".count", d);
+  var sel = state.filters[key].length;
+  badge.textContent = sel;
+  badge.hidden = sel === 0;
+}
+
+function updateChrome() {
+  var saved = savedTickets();
+  var total = saved.length;
+  var sum = progressSummary(saved);
+  var prog = saved.filter(isInProgress).length;
+  var waiting = saved.filter(needsYou).length;
+
+  var counts = $("#counts");
+  counts.innerHTML = "";
+  // "3/15 done · 1 cancelled": the done total leaves out excluded states (Cancelled, ...).
+  [["total", String(total)], ["done" + sum.extra, sum.done + "/" + sum.total], ["in progress", String(prog)]].forEach(function (p) {
+    var s = el("span", "pill");
+    s.innerHTML = "<b>" + esc(p[1]) + "</b> " + esc(p[0]);
+    counts.appendChild(s);
+  });
+  counts.children[1].id = "doneProgress";
+  if (waiting) {
+    var w = el("button", "pill needs");
+    w.type = "button";
+    w.title = "Show only tickets waiting for you to try them";
+    w.innerHTML = "<b>" + waiting + "</b> waiting for you to test";
+    w.addEventListener("click", function () {
+      state.filters.status = statusesWithRole("user_testing");
+      render();
+    });
+    counts.appendChild(w);
+  }
+  var merging = saved.filter(isMergeReady).length;
+  if (merging) {
+    var m = el("button", "pill");
+    m.type = "button";
+    m.title = "Show only tickets waiting for their pull request to be merged";
+    m.innerHTML = "<b>" + merging + "</b> waiting for merge";
+    m.addEventListener("click", function () { state.filters.status = statusesWithRole("merge_ready"); render(); });
+    counts.appendChild(m);
+  }
+  var unsIds = state.phases.filter(function (p) { return p.unscheduled === true; }).map(function (p) { return p.id; });
+  var unsN = saved.filter(isUnscheduled).length;
+  if (unsN) {
+    var u = el("button", "pill");
+    u.type = "button";
+    u.title = "Show only tickets in unscheduled (someday) phases";
+    u.innerHTML = "<b>" + unsN + "</b> unscheduled";
+    u.addEventListener("click", function () { state.filters.phase = unsIds.slice(); render(); });
+    counts.appendChild(u);
+  }
+
+  var meta = (state.raw && state.raw.meta) || {};
+  $("#gen").textContent = meta.generated ? "generated " + meta.generated : "";
+
+  // Live (board.py serve) vs view only.
+  var mode = $("#modePill");
+  if (state.live) {
+    mode.className = "pill mode live";
+    mode.textContent = "Live: changes save to the board";
+    mode.title = "Served by board.py serve" + (state.live.board_path ? " \u00b7 " + state.live.board_path : "");
+  } else {
+    mode.className = "pill mode view";
+    mode.innerHTML = "View only: open with <code>" + esc(BOARD_CMD) + " serve</code> to save clicks";
+    mode.title = "Clicks here stay in this browser until you run the board.py commands";
+  }
+
+  var n = changeCount();
+  var dirty = $("#dirty");
+  dirty.hidden = !!state.live;
+  dirty.className = "pill" + (n ? " local-n" : "");
+  dirty.innerHTML = n ? "<b>" + n + "</b> local change" + (n === 1 ? "" : "s") + " not on the board"
+    : "<b>0</b> local changes";
+  $("#copyCmdsBtn").hidden = !!state.live || n === 0;
+  $("#resetBtn").hidden = !!state.live;
+
+  var removed = removedEntries();
+  $("#removedBtn").hidden = !removed.length;
+  $("#removedBtn").textContent = "Removed (" + removed.length + ")";
+  var ulog = unlockLog();
+  $("#historyBtn").hidden = !ulog.length;
+  $("#historyBtn").textContent = "Board history (" + ulog.length + ")";
+
+  var af = activeFilterCount();
+  $("#fcount").textContent = af;
+  $("#clearFilters").hidden = af === 0;
+  $("#sortWrap").style.display = state.view === "board" ? "" : "none";
+  $("#viewBoard").setAttribute("aria-pressed", String(state.view === "board"));
+  $("#viewOrder").setAttribute("aria-pressed", String(state.view === "order"));
+
+  var foot = "Slate v" + SLATE_VERSION;
+  if (meta.slate_version || meta.schema_version) {
+    foot += " · tickets.json " + (meta.slate_version || "?") + " / schema " + (meta.schema_version || "?");
+    if (meta.slate_version && meta.slate_version !== SLATE_VERSION) foot += " (different Slate version, run /slate:upgrade)";
+  }
+  $("#siteFoot").textContent = foot;
+}
+
+function removedEntries() {
+  var r = state.raw && state.raw.meta && state.raw.meta.removed;
+  return arr(r).filter(function (x) { return x && typeof x === "object"; });
+}
+function unlockLog() {
+  var r = state.raw && state.raw.meta && state.raw.meta.unlock_log;
+  return arr(r).filter(function (x) { return x && typeof x === "object"; });
+}
+// The active unlock: /api/info unlock_active (live) or kanban/.slate-unlock.json (view only).
+function activeUnlock() {
+  var u = state.live ? state.live.unlock_active : state.unlockFile;
+  if (!u || typeof u !== "object") return null;
+  if (u.until) {
+    var t = Date.parse(u.until);
+    if (!isNaN(t) && t <= Date.now()) return null;
+  }
+  return u;
+}
+function fmtUntil(iso) {
+  var t = Date.parse(iso);
+  if (isNaN(t)) return String(iso || "?");
+  var d = new Date(t);
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+// A one-line status banner: title + short action; click to expand the details (kept open across
+// re-renders by id).
+var bannerOpen = {};
+function banner(id, cls, title, action, details) {
+  var b = el("details", "banner" + (cls ? " " + cls : ""));
+  b.id = id;
+  b.setAttribute("role", "status");
+  if (bannerOpen[id]) b.open = true;
+  b.addEventListener("toggle", function () { bannerOpen[id] = b.open; });
+  var sum = el("summary");
+  sum.appendChild(el("strong", null, title));
+  if (action) sum.appendChild(el("span", "bact", action));
+  if (details && (typeof details === "string" || details.length)) sum.appendChild(el("span", "bmore", "details"));
+  b.appendChild(sum);
+  if (details && (typeof details === "string" || details.length)) {
+    var body = el("div", "bbody");
+    if (typeof details === "string") body.appendChild(el("div", null, details));
+    else {
+      var ul = el("ul");
+      details.forEach(function (d) {
+        var li = el("li", null, String(d.text));
+        if (d.title) li.title = d.title;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+    b.appendChild(body);
+  }
+  $("#bannerHost").appendChild(b);
+  return b;
+}
+
+function renderBanner() {
+  var host = $("#bannerHost");
+  host.innerHTML = "";
+  var meta = (state.raw && state.raw.meta) || {};
+
+  var un = activeUnlock();
+  if (un) {
+    banner("unlockBanner", "bad", "One direct edit allowed until " + fmtUntil(un.until) + " (then locks again).",
+      un.reason ? "Reason: " + un.reason : "",
+      "The next direct edit of tickets.json is allowed once; after it, or at " + fmtUntil(un.until)
+        + ", the board locks again. Every board.py command still checks the file.");
+  }
+
+  var issues = state.live && state.live.doctor && arr(state.live.doctor.issues);
+  if (issues && issues.length) {
+    var setup = issues.filter(function (x) { return x && x.kind !== "tickets"; });
+    var tick = issues.filter(function (x) { return x && x.kind === "tickets"; });
+    var items = function (list) {
+      return list.map(function (x) { return { text: x.message || x.code || "problem", title: x.code || "" }; });
+    };
+    if (tick.length) banner("doctorTickets", "bad", "Board needs sorting", "run /slate:sync", items(tick));
+    if (setup.length) banner("doctorSetup", "warn", "Setup needs attention", "run /slate:upgrade", items(setup));
+  }
+
+  // Version: page vs board file vs server.
+  var other = (state.live && state.live.version && state.live.version !== SLATE_VERSION) ? state.live.version
+    : (meta.slate_version && meta.slate_version !== SLATE_VERSION ? meta.slate_version : null);
+  if (other && !(issues && issues.length)) {
+    banner("versionBanner", "warn", "Different Slate version", "run /slate:upgrade",
+      "This page is Slate " + SLATE_VERSION + ", the board " + (state.live && state.live.version ? "server" : "file")
+      + " is " + other + ".");
+  }
+
+  if (state.lostLive) {
+    banner("lostBanner", "warn", "Board server stopped", "run " + BOARD_CMD + " serve --ensure, then reload",
+      "Clicks now stay in this browser until the server is back.");
+  }
+
+  if (state.previewCount) {
+    banner("previewBanner", "", "Preview: " + state.previewCount + " ticket" + (state.previewCount === 1 ? "" : "s")
+      + " not yet saved", "dashed borders",
+      "Nothing is saved until Claude runs board.py add; board.py discard-preview removes them. Export leaves them out.");
+  }
+}
+
+/* ---------------- modals ---------------- */
+
+var modalCancel = null;
+function closeModal() { modalCancel = null; $("#modalHost").innerHTML = ""; }
+function cancelModal() { var c = modalCancel; closeModal(); if (c) c(); }
+function modalOpen() { return !!$("#modalHost .modal"); }
+
+// A dialog with a title, body nodes and buttons [[label, cls, fn]]. Escape / scrim click closes.
+function openModal(title, nodes, buttons, onCancel) {
+  var host = $("#modalHost");
+  host.innerHTML = "";
+  var scrim = el("div", "modal-scrim");
+  var m = el("div", "modal");
+  m.setAttribute("role", "dialog");
+  m.setAttribute("aria-modal", "true");
+  m.setAttribute("aria-label", title);
+  m.appendChild(el("h3", null, title));
+  nodes.forEach(function (n) { if (n) m.appendChild(n); });
+  var bs = el("div", "mbtns");
+  (buttons || [["Close", "btn", null]]).forEach(function (b) {
+    var btn = el("button", b[1] || "btn", b[0]);
+    btn.type = "button";
+    btn.addEventListener("click", function () { if (b[2]) b[2](btn); else cancelModal(); });
+    bs.appendChild(btn);
+  });
+  m.appendChild(bs);
+  scrim.appendChild(m);
+  scrim.addEventListener("mousedown", function (e) { if (e.target === scrim) cancelModal(); });
+  host.appendChild(scrim);
+  modalCancel = onCancel || null;
+  return m;
+}
+
+// Ask for text. Resolves to the text (trimmed) or null when cancelled.
+function askText(o) {
+  return new Promise(function (resolve) {
+    var settled = false;
+    var finish = function (v) { if (settled) return; settled = true; closeModal(); resolve(v); };
+    var input = el(o.multiline ? "textarea" : "input");
+    if (!o.multiline) input.type = "text";
+    input.id = "askInput";
+    input.placeholder = o.placeholder || "";
+    input.setAttribute("aria-label", o.placeholder || o.title);
+    if (o.value) input.value = o.value;
+    var ok = function () {
+      var v = input.value.trim();
+      if (!v && !o.optional) { input.focus(); return; }
+      finish(v);
+    };
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (!o.multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); ok(); }
+    });
+    var m = openModal(o.title, [o.message ? el("p", null, o.message) : null, input],
+      [[o.cancelLabel || "Cancel", "btn subtle", function () { finish(null); }], [o.okLabel || "OK", "btn primary", ok]],
+      function () { if (!settled) { settled = true; resolve(null); } });
+    m.id = "askModal";
+    var okBtn = m.querySelector(".mbtns .btn.primary");
+    okBtn.id = "askOk";
+    var sync = function () { okBtn.disabled = !o.optional && !input.value.trim(); };
+    input.addEventListener("input", sync);
+    sync();
+    setTimeout(function () { input.focus(); }, 0);
+  });
+}
+
+// The server refused: show each error with its fix lines (commands or "ask the user: ...").
+function showRefusal(title, res) {
+  var errs = arr(res && res.errors);
+  if (!errs.length && res && res.error) errs = [{ message: String(res.error), fix: arr(res.fix) }];
+  if (!errs.length) errs = [{ message: "The board did not accept this change.", fix: [] }];
+  var ul = el("ul", "errlist");
+  errs.forEach(function (e) {
+    e = (e && typeof e === "object") ? e : { message: String(e) };
+    var li = el("li");
+    var what = [e.id, e.field].filter(Boolean).join(" ");
+    if (what) li.appendChild(el("div", "what", what));
+    li.appendChild(el("div", null, String(e.message || "")));
+    var fixes = arr(e.fix);
+    if (typeof e.fix === "string") fixes = [e.fix];
+    if (fixes.length) {
+      var fl = el("ul", "fixes");
+      fixes.forEach(function (f) {
+        var fli = el("li");
+        var s = String(f);
+        if (/^ask the user:/i.test(s)) fli.appendChild(el("div", null, s));
+        else fli.appendChild(el("code", null, s));
+        fl.appendChild(fli);
+      });
+      li.appendChild(el("div", "plain", "Fix:"));
+      li.appendChild(fl);
+    }
+    ul.appendChild(li);
+  });
+  var m = openModal(title, [ul], [["OK", "btn primary", null]]);
+  m.id = "refusalModal";
+}
+
+function removedPanel() {
+  var list = removedEntries();
+  var tb = el("table");
+  tb.innerHTML = "<thead><tr><th>Ticket</th><th>Title</th><th>Removed</th><th>Reason</th></tr></thead>";
+  var body = el("tbody");
+  list.forEach(function (x) {
+    var t = (x.ticket && typeof x.ticket === "object") ? x.ticket : x;
+    var tr = el("tr");
+    tr.appendChild(el("td", "mono", t.id || "?"));
+    tr.appendChild(el("td", null, t.title || ""));
+    tr.appendChild(el("td", null, x.removed || x.date || ""));
+    tr.appendChild(el("td", null, x.reason || ""));
+    body.appendChild(tr);
+  });
+  tb.appendChild(body);
+  var hint = el("div", "hint");
+  hint.appendChild(document.createTextNode("Bring one back with "));
+  hint.appendChild(el("code", "md-code", BOARD_CMD + " restore ID"));
+  hint.appendChild(document.createTextNode(". Removed ids are never reused."));
+  openModal("Removed tickets (" + list.length + ")", [tb, hint]).id = "removedModal";
+}
+
+function historyPanel() {
+  var list = unlockLog().slice().reverse();
+  var tb = el("table");
+  tb.innerHTML = "<thead><tr><th>When</th><th>What</th><th>Reason</th><th>Details</th></tr></thead>";
+  var body = el("tbody");
+  list.forEach(function (x) {
+    var tr = el("tr");
+    tr.appendChild(el("td", null, x.date || ""));
+    tr.appendChild(el("td", null, x.event || "unlock"));
+    tr.appendChild(el("td", null, x.reason || ""));
+    var det = [];
+    if (x.minutes) det.push(x.minutes + " min");
+    if (x.until) det.push("until " + x.until);
+    if (x.approved) det.push("approved: " + x.approved);
+    if (x.permission_mode) det.push("mode: " + x.permission_mode);
+    if (x.tool) det.push("tool: " + x.tool);
+    tr.appendChild(el("td", null, det.join(" · ")));
+    body.appendChild(tr);
+  });
+  tb.appendChild(body);
+  var p = el("p", null, "Times the board was unlocked for direct edits to tickets.json (newest first).");
+  openModal("Board history", [p, tb]).id = "historyModal";
+}
+
+/* ---------------- view only: local changes as board.py commands ---------------- */
+
+// A double-quoted shell word ("…" as in the docs), for notes and reasons.
+function dq(s) { return "\"" + String(s).replace(/[\\"$`]/g, "\\$&") + "\""; }
+
+function shq(s) {
+  s = String(s);
+  return /^[A-Za-z0-9_.\/:@%+=,-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\"'\"'") + "'";
+}
+
+// One command per FINAL local state (the overlay only keeps the last status / tick of each item).
+// check-item and usertest lines first (gates read them), then status moves; both in rank order so
+// dependencies land before dependents. Moves to the same status with no handoff note needed become
+// one bulk `set ID1,ID2 STATUS` (all or nothing in board.py), placed where its first ticket ranks.
+function localCommands() {
+  var items = [], moves = [];
+  savedTickets().slice().sort(function (a, b) { return a.rank - b.rank || cmp(a.id, b.id); }).forEach(function (t) {
+    var o = state.overlay[t.id];
+    if (!o) return;
+    if (o.checks) Object.keys(o.checks).sort(function (x, y) {
+      var kx = x.split(":"), ky = y.split(":");
+      return cmp(kx[0], ky[0]) || Number(kx[1]) - Number(ky[1]);
+    }).forEach(function (k) {
+      var v = o.checks[k];
+      if (markInFile(t, k, v)) return;
+      var m = /^(acceptance|test):(\d+)$/.exec(k);
+      if (m) items.push(BOARD_CMD + " check-item " + shq(t.id) + " " + m[1] + " " + m[2]);
+      var u = /^usertest:(\d+)$/.exec(k);
+      if (u) items.push(BOARD_CMD + " usertest " + shq(t.id) + " " + u[1] + " " + v);
+    });
+    if (o.status && o.status !== t.status) {
+      moves.push({ id: t.id, status: o.status, from: t.status, t: t,
+        note: typeof o.note === "string" && o.note ? o.note : "",
+        needs: noteRequired(o.status) || (isBackward(t.status, o.status) && hasPathRules()) });
+    }
+  });
+  var sets = [], groups = {};
+  moves.forEach(function (mv) {
+    var note = dq(mv.note || HANDOFF_PLACEHOLDER);
+    // Into the state `board.py cancel` uses: cancel ID --reason "…".
+    if (mv.status === cancelStatus() && !isExcludedStatus(mv.from)) {
+      sets.push(BOARD_CMD + " cancel " + shq(mv.id) + " --reason " + note);
+      return;
+    }
+    // Out of a cancelled state: uncancel ID [--to STATUS] --handoff "…".
+    if (isExcludedStatus(mv.from) && !flagsOf(mv.status).terminal) {
+      sets.push(BOARD_CMD + " uncancel " + shq(mv.id) + (mv.status !== mv.t.cancelled_from ? " --to " + shq(mv.status) : "")
+        + " --handoff " + note);
+      return;
+    }
+    if (mv.needs || mv.note) {
+      sets.push(BOARD_CMD + " set " + shq(mv.id) + " " + shq(mv.status) + " --handoff " + note);
+      return;
+    }
+    var g = groups[mv.status];
+    if (!g) { g = groups[mv.status] = { ids: [], at: sets.length }; sets.push(null); }
+    g.ids.push(mv.id);
+  });
+  Object.keys(groups).forEach(function (st) {
+    sets[groups[st].at] = BOARD_CMD + " set " + groups[st].ids.map(shq).join(",") + " " + shq(st);
+  });
+  return items.concat(sets);
+}
+
+function copyText(text) {
+  var fallback = function () {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return Promise.resolve(ok);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(function () { return true; }, fallback);
+  }
+  return fallback();
+}
+
+function copyCommands() {
+  var lines = localCommands();
+  if (!lines.length) { showToast("No local changes to copy"); return; }
+  var text = lines.join("\n") + "\n";
+  copyText(text).then(function (ok) {
+    var pre = el("pre", "mono", text);
+    pre.id = "cmdText";
+    var placeholder = text.indexOf(HANDOFF_PLACEHOLDER) !== -1;
+    var n = changeCount();
+    var count = el("p", "cmdcount");
+    count.id = "cmdCount";
+    count.appendChild(el("b", null, n + " local change" + (n === 1 ? "" : "s") + " → "
+      + lines.length + " command" + (lines.length === 1 ? "" : "s")));
+    var p = el("p", null, ok
+      ? "Copied " + lines.length + " command" + (lines.length === 1 ? "" : "s") + ". Run them in the project folder "
+        + "(or paste them to Claude). " + (placeholder ? "Replace " + HANDOFF_PLACEHOLDER + " with a real note. " : "")
+        + "Local marks disappear once the board has them."
+      : "Copy these commands by hand (the browser blocked the clipboard):"
+        + (placeholder ? " Replace " + HANDOFF_PLACEHOLDER + " with a real note." : ""));
+    var tip = el("div", "hint");
+    tip.id = "cmdTip";
+    tip.appendChild(document.createTextNode("Tip: open the board with "));
+    tip.appendChild(el("code", "md-code", BOARD_CMD + " serve"));
+    tip.appendChild(document.createTextNode(" and clicks save to the board directly."));
+    openModal("board.py commands", [count, p, pre, tip]).id = "cmdModal";
+    if (ok) showToast("Copied " + lines.length + " command" + (lines.length === 1 ? "" : "s"));
+  });
+}
+
+function render() {
+  var root = $("#main");
+  root.innerHTML = "";
+  renderBanner();
+  if (state.view === "board") renderBoard(root); else renderOrder(root);
+
+  buildMenu("fdPhase", "phase", state.filterPhases || [], function (v) {
+    var p = phaseById(v);
+    return (p && p.name) ? v + " " + p.name : v;
+  });
+  buildMenu("fdArea", "area", state.areas);
+  buildMenu("fdPrio", "priority", state.priorities);
+  buildMenu("fdStatus", "status", state.statuses, labelStatus);
+
+  updateChrome();
+  if (state.openId) renderDrawer(false);
+}
+
+// Re-render without losing the page, board-column and drawer scroll positions.
+function renderKeepScroll() {
+  var sx = window.scrollX, sy = window.scrollY;
+  var board = $(".board");
+  var left = board ? board.scrollLeft : 0;
+  var stacks = {};
+  Array.prototype.forEach.call(document.querySelectorAll(".col"), function (c) {
+    var st = $(".stack", c);
+    if (st) stacks[c.dataset.status] = st.scrollTop;
+  });
+  render();
+  var nb = $(".board");
+  if (nb) nb.scrollLeft = left;
+  Array.prototype.forEach.call(document.querySelectorAll(".col"), function (c) {
+    var st = $(".stack", c);
+    if (st && stacks[c.dataset.status]) st.scrollTop = stacks[c.dataset.status];
+  });
+  window.scrollTo(sx, sy);
+}
+
+/* ---------------- live refresh (served folder only) ---------------- */
+
+var toastTimer = null;
+function showToast(text) {
+  var t = $("#toast");
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.hidden = true; }, 2500);
+}
+
+function fetchText(url) {
+  return fetch(url, { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.text() : null; })
+    .catch(function () { return null; });
+}
+
+// Conditional GET: If-Modified-Since with the Last-Modified of the response last shown.
+// -> { kind: "same" } (304), { kind: "ok", text, lm }, { kind: "missing" } (404) or { kind: "error" }.
+function fetchCond(url, full) {
+  var headers = {};
+  if (!full && state.lastMod[url]) headers["If-Modified-Since"] = state.lastMod[url];
+  return fetch(url, { cache: "no-store", headers: headers })
+    .then(function (r) {
+      if (r.status === 304) return { kind: "same" };
+      if (r.status === 404) return { kind: "missing" };
+      if (!r.ok) return { kind: "error" };
+      var lm = r.headers.get("Last-Modified");
+      return r.text().then(function (text) { return { kind: "ok", text: text, lm: lm }; });
+    })
+    .catch(function () { return { kind: "error" }; });
+}
+
+// Something the viewer is in the middle of that a re-render would break.
+function busy() {
+  if (document.querySelector(".card.dragging")) return true;
+  if (modalOpen() || state.saving) return true;
+  var a = document.activeElement;
+  if (!a || !a.closest || !a.closest("#main, #drawerHost")) return false;
+  if (a.tagName === "SELECT") return true;
+  return (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")) && !!a.value;
+}
+
+function applyUpdate(data, preview, quiet) {
+  var meta = (data && data.meta) || {};
+  var key = "slate." + String(meta.prefix || "board") + ".overlay.v1";
+  if (key !== OVERLAY_KEY) { OVERLAY_KEY = key; state.overlay = loadOverlay(); }
+  normalise(data || {}, isPreviewDoc(preview) ? preview : null);
+  pruneOverlay();
+  state.allowed = {};
+  setTitle(meta);
+  if (state.openId && !state.byId[state.openId]) closeDrawer();
+  renderKeepScroll();
+  if (!quiet) showToast("Board updated");
+  loadAllowed();
+}
+
+var TICKETS_URL = "./tickets.json", PREVIEW_URL = "./preview.json";
+
+// Re-read tickets.json and preview.json and re-render when either changed. full: skip
+// If-Modified-Since and compare the content (the safety net; Last-Modified has 1 s steps).
+// force: apply even while the viewer is busy (right after a save). A half-written or invalid
+// file is skipped until the next round.
+function poll(full, force) {
+  if (state.source !== "fetch") return Promise.resolve(false);
+  if (state.polling && !force) return Promise.resolve(false);
+  state.polling = true;
+  return Promise.all([fetchCond(TICKETS_URL, full), fetchCond(PREVIEW_URL, full)])
+    .then(function (res) {
+      var t = res[0], p = res[1];
+      if (t.kind === "error" || t.kind === "missing") return false;
+      if (full) state.lastFull = Date.now();
+      var tt = t.kind === "same" ? state.lastText.t : t.text;
+      var pt = p.kind === "same" ? state.lastText.p : (p.kind === "ok" ? p.text : null);
+      if (p.kind === "error") pt = state.lastText.p;
+      var commit = function () {
+        state.lastText = { t: tt, p: pt };
+        if (t.kind === "ok" && t.lm) state.lastMod[TICKETS_URL] = t.lm;
+        if (p.kind === "ok" && p.lm) state.lastMod[PREVIEW_URL] = p.lm;
+        if (p.kind === "missing") delete state.lastMod[PREVIEW_URL];
+      };
+      var sig = tt + "\u0000" + (pt || "");
+      if (sig === state.lastSig) { commit(); return false; }
+      var data, pv = null;
+      try { data = JSON.parse(tt); } catch (e) { return false; }
+      if (pt) { try { pv = JSON.parse(pt); } catch (e) { pv = null; } }
+      if (!data || typeof data !== "object") return false;
+      if (!force && busy()) return false;     // try again next round (not committed, so no 304)
+      commit();
+      state.lastSig = sig;
+      state.lastActivity = Date.now();
+      applyUpdate(data, pv, !!force);
+      return true;
+    })
+    .catch(function () { return false; })
+    .then(function (changed) { state.polling = false; return changed; });
+}
+
+// Right after a save: re-read the file and the server info now.
+function refreshNow() {
+  return Promise.all([poll(true, true), refreshInfo()]).then(function () { applyAllowedToSelects(); });
+}
+
+// /api/info: live mode, token, doctor, active unlock. Two misses in a row -> view only.
+function readInfo() {
+  return fetch("./api/info", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { return (j && typeof j === "object" && j.slate === true) ? j : null; })
+    .catch(function () { return null; });
+}
+function setLive(info) {
+  state.live = info;
+  var tokenMeta = document.querySelector('meta[name="slate-token"]');
+  state.token = (info && typeof info.token === "string" && info.token)
+    || (tokenMeta && tokenMeta.getAttribute("content")) || "";
+}
+function refreshInfo() {
+  if (state.source !== "fetch") return Promise.resolve();
+  if (!state.live) {
+    // View only: show an active unlock straight from kanban/.slate-unlock.json when it is served.
+    return getJson("./.slate-unlock.json").then(function (u) {
+      var before = JSON.stringify(state.unlockFile);
+      state.unlockFile = (u && typeof u === "object" && u.until) ? u : null;
+      if (JSON.stringify(state.unlockFile) !== before) renderBanner();
+    });
+  }
+  return readInfo().then(function (info) {
+    if (info) {
+      state.infoFails = 0;
+      var before = JSON.stringify([state.live.doctor, state.live.unlock_active, state.live.version]);
+      setLive(info);
+      if (JSON.stringify([info.doctor, info.unlock_active, info.version]) !== before) renderBanner();
+      return;
+    }
+    if (++state.infoFails >= 2) {
+      setLive(null);
+      state.lostLive = true;
+      renderKeepScroll();
+    }
+  });
+}
+
+// 5 s while changes happen or the viewer is active, 30 s after IDLE_MS quiet; visible tab only.
+function schedulePoll() {
+  clearTimeout(state.pollTimer);
+  state.pollTimer = null;
+  if (state.source !== "fetch" || document.visibilityState !== "visible") return;
+  var idle = Date.now() - state.lastActivity > IDLE_MS;
+  state.pollTimer = setTimeout(pollTick, idle ? POLL_SLOW_MS : POLL_FAST_MS);
+}
+function pollTick() {
+  state.pollTimer = null;
+  if (state.source !== "fetch" || document.visibilityState !== "visible") return;
+  var full = Date.now() - state.lastFull >= SAFETY_MS;
+  var jobs = [poll(full, false)];
+  if (full) jobs.push(refreshInfo());
+  Promise.all(jobs).then(schedulePoll, schedulePoll);
+}
+// Any click or key press brings the 30 s poll back to 5 s.
+function noteActivity() {
+  var wasIdle = Date.now() - state.lastActivity > IDLE_MS;
+  state.lastActivity = Date.now();
+  if (wasIdle && state.source === "fetch" && document.visibilityState === "visible") schedulePoll();
+}
+function startPolling() {
+  state.lastActivity = Date.now();
+  state.lastFull = Date.now();
+  schedulePoll();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") { state.lastActivity = Date.now(); pollTick(); }
+    else { clearTimeout(state.pollTimer); state.pollTimer = null; }
+  });
+  document.addEventListener("click", noteActivity, true);
+  document.addEventListener("keydown", noteActivity, true);
+}
+
+/* ---------------- export and reset ---------------- */
+
+// The original tickets.json with overlay statuses applied. Preview tickets, checklist ticks
+// and local Pass/Fail clicks are never written: user_checks in the file stay authoritative.
+function mergedJson() {
+  var out = JSON.parse(JSON.stringify(state.raw));
+  var savedIds = {};
+  (out.tickets || []).forEach(function (t) { savedIds[t.id] = true; });
+  (out.tickets || []).forEach(function (t) {
+    var o = state.overlay[t.id];
+    if (o && o.status && useOverlay()) t.status = o.status;
+    if (!Array.isArray(t.unlocks) && state.byId[t.id]) {
+      t.unlocks = state.byId[t.id].unlocks.filter(function (x) { return savedIds[x]; });
+    }
+  });
+  return JSON.stringify(out, null, 2) + "\n";
+}
+
+function download(name, text) {
+  var blob = new Blob([text], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+/* ---------------- theme ---------------- */
+
+function applyTheme(mode) {
+  if (mode === "light" || mode === "dark") document.documentElement.setAttribute("data-theme", mode);
+  else document.documentElement.removeAttribute("data-theme");
+  try { localStorage.setItem(THEME_KEY, mode); } catch (e) { /* ignore */ }
+}
+
+/* ---------------- wiring ---------------- */
+
+function typingIn() {
+  var tag = document.activeElement ? document.activeElement.tagName : "";
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(tag);
+}
+
+function wire() {
+  $("#viewBoard").addEventListener("click", function () { state.view = "board"; render(); });
+  $("#viewOrder").addEventListener("click", function () { state.view = "order"; render(); });
+
+  $("#search").addEventListener("input", function (e) {
+    state.search = e.target.value.trim().toLowerCase();
+    render();
+  });
+  $("#sort").addEventListener("change", function (e) { state.sort = e.target.value; render(); });
+  $("#fReady").addEventListener("change", function (e) { state.readyOnly = e.target.checked; render(); });
+  $("#fHideDone").addEventListener("change", function (e) { state.hideDone = e.target.checked; render(); });
+
+  $("#clearFilters").addEventListener("click", function () {
+    state.filters = { phase: [], area: [], priority: [], status: [] };
+    state.readyOnly = false;
+    state.hideDone = false;
+    $("#fReady").checked = false;
+    $("#fHideDone").checked = false;
+    render();
+  });
+
+  $("#exportBtn").addEventListener("click", function () {
+    if (!state.raw) return;
+    download("tickets.json", mergedJson());
+  });
+
+  $("#resetBtn").addEventListener("click", function () {
+    if (!changeCount() || window.confirm("Discard all local status changes, checklist ticks and Pass/Fail clicks?")) {
+      state.overlay = {};
+      saveOverlay();
+      render();
+    }
+  });
+
+  var themes = ["auto", "light", "dark"];
+  $("#themeBtn").addEventListener("click", function () {
+    var cur = "auto";
+    try { cur = localStorage.getItem(THEME_KEY) || "auto"; } catch (e) { /* ignore */ }
+    var nextTheme = themes[(themes.indexOf(cur) + 1) % themes.length];
+    applyTheme(nextTheme);
+    $("#themeBtn").textContent = "Theme: " + nextTheme;
+  });
+
+  $("#copyCmdsBtn").addEventListener("click", copyCommands);
+  $("#removedBtn").addEventListener("click", removedPanel);
+  $("#historyBtn").addEventListener("click", historyPanel);
+
+  document.addEventListener("keydown", function (e) {
+    if (modalOpen()) {
+      if (e.key === "Escape") cancelModal();
+      return;
+    }
+    if (e.key === "Escape" && state.openId) { closeDrawer(); return; }
+    if (state.openId && !typingIn() && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      var b = $(e.key === "ArrowLeft" ? "#drawerPrev" : "#drawerNext");
+      if (b && !b.disabled) { e.preventDefault(); b.click(); }
+      return;
+    }
+    if (e.key === "/" && !typingIn()) {
+      e.preventDefault();
+      $("#search").focus();
+      $("#search").select();
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    var open = document.querySelectorAll("details.fd[open]");
+    for (var i = 0; i < open.length; i++) {
+      if (!open[i].contains(e.target)) open[i].removeAttribute("open");
+    }
+  });
+}
+
+/* ---------------- boot ---------------- */
+
+function isPreviewDoc(v) { return !!(v && typeof v === "object" && v.preview === true && Array.isArray(v.tickets)); }
+
+function showLoader(message) {
+  var rows = document.querySelectorAll("header .hrow");
+  if (rows[1]) rows[1].style.display = "none";
+
+  var root = $("#main");
+  root.innerHTML = "";
+  var box = el("div", "loader");
+  box.appendChild(el("h2", null, "Could not load tickets.json"));
+
+  var p = el("p");
+  p.innerHTML = "This page reads <code>./tickets.json</code> from its own folder. Serve the folder with "
+    + "<code>python3 -m http.server 8088</code> and open <code>http://localhost:8088</code>, "
+    + "or pick the file below to load it directly. You can pick <code>preview.json</code> "
+    + "together with it to see a preview.";
+  box.appendChild(p);
+
+  var inp = el("input");
+  inp.type = "file";
+  inp.multiple = true;
+  inp.accept = ".json,application/json";
+  inp.addEventListener("change", function () {
+    var files = Array.prototype.slice.call(inp.files || []);
+    if (!files.length) return;
+    var results = [], left = files.length, failed = false;
+    files.forEach(function (f, idx) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        try { results[idx] = JSON.parse(String(fr.result)); }
+        catch (err) {
+          failed = true;
+          box.appendChild(el("div", "err", f.name + " is not valid JSON: " + err.message));
+        }
+        if (--left === 0 && !failed) {
+          var board = results.filter(function (r) { return !isPreviewDoc(r); })[0];
+          var pv = results.filter(isPreviewDoc)[0] || null;
+          if (!board) { box.appendChild(el("div", "err", "Pick tickets.json too (preview.json alone is not a board).")); return; }
+          state.source = "file";   // picked files can't be re-read, so no live refresh
+          boot(board, pv);
+        }
+      };
+      fr.readAsText(f);
+    });
+  });
+  box.appendChild(inp);
+  if (message) box.appendChild(el("div", "err", "Reason: " + message));
+  root.appendChild(box);
+}
+
+function setTitle(meta) {
+  var proj = meta.project || "Slate board";
+  document.title = meta.project ? proj + " board" : proj;
+  $("#brandName").textContent = proj;
+}
+
+function boot(data, preview) {
+  var rows = document.querySelectorAll("header .hrow");
+  for (var i = 0; i < rows.length; i++) rows[i].style.display = "";
+  var meta = (data && data.meta) || {};
+  var prefix = String(meta.prefix || "board");
+  OVERLAY_KEY = "slate." + prefix + ".overlay.v1";
+  state.overlay = loadOverlay();
+  normalise(data || {}, isPreviewDoc(preview) ? preview : null);
+  pruneOverlay();
+  setTitle(meta);
+  render();
+}
+
+(function init() {
+  try {
+    var saved = localStorage.getItem(THEME_KEY);
+    if (saved) { applyTheme(saved); $("#themeBtn").textContent = "Theme: " + saved; }
+  } catch (e) { /* ignore */ }
+  wire();
+  var infoP = readInfo();
+  fetch(TICKETS_URL, { cache: "no-store" })
+    .then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      var lm = r.headers.get("Last-Modified");
+      return r.text().then(function (tt) { return { tt: tt, lm: lm }; });
+    })
+    .then(function (res) {
+      var data = JSON.parse(res.tt);
+      return Promise.all([fetchCond(PREVIEW_URL, true), infoP]).then(function (more) {
+        var p = more[0], pt = p.kind === "ok" ? p.text : null, pv = null;
+        if (pt) { try { pv = JSON.parse(pt); } catch (e) { pv = null; } }
+        setLive(more[1]);
+        state.source = "fetch";
+        state.lastSig = res.tt + "\u0000" + (pt || "");
+        state.lastText = { t: res.tt, p: pt };
+        if (res.lm) state.lastMod[TICKETS_URL] = res.lm;
+        if (p.kind === "ok" && p.lm) state.lastMod[PREVIEW_URL] = p.lm;
+        boot(data, pv);
+        loadAllowed();
+        if (!state.live) refreshInfo();
+        startPolling();
+      });
+    })
+    .catch(function (err) { showLoader(String(err && err.message ? err.message : err)); });
+})();
+</script>
+</body>
+</html>

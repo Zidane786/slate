@@ -4,3 +4,4 @@
 *.jpg binary
 # Windows batch files need CRLF (cmd.exe labels break with LF)
 *.cmd text eol=crlf
+kanban/tickets.json merge=slate text eol=lf
