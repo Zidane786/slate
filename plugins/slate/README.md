@@ -2,7 +2,7 @@
 
 Plan ideas into plain-language tickets on a kanban board in your repo, then build them one at
 a time with tests, review, your own check and the commit/PR recorded on the ticket. You stay
-in charge: the agent (Claude Code or GitHub Copilot CLI) builds one ticket per request, parks it
+in charge: the agent (Claude Code, GitHub Copilot CLI or OpenCode V2) builds one ticket per request, parks it
 in **Waiting for merge**, and stops; it moves to Done only after you say the PR is merged.
 
 ## Install
@@ -105,5 +105,12 @@ Linux and Windows (`python3`, `python` or `py -3`).
 `copilot plugin marketplace add Zidane786/slate`, then `copilot plugin install slate@slate`.
 The commands are the same (`/slate:plan`, `/slate:work`, …); the unlock card shows in every mode,
 even Autopilot with Allow all.
+
+**OpenCode V2:** install Slate with one of the commands above, then run `/slate-init` in your project
+(or the same command inside OpenCode). It copies a local plugin into `.opencode/plugins/slate/` and
+command stubs into `.opencode/commands/`; no npm install or global config is needed. Use
+`/slate-upgrade` to refresh them. Commands have no colon (`/slate-plan`, `/slate-work`, …), the
+status line shows the next ticket, and the unlock card says "Allow once". OpenCode V1 is not
+supported yet.
 
 Full docs, design and source: https://github.com/Zidane786/slate · Changes: [CHANGELOG.md](CHANGELOG.md)

@@ -209,15 +209,58 @@ Cancel any unlock you didn't use: `PY kanban/board.py lock`.
 
 ---
 
+## 6. OpenCode V2 live in tmux (needs OpenCode 2.x and tmux)
+
+Use the same scratch project after `/slate:init` has run with the 0.5.0 plugin (it now copies
+`.opencode/plugins/slate/`, `.opencode/commands/slate-*.md` and the `SLATE.md` instruction into
+`opencode.jsonc`). Check that `opencode --version` says 2.x — V1 is not supported.
+
+```
+cd slate-scratch
+tmux new-session -s slate-opencode -x 200 -y 50 'opencode --standalone'
+```
+
+`--standalone` gives the session its own server, so it cannot pick up another project's plugin
+list. In the pane, try and report:
+
+- [ ] `opencode plugin list` in another terminal from the same folder shows `slate` as a local
+      plugin; the TUI starts and shows `Build · … · OpenCode` in the status bar.
+- [ ] Ask "what does the Slate board line say?" (no tools) → it quotes the
+      `Slate 0.5.0: …` line from the context hook.
+- [ ] `/slate-status` is listed (OpenCode commands have no colon) and gives a read-only report
+      from this project's board.
+- [ ] Ask it to change the project name in `kanban/tickets.json` **with its edit tool, not
+      board.py** → blocked with "Change tickets through kanban/board.py…", and the file is unchanged.
+- [ ] Ask it to run exactly `PY kanban/board.py unlock --reason "tmux test" --minutes 5` with its
+      shell tool → a **"Permission required"** card appears with **Allow once / Always allow /
+      Reject**. Choose **Allow once**; the agent should then know only one edit is allowed.
+- [ ] Ask for one direct edit of `kanban/tickets.json` with the edit tool → allowed once, and
+      `kanban/.slate-unlock.used.json` appears. Ask for a second one → blocked with the same
+      `Change tickets through…` reason and the `fix:` line.
+- [ ] **Terminal fallback:** in a second pane (`tmux split-window -h`) run
+      `PY kanban/board.py unlock --reason "pane test" --minutes 5`; it prints a 4-letter code. Type
+      the code in that pane, then go back to the agent pane and ask for one direct edit → allowed,
+      the next one blocked. Cancel leftovers with `PY kanban/board.py lock`.
+- [ ] Start the board in a pane with `PY kanban/board.py serve --ensure --port 8088`; open the URL
+      on your machine (over SSH, first `ssh -L 8088:localhost:8088 <host>`), click a ticket to
+      change it and confirm the pane logs the `board.py` write. In view-only mode the page says so
+      and clicking does not write.
+
+Expected overall: an OpenCode session cannot corrupt `tickets.json`; every approval is one edit,
+and a second pane can approve when a non-interactive `opencode run` has no card.
+
+---
+
 ## Report format
 
 ```
-Machine: <OS + version>, Python <ver> (<command>), git <ver>, Claude Code <ver|none>, Copilot CLI <ver|none>, tmux <ver|none>
+Machine: <OS + version>, Python <ver> (<command>), git <ver>, Claude Code <ver|none>, Copilot CLI <ver|none>, OpenCode <ver|none>, tmux <ver|none>
 Level 1: <N passed / failures with names>
 Level 2: <pass/fail>
 Level 3: <each checkbox: pass/fail + notes>
 Level 4: <each checkbox: pass/fail + notes>
 Level 5: <each checkbox: pass/fail + notes, or skipped>
+Level 6: <each checkbox: pass/fail + notes, or skipped>
 Problems: <exact command + output for every failure>
 ```
 

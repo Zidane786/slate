@@ -7,6 +7,49 @@ nothing). Merging a version bump into `main` publishes a GitHub Release with tha
 section. Each section lists only what changed since the previous version, and a released
 section is never edited afterwards (CI enforces both).
 
+## 0.5.0 — 2026-11-23
+
+Board schema **3** (unchanged).
+
+### Highlights
+
+- **OpenCode V2 is now a first-class Slate host.** The same skills, board and one-time unlock work
+  in OpenCode 2.x alongside Claude Code and GitHub Copilot CLI. `/slate:init` copies a local plugin
+  into the project, so there is no npm package and nothing to install globally.
+- **The guard holds in OpenCode too.** Direct edits to `kanban/tickets.json` are denied with the
+  actionable `fix:` message; `board.py unlock` shows OpenCode's permission card, and one approval
+  allows exactly one edit.
+
+### Added
+
+- **OpenCode V2 support** for the whole plugin: all seven skills (`/slate-init`, `/slate-plan`,
+  `/slate-work`, `/slate-review`, `/slate-status`, `/slate-sync`, `/slate-upgrade`), the session
+  status line, the write guard and the one-time unlock.
+- A shipped local plugin at `plugins/opencode/` — a dependency-free `index.js` that translates
+  OpenCode's V2 hooks to the same Python guard the other hosts use. `/slate:init` copies it into
+  `.opencode/plugins/slate/` and adds `SLATE.md` to `opencode.jsonc`.
+- `guard_tickets.py --opencode`: a JSON-in/JSON-out dialect for OpenCode permission decisions.
+- `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the approval card, one unlock =
+  one edit, the second-pane fallback, and the board server.
+
+### Changed
+
+- `board.py unlock` now names OpenCode's permission card (and the second-tmux-pane fallback) when
+  it runs inside OpenCode; Claude Code and Copilot CLI messages are unchanged.
+- `CLAUDE.md` / `AGENTS.md` now describe the three hosts and the new plugin folder.
+
+### Fixed
+
+- Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
+  skill" resolves in OpenCode.
+
+### Upgrade notes
+
+Run `/slate:upgrade` in each project (in OpenCode use `/slate-upgrade`). It refreshes
+`.opencode/plugins/slate/` and `.opencode/commands/slate-*.md`, and adds `"SLATE.md"` to
+`instructions` in `opencode.jsonc` without dropping your other settings. No board migration is
+needed and no global OpenCode config is touched.
+
 ## 0.4.0 — 2026-10-09
 
 Board schema **3** (unchanged).
