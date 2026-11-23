@@ -204,7 +204,7 @@ Copy-Item -LiteralPath (Join-Path $SlateRoot '.claude-plugin/plugin.json') -Dest
 Copy-Item -LiteralPath (Join-Path $SlateRoot 'CHANGELOG.md') -Destination $Target -Force
 Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') '.') -Destination $Target -Recurse -Force
 Get-ChildItem -LiteralPath (Join-Path $Project '.opencode/commands') -Filter 'slate-*.md' -ErrorAction SilentlyContinue | Remove-Item -Force
-Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
+Copy-Item -Path (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
 ```
 
 OpenCode discovers `.opencode/plugins/` itself, so no `plugins` entry is needed in

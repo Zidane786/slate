@@ -129,7 +129,7 @@ and tell the user what you added. If doctor's notes include `team-settings-ignor
       Copy-Item -LiteralPath (Join-Path $SlateRoot 'CHANGELOG.md') -Destination $Target -Force
       Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') '.') -Destination $Target -Recurse -Force
       Get-ChildItem -LiteralPath (Join-Path $Project '.opencode/commands') -Filter 'slate-*.md' -ErrorAction SilentlyContinue | Remove-Item -Force
-      Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
+      Copy-Item -Path (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
       ```
       If `opencode.jsonc` exists, keep its keys and make sure `instructions` contains
       `"SLATE.md"`; if it is missing, create it with the `$schema` and that one instruction.

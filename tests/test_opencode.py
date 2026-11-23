@@ -292,9 +292,20 @@ def _install_shaped_root(tmp_path: Path) -> Path:
 
 
 def _run_copy(root: Path, project: Path, skill: str = "init") -> subprocess.CompletedProcess:
-    script = _copy_block(skill, "bash").replace("<ROOT>", str(root))
-    return subprocess.run(["bash", "-c", script], cwd=str(project), capture_output=True,
-                          text=True, encoding="utf-8", errors="replace", timeout=30)
+    """Run the skill's copy block: PowerShell on Windows (where `bash` may be WSL's stub), bash elsewhere."""
+    if sys.platform == "win32":
+        shell = shutil.which("pwsh") or shutil.which("powershell")
+        if shell is None:
+            pytest.skip("no PowerShell")
+        script_file = project.parent / f"copy-{skill}.ps1"
+        script_file.write_text(_copy_block(skill, "powershell").replace("<ROOT>", str(root)), encoding="utf-8")
+        cmd = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script_file)]
+    else:
+        if shutil.which("bash") is None:
+            pytest.skip("no bash")
+        cmd = ["bash", "-c", _copy_block(skill, "bash").replace("<ROOT>", str(root))]
+    return subprocess.run(cmd, cwd=str(project), capture_output=True,
+                          text=True, encoding="utf-8", errors="replace", timeout=60)
 
 
 @pytest.mark.parametrize("skill", ["init", "upgrade"])
@@ -322,8 +333,9 @@ def test_install_shaped_copy_fails_actionably_without_index_js(tmp_path: Path) -
     project.mkdir()
     r = _run_copy(root, project)
     assert r.returncode != 0
-    assert "opencode/index.js" in (r.stdout + r.stderr)
-    assert "fix:" in (r.stdout + r.stderr)
+    out = (r.stdout + r.stderr).replace("\\", "/")
+    assert "opencode/index.js" in out
+    assert "fix:" in out
     assert not (project / ".opencode" / "plugins" / "slate").exists()
 
 
@@ -407,8 +419,9 @@ def test_standalone_assembly_fails_actionably_without_index_js(tmp_path: Path) -
     project.mkdir()
     r = _run_assemble("--root", str(root), "--project", str(project))
     assert r.returncode != 0
-    assert "opencode/index.js" in (r.stdout + r.stderr)
-    assert "fix:" in (r.stdout + r.stderr)
+    out = (r.stdout + r.stderr).replace("\\", "/")
+    assert "opencode/index.js" in out
+    assert "fix:" in out
     assert not (project / ".opencode" / "plugins" / "slate").exists()
 
 
