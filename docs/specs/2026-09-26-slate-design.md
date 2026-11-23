@@ -675,7 +675,8 @@ so a real install (which contains only `plugins/slate`) works. Measured with Ope
 | `tool.hook("execute.after")` gets `input.command` for the shell tool and `status: "completed"` | Runs the `--post` guard so an approved `board.py unlock` activates exactly one edit; a synthetic message tells the agent how many edits remain. |
 | `skill.transform` editors expose `add`, and a command stub says `Use the slate-init skill` | Registers all seven `SKILL.md` files as `slate-<name>` (name and id match the stubs), rewriting `${CLAUDE_PLUGIN_ROOT}` to the copied folder. |
 | Calls hooks on every tool call | The Python 3.9+ interpreter is found once at setup (`py -3` first on Windows), and the status line is cached for ~30 s instead of running `board.py next` each time. |
-| Sets `OPENCODE=1` in the agent's shell, and a non-interactive `opencode run` has no approval card | `board.py unlock` names OpenCode's "Allow once" card and the second-tmux-pane code fallback. |
+| Sets `OPENCODE=1` in the agent's shell, and a non-interactive `opencode run` has no approval card | `board.py unlock` names OpenCode's "Allow once" card and the second-tmux-pane code fallback. V2.3.2's card renders only the command, never the hook's `message`, so `unlock` prints the reason and what "Allow once" approves (exactly one direct edit); skills say the same. |
+
 
 Stand-alone installs need no other host: `scripts/assemble_opencode.py --root <release>/plugins/slate`
 writes the same folder for `--project` or `--global` (`$XDG_CONFIG_HOME/opencode` or

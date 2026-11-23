@@ -223,6 +223,9 @@ the user first and name the exact change.
   - **Bypass permissions**, **Don't-ask** or a `-p` script refuse (nobody there to approve):
     ask the user to run `python3 kanban/board.py unlock --reason "<why>"` in their own terminal
     and type the code it shows. Wait for them to say it's done.
+- In OpenCode V2 the card is labelled "Allow once" and shows only the command, not the reason
+  printed by `unlock`: approving allows exactly one direct edit of `tickets.json`, rejecting allows
+  none. With no one to answer (an unattended `opencode run`), use the terminal-code path above.
 - One unlock = one edit, expiring after the minutes given. Make exactly that edit, then
   `python3 kanban/board.py check`. If the user declines, stop. Never try to get around the
   guard any other way; `lock` cancels an unlock that is no longer needed.

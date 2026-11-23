@@ -355,7 +355,7 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   is ever truly needed, Claude asks for a one-time unlock: in Manual, Accept edits or Auto mode
   Claude Code shows its approval card and your Yes allows exactly one edit; in Plan, Bypass
   permissions or Don't-ask mode you run `python3 kanban/board.py unlock --reason "…"` in your own
-  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the approval card appears when `board.py unlock` runs in an interactive session; in a non-interactive `opencode run` there is no card, so use the terminal-code fallback in another pane.
+  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the approval card is labelled "Allow once" and shows the command only, not the reason: approving allows exactly one direct edit of `tickets.json`, rejecting allows none. In a non-interactive `opencode run` there is no card, so use the terminal-code fallback in another pane.
 - Suggest committing these files, then `/slate:plan "<an idea>"` as the next step.
 
 ## If a hand edit of tickets.json is ever needed

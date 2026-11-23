@@ -21,7 +21,8 @@ and show the change as a picture first. A hand edit of `tickets.json` is never p
 planning: if one ever seems needed, stop and use `/slate:sync` (it explains the supervised
 `unlock`: Claude Code's approval card in Manual / Accept edits / Auto mode, or the user types a
 code in their own terminal in Plan / Bypass / Don't-ask mode; Copilot CLI's card shows in every
-mode; one unlock = one edit).
+mode; OpenCode V2's "Allow once" card shows the command only, so the reason and what approving does
+(one direct edit) are printed by `unlock`; one unlock = one edit).
 
 ## Step 0: version check, board server and context
 

@@ -45,6 +45,8 @@ Board schema **3** (unchanged).
 
 - Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
   skill" resolves in OpenCode.
+- OpenCode's `unlock` output now prints the reason and explains that "Allow once" approves exactly
+  one direct edit while the card itself shows only the command; the skills say the same.
 - A chained `board.py unlock` (`echo hi && …`) is refused when the permission card is evaluated,
   with the plain-command fix, instead of looking approved and never activating.
 - OpenCode finds its Python interpreter once at setup (`py -3` first on Windows) and caches the
