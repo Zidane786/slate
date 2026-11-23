@@ -674,6 +674,7 @@ so a real install (which contains only `plugins/slate`) works. Measured with Ope
 | `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; `action` is `edit`, `read`, `shell`, … and `resources` holds paths or shell commands | Calls `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; the reason becomes `event.message`, so a refusal is actionable in the TUI. |
 | `tool.hook("execute.after")` gets `input.command` for the shell tool and `status: "completed"` | Runs the `--post` guard so an approved `board.py unlock` activates exactly one edit; a synthetic message tells the agent how many edits remain. |
 | `skill.transform` editors expose `add`, and a command stub says `Use the slate-init skill` | Registers all seven `SKILL.md` files as `slate-<name>` (name and id match the stubs), rewriting `${CLAUDE_PLUGIN_ROOT}` to the copied folder. |
+| Calls hooks on every tool call | The Python 3.9+ interpreter is found once at setup (`py -3` first on Windows), and the status line is cached for ~30 s instead of running `board.py next` each time. |
 | Sets `OPENCODE=1` in the agent's shell, and a non-interactive `opencode run` has no approval card | `board.py unlock` names OpenCode's "Allow once" card and the second-tmux-pane code fallback. |
 
 Stand-alone installs need no other host: `scripts/assemble_opencode.py --root <release>/plugins/slate`

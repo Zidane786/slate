@@ -45,6 +45,8 @@ Board schema **3** (unchanged).
 
 - Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
   skill" resolves in OpenCode.
+- OpenCode finds its Python interpreter once at setup (`py -3` first on Windows) and caches the
+  board status line for ~30 s, instead of probing and running `board.py next` on every hook call.
 - The OpenCode context line is composed into the existing system text as one part, instead of
   adding a part on every model call; title-generation calls are not touched.
 - Init/upgrade now work from a real install, where only `plugins/slate` exists: they assemble the

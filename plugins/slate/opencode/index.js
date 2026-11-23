@@ -26,22 +26,29 @@ export function composeSystemText(system, text) {
   system.push({ type: "text", text: parts.join("\n\n") })
 }
 
-function python() {
-  for (const candidate of ["python3", "python", "py"]) {
-    const probe = spawnSync(candidate, ["-c", "import sys; print(sys.version_info >= (3, 9))"],
-                            { encoding: "utf8", timeout: 5000 })
-    if (probe.status === 0 && probe.stdout.trim() === "True") return candidate
+// Find the interpreter ONCE at setup, not on every hook call. Windows uses `py -3` first.
+const PY_CANDIDATES = [["python3"], ["python"], ["py", "-3"]]
+const PY_WINDOWS = [["py", "-3"], ["python"], ["python3"]]
+
+export function detectPython(platform = process.platform, runner = spawnSync) {
+  for (const spec of platform === "win32" ? PY_WINDOWS : PY_CANDIDATES) {
+    const probe = runner(spec[0], [...spec.slice(1), "-c", "import sys; print(sys.version_info >= (3, 9))"],
+                         { encoding: "utf8", timeout: 5000 })
+    if (probe.status === 0 && String(probe.stdout || "").trim() === "True") return spec
   }
   return null
 }
 
-function guard(payload, post = false) {
-  const py = python()
+function runPython(runner, py, args, options) {
+  return runner(py[0], [...py.slice(1), ...args], options)
+}
+
+function guard(payload, post, py) {
   if (!py || !existsSync(GUARD)) return ALLOW
   const args = [GUARD, "--opencode"]
   if (post) args.push("--post")
   try {
-    const r = spawnSync(py, args, {
+    const r = runPython(spawnSync, py, args, {
       input: JSON.stringify(payload), encoding: "utf8", timeout: 10000,
       cwd: payload.cwd || process.cwd(), env: process.env,
     })
@@ -53,17 +60,23 @@ function guard(payload, post = false) {
   }
 }
 
-function statusLine(project) {
-  const py = python()
-  const script = join(project, BOARD)
-  if (!py || !existsSync(script)) return ""
-  try {
-    const r = spawnSync(py, [script, "next", "--brief", "--against", HERE], {
-      cwd: project, encoding: "utf8", timeout: 9000, env: process.env,
-    })
-    return r.status === 0 ? (r.stdout || "").trim() : ""
-  } catch (e) {
-    return ""
+// board.py next is read-only but slow; reuse the line for ~30 seconds (a session lasts minutes).
+export function makeStatusLine(runner = spawnSync, ttlMs = 30000, exists = existsSync) {
+  let cached = "", cachedAt = -Infinity
+  return (project, py, now = Date.now()) => {
+    if (cached && now - cachedAt < ttlMs) return cached
+    const script = join(project, BOARD)
+    if (!py || !exists(script)) return ""
+    try {
+      const r = runPython(runner, py, [script, "next", "--brief", "--against", HERE], {
+        cwd: project, encoding: "utf8", timeout: 9000, env: process.env,
+      })
+      cached = r.status === 0 ? (r.stdout || "").trim() : ""
+    } catch (e) {
+      cached = ""
+    }
+    cachedAt = now
+    return cached
   }
 }
 
@@ -82,10 +95,12 @@ export default {
   id: "slate",
   async setup(ctx) {
     const project = (ctx.location && ctx.location.directory) || process.cwd()
+    const py = detectPython()
+    const statusLine = makeStatusLine()
 
     // The one-line board hint that Claude Code/Copilot get from SessionStart.
     await ctx.session.hook("context", async (event) => {
-      const line = statusLine(project)
+      const line = statusLine(project, py)
       if (line) composeSystemText(event.system, `Slate board: ${line}`)
     })
 
@@ -99,7 +114,7 @@ export default {
       if (action === "shell") {
         let verdict = ALLOW
         for (const command of resources) {
-          const d = guard({ tool: "shell", cwd: project, command })
+          const d = guard({ tool: "shell", cwd: project, command }, false, py)
           if (d.action === "deny") { verdict = d; break }
           if (d.action === "ask") verdict = d
         }
@@ -111,7 +126,7 @@ export default {
       }
 
       // One call for all paths of an edit, so one unlock is consumed at most once.
-      const d = guard({ tool: "edit", cwd: project, resources })
+      const d = guard({ tool: "edit", cwd: project, resources }, false, py)
       if (d.action !== "allow") {
         event.effect = d.action
         event.message = d.reason
@@ -124,7 +139,7 @@ export default {
       const input = event.input || {}
       const command = typeof input === "string" ? input : (input.command || "")
       if (typeof command !== "string" || !UNLOCK.test(command)) return
-      const d = guard({ tool: "shell", cwd: project, command }, true)
+      const d = guard({ tool: "shell", cwd: project, command }, true, py)
       if (!d.note) return
       const sessionID = event.sessionID || input.sessionID
       if (sessionID) await ctx.session.synthetic({ sessionID, text: d.note })
