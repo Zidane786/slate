@@ -13,6 +13,15 @@ const SKILLS = join(HERE, "skills")
 const BOARD = join("kanban", "board.py")
 const UNLOCK = /board\.py\s+unlock\b/i
 const ALLOW = { action: "allow" }
+export const CHAIN_MESSAGE = ('Use: python3 kanban/board.py unlock --reason "…" --minutes 5 on its own '
+                              + "(no && or ;). OpenCode splits chained commands, so they cannot be approved.")
+
+// ShellParse splits `echo hi && board.py unlock` into several resources before evaluate, while
+// execute.after still sees the whole command and cannot activate it. Refuse it at the card.
+export function chainedUnlock(resources) {
+  return Array.isArray(resources) && resources.length > 1 &&
+    resources.some((r) => UNLOCK.test(String(r)))
+}
 
 // Compose into ONE system part: several parts break some chat templates (Plannotator #1114).
 // Read the existing text first, then replace the array in place. Title generation uses a separate
@@ -112,6 +121,11 @@ export default {
       if (!resources.length) return
 
       if (action === "shell") {
+        if (chainedUnlock(resources)) {
+          event.effect = "deny"
+          event.message = CHAIN_MESSAGE
+          return
+        }
         let verdict = ALLOW
         for (const command of resources) {
           const d = guard({ tool: "shell", cwd: project, command }, false, py)

@@ -248,7 +248,7 @@ def test_no_generated_files_are_shipped() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-@pytest.mark.parametrize("name", ["context", "perf"])
+@pytest.mark.parametrize("name", ["context", "perf", "chain"])
 def test_opencode_plugin_javascript_behaviour(name: str) -> None:
     r = subprocess.run(["node", "--test", str(REPO / "tests" / f"opencode_{name}.test.mjs")],
                        cwd=str(REPO), capture_output=True, text=True, encoding="utf-8",

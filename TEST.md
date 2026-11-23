@@ -243,6 +243,9 @@ list. In the pane, try and report:
 - [ ] Ask it to run exactly `PY kanban/board.py unlock --reason "tmux test" --minutes 5` with its
       shell tool → a **"Permission required"** card appears with **Allow once / Always allow /
       Reject**. Choose **Allow once**; the agent should then know only one edit is allowed.
+- [ ] Ask it to run `echo hi && PY kanban/board.py unlock --reason "chain test" --minutes 5`.
+      OpenCode splits the command before the card: it is denied with "on its own (no && or ;)"
+      and nothing activates. Then ask for a direct edit → still blocked.
 - [ ] Ask for one direct edit of `kanban/tickets.json` with the edit tool → allowed once, and
       `kanban/.slate-unlock.used.json` appears. Ask for a second one → blocked with the same
       `Change tickets through…` reason and the `fix:` line.
