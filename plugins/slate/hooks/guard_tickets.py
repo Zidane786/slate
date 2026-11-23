@@ -39,6 +39,12 @@ Two exceptions and one extra rule:
   (`kanban/.slate-write.lock`) can't be written directly (only board.py and this guard
   touch them).
 
+OpenCode V2 has no hooks.json and no Claude-style hook payload. With `--opencode` this guard
+reads a small JSON decision request from its JS plugin (tool, cwd, resources or command) and
+answers with `{"action": "allow"|"deny"|"ask", "reason": ...}` on stdout, always exit 0. The
+power to guard is the same; only the dialect changes. `--opencode --post` activates an approved
+unlock, exactly like PostToolUse does for the other two hosts.
+
 Standard library only.
 """
 
@@ -503,6 +509,82 @@ def main(stdin_text: str) -> int:
     return 0
 
 
+def opencode_decision(action: str, reason: str | None = None, note: str | None = None) -> int:
+    """OpenCode's JS plugin reads this decision from stdout. Always exit 0: an exception in a
+    permission hook loses its reason, and a non-zero exit would break unrelated tool calls."""
+    out: dict = {"action": action}
+    if reason is not None:
+        out["reason"] = reason
+    if note is not None:
+        out["note"] = note
+    print(json.dumps(out))
+    return 0
+
+
+def main_opencode(stdin_text: str, post: bool = False) -> int:
+    """The OpenCode dialect: JSON in, one JSON decision out, no exit-code signalling."""
+    try:
+        payload = json.loads(stdin_text)
+    except (ValueError, TypeError):
+        payload = None
+    if not isinstance(payload, dict):
+        return opencode_decision("allow")
+
+    tool = payload.get("tool")
+    cwd = payload.get("cwd")
+
+    if post:
+        if tool != "shell":
+            return opencode_decision("allow")
+        command = payload.get("command")
+        if not isinstance(command, str) or not exact_unlock_command(command):
+            return opencode_decision("allow")
+        base = cwd if isinstance(cwd, str) and cwd else os.getcwd()
+        active = activate_request(os.path.join(base, "kanban"), "default")
+        if active:
+            note = ("Slate: unlock approved. ONE direct edit of kanban/tickets.json is allowed "
+                    f"until {active['until']}; the next edit after that one is blocked again.")
+            return opencode_decision("allow", note=note)
+        return opencode_decision("allow")
+
+    if tool == "edit":
+        resources = payload.get("resources")
+        if not isinstance(resources, list):
+            return opencode_decision("allow")
+        for path in resources:
+            if not isinstance(path, str) or not path:
+                continue
+            if is_unlock_file(path, cwd):
+                return opencode_decision("deny", UNLOCK_MESSAGE)
+            if is_tickets_file(path, cwd) and not consume_unlock(
+                    os.path.dirname(resolve(path, cwd)), "OpenCode"):
+                return opencode_decision("deny", MESSAGE)
+        return opencode_decision("allow")
+
+    if tool == "shell":
+        command = payload.get("command")
+        if not isinstance(command, str):
+            return opencode_decision("allow")
+        if bash_writes(command, PROTECTED_RE, skip_board_py=False):
+            return opencode_decision("deny", UNLOCK_MESSAGE)
+        if bash_writes_tickets(command) and not any(
+                consume_unlock(d, "OpenCode shell") for d in bash_kanban_dirs(command, cwd)):
+            return opencode_decision("deny", MESSAGE + " Reading it (cat, grep, jq, git add/commit) is fine.")
+        req = unlock_request(command)
+        if req:
+            # A chained command would ask for approval but could never be activated (the post
+            # hook only accepts the exact plain command), so refuse it with the fix instead.
+            if not exact_unlock_command(command):
+                return opencode_decision("deny", UNLOCK_MESSAGE)
+            minutes, reason = req
+            text = (f"Slate: allow ONE direct edit to kanban/tickets.json (within {minutes} minutes)? "
+                    f"Reason: {reason}")
+            return opencode_decision("ask", text)
+        return opencode_decision("allow")
+
+    return opencode_decision("allow")
+
+
 if __name__ == "__main__":
     for _s in (sys.stdout, sys.stderr):  # Windows consoles/pipes default to cp1252; hooks speak UTF-8
         try:
@@ -513,4 +595,7 @@ if __name__ == "__main__":
         data = sys.stdin.buffer.read().decode("utf-8", "replace")
     except Exception:
         sys.exit(0)
-    sys.exit(main_post(data) if "--post" in sys.argv[1:] else main(data))
+    args = sys.argv[1:]
+    if "--opencode" in args:
+        sys.exit(main_opencode(data, "--post" in args))
+    sys.exit(main_post(data) if "--post" in args else main(data))

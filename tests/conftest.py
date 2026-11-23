@@ -21,9 +21,10 @@ import pytest
 # explicit arguments to invoking_python() or clear this variable.
 import os as _os
 _os.environ.setdefault("SLATE_PYTHON", "python3")
-# Hooks and board.py speak Copilot CLI's dialect when COPILOT_CLI is set. Tests run as Claude Code
-# (even when pytest itself runs inside Copilot CLI); Copilot tests set it explicitly.
+# Hooks and board.py speak Copilot CLI's or OpenCode's dialect when their env var is set. Tests
+# run as Claude Code (even when pytest itself runs inside another agent); host tests set it explicitly.
 _os.environ.pop("COPILOT_CLI", None)
+_os.environ.pop("OPENCODE", None)
 
 
 def _write_text_lf(self: Path, data: str, encoding: Optional[str] = None, errors: Optional[str] = None,
