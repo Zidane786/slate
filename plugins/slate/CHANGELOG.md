@@ -45,6 +45,8 @@ Board schema **3** (unchanged).
 
 - Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
   skill" resolves in OpenCode.
+- The OpenCode context line is composed into the existing system text as one part, instead of
+  adding a part on every model call; title-generation calls are not touched.
 - Init/upgrade now work from a real install, where only `plugins/slate` exists: they assemble the
   OpenCode folder from the installed plugin plus `plugins/slate/opencode/`, and stop with an
   actionable error if the OpenCode files are missing. Windows/PowerShell copy steps are included.

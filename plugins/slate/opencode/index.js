@@ -14,6 +14,18 @@ const BOARD = join("kanban", "board.py")
 const UNLOCK = /board\.py\s+unlock\b/i
 const ALLOW = { action: "allow" }
 
+// Compose into ONE system part: several parts break some chat templates (Plannotator #1114).
+// Read the existing text first, then replace the array in place. Title generation uses a separate
+// session.hook("title"), so the context hook never runs for it.
+export function composeSystemText(system, text) {
+  if (!Array.isArray(system) || !text) return
+  const parts = system.map((part) => (part && typeof part.text === "string" ? part.text.trim() : ""))
+    .filter(Boolean)
+  parts.push(text)
+  system.length = 0
+  system.push({ type: "text", text: parts.join("\n\n") })
+}
+
 function python() {
   for (const candidate of ["python3", "python", "py"]) {
     const probe = spawnSync(candidate, ["-c", "import sys; print(sys.version_info >= (3, 9))"],
@@ -74,7 +86,7 @@ export default {
     // The one-line board hint that Claude Code/Copilot get from SessionStart.
     await ctx.session.hook("context", async (event) => {
       const line = statusLine(project)
-      if (line) event.system.push({ type: "text", text: `Slate board: ${line}` })
+      if (line) composeSystemText(event.system, `Slate board: ${line}`)
     })
 
     // The same guard, through OpenCode's permission decisions.

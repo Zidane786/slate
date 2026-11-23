@@ -670,7 +670,7 @@ so a real install (which contains only `plugins/slate`) works. Measured with Ope
 | OpenCode V2 does | Slate does |
 |---|---|
 | Loads a default-export plugin object `{ id, setup }`; `ctx.location.directory` is the project | `index.js` finds the copied guard/skills relative to its own file. |
-| `session.hook("context")` gets an event with a `system` array | Appends the same `next --brief --against <ROOT>` line Claude/Copilot get at session start. |
+| `session.hook("context")` gets an event with a `system` array | Composes the same `next --brief --against <ROOT>` line Claude/Copilot get at session start into the existing system text as ONE part (several parts break some chat templates). Title generation uses the separate `session.hook("title")`, so it is never touched. |
 | `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; `action` is `edit`, `read`, `shell`, … and `resources` holds paths or shell commands | Calls `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; the reason becomes `event.message`, so a refusal is actionable in the TUI. |
 | `tool.hook("execute.after")` gets `input.command` for the shell tool and `status: "completed"` | Runs the `--post` guard so an approved `board.py unlock` activates exactly one edit; a synthetic message tells the agent how many edits remain. |
 | `skill.transform` editors expose `add`, and a command stub says `Use the slate-init skill` | Registers all seven `SKILL.md` files as `slate-<name>` (name and id match the stubs), rewriting `${CLAUDE_PLUGIN_ROOT}` to the copied folder. |
