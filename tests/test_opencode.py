@@ -26,7 +26,7 @@ from conftest import VERSION, Board, base_doc
 
 REPO = Path(__file__).resolve().parents[1]
 SLATE_PLUGIN = REPO / "plugins" / "slate"
-OPENCODE_PLUGIN = REPO / "plugins" / "opencode"
+OPENCODE_SRC = SLATE_PLUGIN / "opencode"
 GUARD = SLATE_PLUGIN / "hooks" / "guard_tickets.py"
 MESSAGE = "Change tickets through kanban/board.py (new, add, edit, set, rerank, usertest)."
 CWD = "/work/acme"
@@ -204,93 +204,127 @@ def test_no_copilot_env_leaks_into_the_dialect() -> None:
 
 # --------------------------------------------------------------------------- the shipped plugin folder
 
+ASSEMBLED_FILES = (
+    "index.js", "package.json", "hooks/guard_tickets.py", "reference/commands.md",
+    "CHANGELOG.md", ".claude-plugin/plugin.json", "assets/board/board.py",
+    "assets/board/index.html", "assets/board/README.md", "templates/SLATE.md",
+    "upgrades/0.5.0.md", "skills/init/SKILL.md", "skills/plan/SKILL.md",
+    "skills/work/SKILL.md", "skills/review/SKILL.md", "skills/status/SKILL.md",
+    "skills/sync/SKILL.md", "skills/upgrade/SKILL.md",
+)
+
+
+def test_opencode_files_live_inside_the_installed_plugin() -> None:
+    assert not (REPO / "plugins" / "opencode").exists()
+    assert (OPENCODE_SRC / "index.js").is_file()
+    assert (OPENCODE_SRC / "package.json").is_file()
+    assert (OPENCODE_SRC / "commands" / "slate-init.md").is_file()
+
+
 def test_opencode_plugin_has_no_runtime_dependencies() -> None:
-    assert (OPENCODE_PLUGIN / "index.js").is_file()
-    # package.json only marks the local folder as ESM so OpenCode discovers it; no npm install.
-    manifest = json.loads((OPENCODE_PLUGIN / "package.json").read_text(encoding="utf-8"))
+    manifest = json.loads((OPENCODE_SRC / "package.json").read_text(encoding="utf-8"))
     assert manifest["type"] == "module" and manifest["main"] == "index.js"
     assert "dependencies" not in manifest and "devDependencies" not in manifest
-    source = (OPENCODE_PLUGIN / "index.js").read_text(encoding="utf-8")
-    assert "require(" not in source
-    # Only Node/Bun built-ins: no npm package is installed for this plugin.
-    imports = re.findall(r'from\s+["\']([^"\']+)["\']', source)
-    assert all(name.startswith("node:") for name in imports), imports
+    for file in OPENCODE_SRC.rglob("*.js"):
+        source = file.read_text(encoding="utf-8")
+        assert "require(" not in source, file
+        imports = re.findall(r'from\s+["\']([^"\']+)["\']', source)
+        assert all(name.startswith("node:") for name in imports), (file, imports)
 
 
 def test_plugin_registers_the_hooks_it_needs() -> None:
-    source = (OPENCODE_PLUGIN / "index.js").read_text(encoding="utf-8")
+    source = (OPENCODE_SRC / "index.js").read_text(encoding="utf-8")
     for hook in ('session.hook("context"', 'permission.hook("evaluate"', 'tool.hook("execute.after"',
                  'skill.transform'):
         assert hook in source, hook
     assert "--opencode" in source
 
 
-def test_plugin_ships_the_guard_and_all_skills(tmp_path: Path) -> None:
-    assert (OPENCODE_PLUGIN / "hooks" / "guard_tickets.py").read_bytes() == GUARD.read_bytes()
-    assert (OPENCODE_PLUGIN / ".claude-plugin" / "plugin.json").is_file()
-    source_skills = sorted(p.name for p in (SLATE_PLUGIN / "skills").iterdir() if p.is_dir())
-    shipped = sorted(p.name for p in (OPENCODE_PLUGIN / "skills").iterdir() if p.is_dir())
-    assert shipped == source_skills
-    for name in source_skills:
-        src = (SLATE_PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
-        dst = (OPENCODE_PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
-        assert dst == src
-    assert (OPENCODE_PLUGIN / "reference" / "commands.md").read_bytes() == \
-        (SLATE_PLUGIN / "reference" / "commands.md").read_bytes()
-
-
-def _relative_files(root: Path) -> set:
-    return {str(p.relative_to(root)) for p in root.rglob("*")
-            if p.is_file() and "__pycache__" not in p.parts and ".ruff_cache" not in p.parts
-            and p.suffix != ".pyc"}
-
-
-def _assert_same_tree(source: Path, shipped: Path) -> None:
-    assert _relative_files(source) == _relative_files(shipped)
-    for rel in _relative_files(source):
-        assert (source / rel).read_bytes() == (shipped / rel).read_bytes(), rel
-
-
-def test_every_copied_file_matches_the_source_plugin() -> None:
-    """init/upgrade copy one folder; a stale copy would give OpenCode a different plugin."""
-    for folder in ("skills", "assets", "templates", "upgrades"):
-        _assert_same_tree(SLATE_PLUGIN / folder, OPENCODE_PLUGIN / folder)
-    for rel in ("hooks/guard_tickets.py", "reference/commands.md", "CHANGELOG.md",
-                ".claude-plugin/plugin.json"):
-        assert (SLATE_PLUGIN / rel).read_bytes() == (OPENCODE_PLUGIN / rel).read_bytes(), rel
-
-
 def test_no_generated_files_are_shipped() -> None:
-    for path in OPENCODE_PLUGIN.rglob("*"):
+    for path in OPENCODE_SRC.rglob("*"):
         assert "__pycache__" not in path.parts, path
         assert ".ruff_cache" not in path.parts, path
         assert path.suffix != ".pyc", path
 
 
-def test_init_and_upgrade_replace_the_whole_opencode_folder() -> None:
-    for name in ("init", "upgrade"):
-        text = (SLATE_PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
-        assert "rm -rf .opencode/plugins/slate" in text, name
-        assert "rm -f .opencode/commands/slate-*.md" in text, name
-
-
-def test_opencode_plugin_version_matches_the_plugin() -> None:
-    manifest = json.loads((OPENCODE_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == VERSION
-
-
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 def test_plugin_is_valid_javascript() -> None:
-    r = subprocess.run(["node", "--check", str(OPENCODE_PLUGIN / "index.js")], capture_output=True,
-                       text=True, encoding="utf-8", errors="replace", timeout=10)
-    assert r.returncode == 0, r.stderr
+    for file in OPENCODE_SRC.rglob("*.js"):
+        r = subprocess.run(["node", "--check", str(file)], capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=10)
+        assert r.returncode == 0, r.stderr
 
 
 def test_command_stubs_point_at_the_registered_skills() -> None:
-    commands = OPENCODE_PLUGIN / "commands"
+    commands = OPENCODE_SRC / "commands"
     for name in ("init", "plan", "work", "review", "status", "sync", "upgrade"):
         stub = commands / f"slate-{name}.md"
         assert stub.is_file()
         text = stub.read_text(encoding="utf-8")
         assert "description:" in text
         assert f"slate-{name}" in text
+
+
+def _copy_block(skill: str, kind: str) -> str:
+    text = (SLATE_PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+    match = re.search(rf"<!-- opencode-copy:{kind} -->\s*```(?:bash|powershell)\n(.*?)\n[ \t]*```",
+                      text, re.S)
+    assert match, (skill, kind)
+    return match.group(1)
+
+
+def _install_shaped_root(tmp_path: Path) -> Path:
+    root = tmp_path / "cache" / "slate" / "slate" / VERSION
+    shutil.copytree(SLATE_PLUGIN, root, ignore=shutil.ignore_patterns("__pycache__", ".ruff_cache"))
+    return root
+
+
+def _run_copy(root: Path, project: Path, skill: str = "init") -> subprocess.CompletedProcess:
+    script = _copy_block(skill, "bash").replace("<ROOT>", str(root))
+    return subprocess.run(["bash", "-c", script], cwd=str(project), capture_output=True,
+                          text=True, encoding="utf-8", errors="replace", timeout=30)
+
+
+@pytest.mark.parametrize("skill", ["init", "upgrade"])
+def test_install_shaped_copy_assembles_everything_index_needs(tmp_path: Path, skill: str) -> None:
+    root = _install_shaped_root(tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    r = _run_copy(root, project, skill)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+    target = project / ".opencode" / "plugins" / "slate"
+    for rel in ASSEMBLED_FILES:
+        assert (target / rel).is_file(), rel
+    assert (target / "hooks" / "guard_tickets.py").read_bytes() == GUARD.read_bytes()
+    assert json.loads((target / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"] \
+        == VERSION
+    for name in ("init", "plan", "work", "review", "status", "sync", "upgrade"):
+        assert (project / ".opencode" / "commands" / f"slate-{name}.md").is_file()
+
+
+def test_install_shaped_copy_fails_actionably_without_index_js(tmp_path: Path) -> None:
+    root = _install_shaped_root(tmp_path)
+    (root / "opencode" / "index.js").unlink()
+    project = tmp_path / "project"
+    project.mkdir()
+    r = _run_copy(root, project)
+    assert r.returncode != 0
+    assert "opencode/index.js" in (r.stdout + r.stderr)
+    assert "fix:" in (r.stdout + r.stderr)
+    assert not (project / ".opencode" / "plugins" / "slate").exists()
+
+
+def test_windows_copy_steps_are_documented() -> None:
+    for skill in ("init", "upgrade"):
+        text = (SLATE_PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+        assert "opencode-copy:powershell" in text, skill
+        block = _copy_block(skill, "powershell")
+        assert "Remove-Item" in block and "Copy-Item" in block and "Test-Path" in block
+
+
+def test_repo_docs_no_longer_promise_a_duplicated_tree() -> None:
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        assert "byte-for-byte" not in text, name
+        assert "plugins/opencode/" not in text, name

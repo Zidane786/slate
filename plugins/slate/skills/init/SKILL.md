@@ -154,23 +154,64 @@ python3 kanban/board.py check
 
 If `board.py init` refuses, show its message and stop. Never write `tickets.json` yourself.
 
-Then set up OpenCode V2 support (also in refresh mode, replacing the whole plugin folder so an
-upgrade cannot leave old files behind):
+Then set up OpenCode V2 support. A real install only contains `plugins/slate`, so build the
+plugin folder from `ROOT` (skills, guard, board assets, templates, reference, upgrades,
+CHANGELOG and `plugin.json`) plus the OpenCode-only files in `ROOT/opencode`. Use the block for
+your shell; both replace the whole folder so an upgrade cannot leave old files behind.
 
+<!-- opencode-copy:bash -->
 ```bash
-OPENCODE_SRC="<ROOT>/../opencode"          # in OpenCode, ROOT itself is the plugin folder
-[ -d "$OPENCODE_SRC" ] || OPENCODE_SRC="<ROOT>"
-rm -rf .opencode/plugins/slate
-mkdir -p .opencode/plugins/slate .opencode/commands
-cp -R "$OPENCODE_SRC/." .opencode/plugins/slate/
-rm -f .opencode/commands/slate-*.md
-cp "$OPENCODE_SRC/commands/"*.md .opencode/commands/
+SLATE_ROOT="<ROOT>"                 # installed plugin folder, e.g. ~/.claude/plugins/cache/slate/slate/0.5.0
+PROJECT="$PWD"
+if [ ! -f "$SLATE_ROOT/opencode/index.js" ]; then
+  echo "error: OpenCode files missing: $SLATE_ROOT/opencode/index.js" >&2
+  echo "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout" >&2
+  exit 1
+fi
+TARGET="$PROJECT/.opencode/plugins/slate"
+rm -rf "$TARGET"
+mkdir -p "$TARGET/.claude-plugin" "$TARGET/hooks" "$PROJECT/.opencode/commands"
+cp -R "$SLATE_ROOT/skills" "$SLATE_ROOT/assets" "$SLATE_ROOT/templates" \
+      "$SLATE_ROOT/reference" "$SLATE_ROOT/upgrades" "$TARGET/"
+cp "$SLATE_ROOT/hooks/guard_tickets.py" "$TARGET/hooks/"
+cp "$SLATE_ROOT/.claude-plugin/plugin.json" "$TARGET/.claude-plugin/"
+cp "$SLATE_ROOT/CHANGELOG.md" "$TARGET/"
+cp -R "$SLATE_ROOT/opencode/." "$TARGET/"
+rm -f "$PROJECT/.opencode/commands/slate-*.md"
+cp "$SLATE_ROOT/opencode/commands/"*.md "$PROJECT/.opencode/commands/"
+```
+
+<!-- opencode-copy:powershell -->
+```powershell
+$SlateRoot = "<ROOT>"
+$Project = (Get-Location).Path
+$Index = Join-Path (Join-Path $SlateRoot 'opencode') 'index.js'
+if (-not (Test-Path -LiteralPath $Index -PathType Leaf)) {
+  Write-Error "error: OpenCode files missing: $Index"
+  Write-Error "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout"
+  exit 1
+}
+$Target = Join-Path $Project '.opencode/plugins/slate'
+if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Recurse -Force }
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Target '.claude-plugin')
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Target 'hooks')
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Project '.opencode/commands')
+foreach ($name in @('skills', 'assets', 'templates', 'reference', 'upgrades')) {
+  Copy-Item -LiteralPath (Join-Path $SlateRoot $name) -Destination $Target -Recurse -Force
+}
+Copy-Item -LiteralPath (Join-Path $SlateRoot 'hooks/guard_tickets.py') -Destination (Join-Path $Target 'hooks') -Force
+Copy-Item -LiteralPath (Join-Path $SlateRoot '.claude-plugin/plugin.json') -Destination (Join-Path $Target '.claude-plugin') -Force
+Copy-Item -LiteralPath (Join-Path $SlateRoot 'CHANGELOG.md') -Destination $Target -Force
+Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') '.') -Destination $Target -Recurse -Force
+Get-ChildItem -LiteralPath (Join-Path $Project '.opencode/commands') -Filter 'slate-*.md' -ErrorAction SilentlyContinue | Remove-Item -Force
+Copy-Item -LiteralPath (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
 ```
 
 OpenCode discovers `.opencode/plugins/` itself, so no `plugins` entry is needed in
 `opencode.jsonc`. The copied `slate-*.md` command stubs give `/slate-init`, `/slate-plan`, and so
 on; the plugin registers the skills as `slate-init`, `slate-plan`, … with `ROOT` rewritten to the
-copied folder. Do not edit the copied files by hand — the next `/slate:upgrade` replaces them.
+copied folder. Commit `.opencode/plugins/slate/`: teammates need it to get the guard. Do not edit
+the copied files by hand — the next `/slate:upgrade` replaces them.
 
 Then apply the answers from step 3 (in refresh mode too, for anything newly agreed):
 

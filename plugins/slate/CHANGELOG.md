@@ -25,9 +25,10 @@ Board schema **3** (unchanged).
 - **OpenCode V2 support** for the whole plugin: all seven skills (`/slate-init`, `/slate-plan`,
   `/slate-work`, `/slate-review`, `/slate-status`, `/slate-sync`, `/slate-upgrade`), the session
   status line, the write guard and the one-time unlock.
-- A shipped local plugin at `plugins/opencode/` — a dependency-free `index.js` that translates
-  OpenCode's V2 hooks to the same Python guard the other hosts use. `/slate:init` copies it into
-  `.opencode/plugins/slate/` and adds `SLATE.md` to `opencode.jsonc`.
+- OpenCode-only files at `plugins/slate/opencode/` — a dependency-free `index.js`, its
+  `package.json` and seven command stubs. `/slate:init` assembles those with the installed
+  plugin's skills, guard, board assets, templates, upgrades, reference, CHANGELOG and
+  `plugin.json` into `.opencode/plugins/slate/`, and adds `SLATE.md` to `opencode.jsonc`.
 - `guard_tickets.py --opencode`: a JSON-in/JSON-out dialect for OpenCode permission decisions.
 - `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the approval card, one unlock =
   one edit, the second-pane fallback, and the board server.
@@ -42,6 +43,9 @@ Board schema **3** (unchanged).
 
 - Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
   skill" resolves in OpenCode.
+- Init/upgrade now work from a real install, where only `plugins/slate` exists: they assemble the
+  OpenCode folder from the installed plugin plus `plugins/slate/opencode/`, and stop with an
+  actionable error if the OpenCode files are missing. Windows/PowerShell copy steps are included.
 
 ### Upgrade notes
 

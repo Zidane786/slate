@@ -21,7 +21,7 @@ VS Code Copilot Chat, and any hosted board.
 
 | OpenCode V2 does | Contract |
 |---|---|
-| Discovers a local plugin from `.opencode/plugins/<name>/`; `package.json` with `"type": "module"` and `"main": "index.js"` marks it as ESM | `plugins/opencode/` is self-contained and copied verbatim into `.opencode/plugins/slate/` by init/upgrade. No npm install and no `plugins` entry in `opencode.jsonc`. |
+| Discovers a local plugin from `.opencode/plugins/<name>/`; `package.json` with `"type": "module"` and `"main": "index.js"` marks it as ESM | `plugins/slate/opencode/` holds only the JS plugin, manifest and stubs; init/upgrade assemble them with the installed plugin's shared files into `.opencode/plugins/slate/`. No npm install and no `plugins` entry in `opencode.jsonc`. |
 | Loads a default-export plugin object `{ id, setup }`; project root is `ctx.location.directory` | `index.js` resolves the guard and skills relative to its own file, and uses the project root for board commands. |
 | `session.hook("context")` receives an event with a `system` array | Append the same `next --brief --against <ROOT>` line Claude/Copilot get at session start. |
 | `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; actions are `edit`, `write`, `shell`, … | Call `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; set `event.effect` and `event.message`, so the refusal reason is visible in the TUI. |
@@ -37,9 +37,10 @@ shared by all three hosts.
 
 ## Files
 
-- **New `plugins/opencode/`:** `index.js`, dependency-free `package.json`, seven command stubs,
-  and byte-for-byte copies of the guard, skills, command reference, board assets, templates,
-  upgrades and CHANGELOG.
+- **New `plugins/slate/opencode/`:** `index.js`, dependency-free `package.json` and seven command
+  stubs. init/upgrade assemble the project plugin from these plus ROOT's skills, guard, board
+  assets, templates, reference, upgrades, CHANGELOG and `plugin.json`, with bash and PowerShell
+  copy steps and an actionable error if `index.js` is missing.
 - `hooks/guard_tickets.py`: `--opencode` decision dialect and `--opencode --post` activation.
 - `assets/board/board.py`: OpenCode wording for `unlock`; version 0.5.0.
 - `assets/board/index.html`, `templates/SLATE.md`, plugin manifest: version 0.5.0.
@@ -55,9 +56,10 @@ shared by all three hosts.
 
 `tests/test_opencode.py` pins every row of the table above: the JSON decision dialect (edit,
 shell, unlock requests, chained commands, malformed input, one-edit consumption), the shipped
-folder (no runtime dependencies, all seven skills and stubs, byte-for-byte copies of every
-copied file, no generated caches), version match, Node syntax, and the OpenCode-specific unlock
-wording. `tests/conftest.py` clears `OPENCODE` so the existing Claude/Copilot tests remain
+folder (no runtime dependencies, all seven skills and stubs, no generated caches), an
+install-shaped copy of `plugins/slate` at `cache/slate/slate/0.5.0/` that assembles every file
+`index.js` needs, the missing-`index.js` refusal, Windows copy steps, Node syntax, and the
+OpenCode-specific unlock wording. `tests/conftest.py` clears `OPENCODE` so the existing Claude/Copilot tests remain
 explicit. Docs consistency and release-notes tests cover the new command names and CHANGELOG
 section.
 

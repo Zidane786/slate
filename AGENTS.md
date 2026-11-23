@@ -34,12 +34,10 @@ plugins/slate/                        the installed Claude Code / Copilot plugin
   reference/commands.md               shared command reference all skills link
   upgrades/<version>.md               per-release "What's new" + upgrade steps
   CHANGELOG.md  README.md
-plugins/opencode/                     OpenCode V2 local plugin, copied into projects by init/upgrade
-  index.js                            V2 hooks → guard_tickets.py --opencode (Node built-ins only)
-  package.json                        marks the folder as ESM for local discovery; no dependencies
-  hooks/guard_tickets.py              byte-for-byte copy of the Slate guard (single source of truth)
-  skills/  commands/  reference/      copies of the same skills, command stubs and command reference
-  assets/  templates/  upgrades/      copies of the board assets, project template and upgrade steps
+  opencode/                           OpenCode V2 files assembled into .opencode/plugins/slate/
+    index.js                          V2 hooks → guard_tickets.py --opencode (Node built-ins only)
+    package.json                      marks the assembled folder as ESM; no dependencies
+    commands/slate-*.md               command stubs for OpenCode's /slate-* commands
 tests/                                pytest suite (+ fixtures/board-demo for the UI)
 .github/workflows/test.yml            CI: Windows/macOS/Linux × Python 3.9/3.13
 .github/workflows/release.yml         publishes vX.Y.Z releases from the CHANGELOG on merge
@@ -80,11 +78,10 @@ SLATE.md                              project context for that board (read by ev
   work for both: Copilot sends apply_patch text for edits, no `permission_mode`, `tool_result`
   (not `tool_response`), hides exit-2 stderr (refuse with JSON when `COPILOT_CLI` is set) and needs
   `{"additionalContext"}` at session start. Every hook has a `powershell` command (Windows
-  Copilot). OpenCode V2 has no `hooks.json`: `plugins/opencode/index.js` calls the same
-  `guard_tickets.py --opencode`, and init/upgrade copy that folder into the project. Keep its
-  copied files byte-for-byte in step with `plugins/slate/`. `tests/test_copilot.py` and
-  `tests/test_opencode.py` pin all of this. OpenCode V1 and VS Code Copilot Chat aren't supported
-  yet; don't add half-support.
+  Copilot). OpenCode V2 has no `hooks.json`: `opencode/index.js` calls the same
+  `guard_tickets.py --opencode`, and init/upgrade assemble the project folder from `ROOT` plus
+  `ROOT/opencode`. `tests/test_copilot.py` and `tests/test_opencode.py` pin all of this. OpenCode
+  V1 and VS Code Copilot Chat aren't supported yet; don't add half-support.
 
 ## 4. Develop and test
 
@@ -139,8 +136,6 @@ new version.
 1. Bump the version in **all** of: `plugins/slate/.claude-plugin/plugin.json`,
    `board.py` (`SLATE_VERSION`, header line), `index.html` (`slate-version` meta),
    `templates/SLATE.md` (first line), and `SCHEMA_VERSION` + `migrate` if the schema changed.
-   Then re-copy the whole `plugins/opencode/` folder from `plugins/slate/` (including its
-   `.claude-plugin/plugin.json` and CHANGELOG) so init/upgrade ship one version everywhere.
 2. Finish `CHANGELOG.md` and `upgrades/<version>.md` (What's new first, then steps). The
    CHANGELOG section for the version is `## X.Y.Z — YYYY-MM-DD` with the headings **Highlights**,
    **Added**, **Changed**, **Fixed**, **Security**, **Removed**, **Upgrade notes** (leave out

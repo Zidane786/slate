@@ -46,7 +46,8 @@ PY -m pip install --user pytest        # or: uv run --with pytest pytest -q
 PY -m pytest -q
 ```
 
-**Expected:** all tests pass (≈960; the PowerShell launcher tests run only on Windows). Report the last line (`N passed …`).
+**Expected:** all tests pass (≈960; the PowerShell launcher tests run only on Windows). Report the last line (`N passed …`). `tests/test_opencode.py` also copies `plugins/slate` to a temporary
+`cache/slate/slate/0.5.0/` install shape and runs the documented init/upgrade copy steps from there.
 
 If you have more than one Python, also run the oldest supported one (3.9) if available.
 
@@ -211,9 +212,12 @@ Cancel any unlock you didn't use: `PY kanban/board.py lock`.
 
 ## 6. OpenCode V2 live in tmux (needs OpenCode 2.x and tmux)
 
-Use the same scratch project after `/slate:init` has run with the 0.5.0 plugin (it now copies
-`.opencode/plugins/slate/`, `.opencode/commands/slate-*.md` and the `SLATE.md` instruction into
-`opencode.jsonc`). Check that `opencode --version` says 2.x — V1 is not supported.
+Use the same scratch project after `/slate:init` has run with the 0.5.0 plugin. From a real
+install it assembles `.opencode/plugins/slate/` from the installed `plugins/slate` folder plus
+`plugins/slate/opencode/`, adds `.opencode/commands/slate-*.md` and puts `SLATE.md` in
+`opencode.jsonc`; the PowerShell version is in the skill too. Check that `opencode --version`
+says 2.x — V1 is not supported. Restart OpenCode after an upgrade so a stale service cannot hide
+the new plugin.
 
 ```
 cd slate-scratch
