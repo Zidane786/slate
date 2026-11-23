@@ -126,14 +126,14 @@ def test_unlock_non_interactive_writes_only_a_request(b: Board) -> None:
     assert edit(b.root).returncode == 2  # a request never unlocks anything
 
 
-def test_opencode_unlock_output_explains_what_approving_does(b: Board, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_opencode_unlock_output_explains_the_terminal_fallback(b: Board, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENCODE", "1")
     r = b.ok("unlock", "--reason", "fix merge", "--minutes", "5")
     assert "Reason: fix merge" in r.stdout
-    assert "card shows the command only" in r.stdout
-    assert "ONE direct edit" in r.stdout
-    assert "Reject" in r.stdout
-    assert "opencode run" in r.stdout
+    assert "permission card is not used" in r.stdout
+    assert "own terminal" in r.stdout
+    assert "type the code" in r.stdout
+    assert "python3 kanban/board.py unlock" in r.stdout
     assert not (b.dir / ".slate-unlock.json").exists()
 
 

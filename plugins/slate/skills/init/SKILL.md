@@ -355,7 +355,7 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   is ever truly needed, Claude asks for a one-time unlock: in Manual, Accept edits or Auto mode
   Claude Code shows its approval card and your Yes allows exactly one edit; in Plan, Bypass
   permissions or Don't-ask mode you run `python3 kanban/board.py unlock --reason "…"` in your own
-  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the approval card is labelled "Allow once" and shows the command only, not the reason: approving allows exactly one direct edit of `tickets.json`, rejecting allows none. In a non-interactive `opencode run` there is no card, so use the terminal-code fallback in another pane.
+  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin refuses unlock commands from the agent, because a card reply cannot be told apart from an unattended `--auto` reply: you run the command in your own terminal (or a tmux pane) and type the code it shows.
 - Suggest committing these files, then `/slate:plan "<an idea>"` as the next step.
 
 ## If a hand edit of tickets.json is ever needed
@@ -366,7 +366,7 @@ If a hand edit is still needed (for example git conflict markers from a merge wi
 merge driver), explain why to the user, then run exactly
 `python3 kanban/board.py unlock --reason "<why>" --minutes 5` (no `cd … &&`, no pipes: only the
 plain command can activate an unlock). Claude Code shows its approval card in Manual, Accept edits and Auto mode; in Plan, Bypass and Don't-ask mode the guard refuses it, and the user runs `unlock` in their own terminal and types the code it shows. One unlock = one edit. If the user declines, stop.
-In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the card comes from the plugin's permission hook; interactive TUI sessions can approve it, non-interactive runs use the terminal fallback (a second tmux pane works well).
+In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin refuses the command from the agent, so ask the user to run it in their own terminal (a second tmux pane works well) and type the code it shows.
 
 ## Checklist before you finish
 

@@ -349,8 +349,10 @@ hand edit is truly needed (say, repairing a messy merge), Claude explains why an
 
 In **GitHub Copilot CLI** the card ("Hook permission request") shows in every mode, even
 Autopilot with Allow all; only a non-interactive `copilot -p` run refuses it. In **OpenCode V2**
-the card says "Allow once"; a non-interactive `opencode run` has no card, so use the terminal-code
-fallback in a second tmux pane. In all three hosts one unlock = one edit.
+there is no way to tell a human's card click from an unattended `--auto` reply, so the plugin
+refuses unlock commands from the agent: you run the command in your own terminal (a second tmux
+pane works well), type the code it shows, and the agent then makes the one edit. In all three hosts
+one unlock = one edit.
 
 One unlock = one edit, expiring after a few minutes if unused, all logged. Git operations on the
 file (checkout, restore, merge, rebase, stash) are never blocked.

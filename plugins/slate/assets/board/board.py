@@ -3965,13 +3965,11 @@ def cmd_unlock(a: argparse.Namespace) -> int:
     atomic_write(UNLOCK_REQUEST, dumps(req))
     log_unlock([log_entry("requested", reason=reason, minutes=a.minutes, id=req["id"])])
     if os.environ.get("OPENCODE"):  # OpenCode V2 sets it for the agent's shell
-        print("Unlock requested (not active yet). Approve it in OpenCode's permission card (Allow once).")
+        print("Unlock requested (not active yet). OpenCode cannot tell a human card click from an")
+        print("unattended --auto reply, so the permission card is not used to approve it.")
         print(f"Reason: {reason}")
-        print("The card shows the command only, not this reason. 'Allow once' approves exactly ONE direct edit")
-        print("of kanban/tickets.json; it does not change the file itself. 'Reject'")
-        print("approves nothing, and 'Always allow' still shows the card next time. In an unattended")
-        print("opencode run nobody can answer the card, so the user runs this in their own terminal")
-        print("(a second tmux pane works well) and types the code it shows:")
+        print("Ask the user to run this in their own terminal (a second tmux pane works well) and")
+        print("type the code it shows. That allows exactly ONE direct edit of kanban/tickets.json:")
     elif os.environ.get("COPILOT_CLI"):  # GitHub Copilot CLI sets it for the agent's shell
         print("Unlock requested (not active yet). Approve it in Copilot CLI's permission card (shown in every")
         print("mode, even Autopilot with Allow all). If no card appears, the user runs this in their own")

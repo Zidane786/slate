@@ -306,8 +306,10 @@ to close it without one. Never guess, never merge it yourself.
   - In **Plan**, **Bypass permissions** and **Don't-ask** mode the guard refuses it: ask the
     user to run `python3 kanban/board.py unlock --reason "<why>"` in their own terminal (or tmux
     pane / second SSH session) and type the 4-letter code it shows, then tell you it's done.
-  - In **OpenCode V2** the card is labelled "Allow once" and shows the command only, not the
-    reason printed by `unlock`; approving means exactly one direct edit of `tickets.json`, rejecting
-    means none. In an unattended `opencode run` use the terminal-code path in another pane.
+  - In **OpenCode V2** do **not** run `unlock` yourself: the plugin refuses every unlock command
+    from the agent, because an "Allow once" card reply cannot be told apart from `--auto`'s
+    automatic reply. Ask the user to run the exact command above in their own terminal (or a tmux
+    pane) and type the 4-letter code it shows, then tell you it's done. That allows exactly one
+    direct edit of `tickets.json`.
   - One unlock = one edit, expiring after the minutes given. If the user declines, stop. Don't
     try to get around the guard any other way; `lock` cancels an unlock no longer needed.

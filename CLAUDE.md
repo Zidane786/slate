@@ -68,8 +68,9 @@ SLATE.md                              project context for that board (read by ev
   through `migrate` (bump `SCHEMA_VERSION` only when needed).
 - **Human in the loop, always.** Skills do one ticket per request, ask before choices, never
   merge, never force-push. The unlock needs the user's approval (Claude Code's card in Manual /
-  Accept edits / Auto; Copilot CLI's card in every interactive mode; OpenCode V2's "Allow once"
-  card; typed code in a terminal otherwise); one unlock = one edit.
+  Accept edits / Auto; Copilot CLI's card in every interactive mode; in OpenCode V2 only a code
+  typed by the user in their own terminal, because a card reply cannot be told apart from an
+  unattended `--auto` reply); one unlock = one edit.
 - **Tickets are for non-technical readers** (summary, story, picture, "done when", "try it
   yourself"); technical notes stay collapsed.
 - **Product text never mentions other internal projects** (e.g. "Forge"). Slate is generic.

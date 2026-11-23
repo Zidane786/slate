@@ -29,7 +29,7 @@ Rules that hold for every command:
   commands (`serve`, `flow`, `workflow`): check `--help`, use the fallback the entry gives, and
   offer `/slate:upgrade`.
 - **Claude Code, GitHub Copilot CLI or OpenCode V2?** The skills and board commands are the same in
-  all three. Where a step differs (plugin update commands, reload, when the unlock card shows), the
+  all three. Where a step differs (plugin update commands, reload, how the unlock is approved), the
   step names the host; follow the one for the tool you are running in. If unsure: `COPILOT_CLI=1`
   means Copilot CLI, `OPENCODE=1` means OpenCode, otherwise it is Claude Code. In OpenCode the
   skills are named `slate-init`, `slate-plan`, … and the command stubs are `/slate-init`,

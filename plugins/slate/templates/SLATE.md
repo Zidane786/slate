@@ -120,9 +120,9 @@ through board.py, with the user's OK, never from the board page; regenerate `## 
   terminal (or tmux pane) and types the 4-letter code it shows. One unlock = one edit;
   if the user declines, stop. Every step is logged in `meta.unlock_log`. In GitHub Copilot CLI the
   card shows in every mode, even Autopilot with Allow all (a `copilot -p` run refuses it). In
-  OpenCode V2 the card shows as "Allow once" in an interactive session and shows the command only,
-  not the reason: approving allows exactly one direct edit of `tickets.json`, rejecting none; a
-  non-interactive run uses the terminal-code fallback in another pane (a tmux pane works well).
+  OpenCode V2 the agent cannot approve its own unlock: the plugin refuses unlock commands from the
+  agent, so the user runs the command in their own terminal (a tmux pane works well) and types the
+  4-letter code it shows.
 - Board changes without hand edits: `note ID "…"` (a history note), `unlink ID --commit SHA` /
   `--pr` (wrongly linked code), `usertest ID N reset` (a wrongly recorded result), `remove ID
   --reason "…"` / `restore ID` (archive, ask first), `edit ID1,ID2 key=value` (several at once).

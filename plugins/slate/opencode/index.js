@@ -11,16 +11,25 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const GUARD = join(HERE, "hooks", "guard_tickets.py")
 const SKILLS = join(HERE, "skills")
 const BOARD = join("kanban", "board.py")
-const UNLOCK = /board\.py\s+unlock\b/i
 const ALLOW = { action: "allow" }
-export const CHAIN_MESSAGE = ('Use: python3 kanban/board.py unlock --reason "…" --minutes 5 on its own '
-                              + "(no && or ;). OpenCode splits chained commands, so they cannot be approved.")
 
-// ShellParse splits `echo hi && board.py unlock` into several resources before evaluate, while
-// execute.after still sees the whole command and cannot activate it. Refuse it at the card.
-export function chainedUnlock(resources) {
-  return Array.isArray(resources) && resources.length > 1 &&
-    resources.some((r) => UNLOCK.test(String(r)))
+// OpenCode 2.3.2 gives no signal that tells a human "Allow once" in the TUI from the automatic
+// `decision: "once"` that `opencode run --auto` sends. A card reply therefore cannot be trusted
+// as the human approval Slate requires. The only activation left is the typed-code path: the
+// user runs the command in their own terminal, where board.py prints a code they type back.
+// This refusal is also an actionable fix for the agent to relay to the user.
+export const UNLOCK_FALLBACK = ('Slate: OpenCode cannot tell a human card approval from an unattended '
+                                + "--auto reply, so an unlock cannot be approved here. Ask the user to run "
+                                + 'this in their own terminal (a second tmux pane works well) and type the code '
+                                + 'it shows: python3 kanban/board.py unlock --reason "…" --minutes 5. Then '
+                                + "make exactly ONE direct edit of kanban/tickets.json.")
+
+// The guard's "ask" means "a human must approve this". In OpenCode nobody can be proven human,
+// so refuse instead of showing a card that --auto could answer for us. Other decisions pass through.
+export function unlockDecision(decision) {
+  if (!decision || typeof decision.action !== "string") return ALLOW
+  if (decision.action === "ask") return { action: "deny", reason: UNLOCK_FALLBACK }
+  return decision
 }
 
 // Compose into ONE system part: several parts break some chat templates (Plannotator #1114).
@@ -52,12 +61,10 @@ function runPython(runner, py, args, options) {
   return runner(py[0], [...py.slice(1), ...args], options)
 }
 
-function guard(payload, post, py) {
+function guard(payload, py) {
   if (!py || !existsSync(GUARD)) return ALLOW
-  const args = [GUARD, "--opencode"]
-  if (post) args.push("--post")
   try {
-    const r = runPython(spawnSync, py, args, {
+    const r = runPython(spawnSync, py, [GUARD, "--opencode"], {
       input: JSON.stringify(payload), encoding: "utf8", timeout: 10000,
       cwd: payload.cwd || process.cwd(), env: process.env,
     })
@@ -121,44 +128,29 @@ export default {
       if (!resources.length) return
 
       if (action === "shell") {
-        if (chainedUnlock(resources)) {
-          event.effect = "deny"
-          event.message = CHAIN_MESSAGE
-          return
-        }
         let verdict = ALLOW
         for (const command of resources) {
-          const d = guard({ tool: "shell", cwd: project, command }, false, py)
+          const d = guard({ tool: "shell", cwd: project, command }, py)
           if (d.action === "deny") { verdict = d; break }
           if (d.action === "ask") verdict = d
         }
-        if (verdict.action !== "allow") {
-          event.effect = verdict.action
-          event.message = verdict.reason
+        const decision = unlockDecision(verdict)
+        if (decision.action !== "allow") {
+          event.effect = decision.action
+          event.message = decision.reason
         }
         return
       }
 
       // One call for all paths of an edit, so one unlock is consumed at most once.
-      const d = guard({ tool: "edit", cwd: project, resources }, false, py)
-      if (d.action !== "allow") {
-        event.effect = d.action
-        event.message = d.reason
+      const decision = unlockDecision(guard({ tool: "edit", cwd: project, resources }, py))
+      if (decision.action !== "allow") {
+        event.effect = decision.action
+        event.message = decision.reason
       }
     })
-
-    // The approval card said yes: turn the request into a one-edit unlock.
-    await ctx.tool.hook("execute.after", async (event) => {
-      if (event.status !== "completed") return
-      const input = event.input || {}
-      const command = typeof input === "string" ? input : (input.command || "")
-      if (typeof command !== "string" || !UNLOCK.test(command)) return
-      const d = guard({ tool: "shell", cwd: project, command }, true, py)
-      if (!d.note) return
-      const sessionID = event.sessionID || input.sessionID
-      if (sessionID) await ctx.session.synthetic({ sessionID, text: d.note })
-      else console.log(d.note)
-    })
+    // Deliberately no execute.after activation: an agent-run command must never be able to turn
+    // a request into an unlock. Only board.py's interactive typed-code path can do that.
 
     // Register Slate's SKILL.md files verbatim, with ROOT pointed at this plugin folder.
     // IDs are slate-* so they cannot collide with a project's own skills.

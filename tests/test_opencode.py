@@ -168,7 +168,7 @@ def test_unlock_request_names_opencode_instead_of_the_other_hosts(tmp_path: Path
                        capture_output=True, text=True, encoding="utf-8", errors="replace",
                        cwd=str(tmp_path), env={**os.environ, "OPENCODE": "1", "COPILOT_CLI": ""}, timeout=60)
     assert r.returncode == 0, r.stderr
-    assert "Approve it in OpenCode's permission card" in r.stdout
+    assert "permission card is not used" in r.stdout
     assert "Claude Code" not in r.stdout and "Copilot CLI" not in r.stdout
     assert "second tmux pane" in r.stdout
 
@@ -234,10 +234,13 @@ def test_opencode_plugin_has_no_runtime_dependencies() -> None:
 
 def test_plugin_registers_the_hooks_it_needs() -> None:
     source = (OPENCODE_SRC / "index.js").read_text(encoding="utf-8")
-    for hook in ('session.hook("context"', 'permission.hook("evaluate"', 'tool.hook("execute.after"',
-                 'skill.transform'):
+    for hook in ('session.hook("context"', 'permission.hook("evaluate"', 'skill.transform'):
         assert hook in source, hook
     assert "--opencode" in source
+    # There is no trustworthy human-reply signal in OpenCode, so no post-tool hook may activate an
+    # unlock. The typed-code path in the user's own terminal is the only activation.
+    assert 'tool.hook("execute.after"' not in source
+    assert "--post" not in source
 
 
 def test_no_generated_files_are_shipped() -> None:
@@ -248,7 +251,7 @@ def test_no_generated_files_are_shipped() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-@pytest.mark.parametrize("name", ["context", "perf", "chain"])
+@pytest.mark.parametrize("name", ["context", "perf", "permission"])
 def test_opencode_plugin_javascript_behaviour(name: str) -> None:
     r = subprocess.run(["node", "--test", str(REPO / "tests" / f"opencode_{name}.test.mjs")],
                        cwd=str(REPO), capture_output=True, text=True, encoding="utf-8",

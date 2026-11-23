@@ -114,7 +114,8 @@ Restart OpenCode, then run `/slate-init` in your project (or `/slate-init` insid
 copies a local plugin into `.opencode/plugins/slate/` and command stubs into `.opencode/commands/`;
 commit that folder so teammates get the guard. Use `/slate-upgrade` to refresh it, then restart
 OpenCode again — a stale background service hides plugin changes. Commands have no colon
-(`/slate-plan`, `/slate-work`, …), the status line shows the next ticket, and the unlock card says
-"Allow once". OpenCode V1 is not supported yet.
+(`/slate-plan`, `/slate-work`, …) and the status line shows the next ticket. The agent cannot
+approve its own unlock here: run `board.py unlock` in your own terminal and type the code it shows.
+OpenCode V1 is not supported yet.
 
 Full docs, design and source: https://github.com/Zidane786/slate · Changes: [CHANGELOG.md](CHANGELOG.md)

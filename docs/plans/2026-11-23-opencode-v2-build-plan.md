@@ -24,11 +24,11 @@ VS Code Copilot Chat, and any hosted board.
 | Discovers a local plugin from `.opencode/plugins/<name>/`; `package.json` with `"type": "module"` and `"main": "index.js"` marks it as ESM | `plugins/slate/opencode/` holds only the JS plugin, manifest and stubs; init/upgrade assemble them with the installed plugin's shared files into `.opencode/plugins/slate/`. No npm install and no `plugins` entry in `opencode.jsonc`. |
 | Loads a default-export plugin object `{ id, setup }`; project root is `ctx.location.directory` | `index.js` resolves the guard and skills relative to its own file, and uses the project root for board commands. |
 | `session.hook("context")` receives an event with a `system` array | Compose the same `next --brief --against <ROOT>` line into ONE system text part; title calls use the separate `session.hook("title")` and are not touched. |
-| `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; actions are `edit`, `write`, `shell`, … | Call `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; set `event.effect` and `event.message`, so the refusal reason is visible in the TUI. Refuse a chained unlock at `evaluate` when several resources contain it. |
-| `tool.hook("execute.after")` gets `input.command` for shell tools | Run `--post` so an approved `board.py unlock` creates exactly one edit unlock; send the note via `ctx.session.synthetic` when a session ID is available. |
+| `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; actions are `edit`, `write`, `shell`, … | Call `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; set `event.effect` and `event.message`, so the refusal reason is visible in the TUI. Convert every `ask` into a `deny` with the typed-code fallback: a card reply cannot be proven human. Chained `&&` commands arrive as several resources and are refused the same way. |
+| `tool.hook("execute.after")` exists but cannot tie a reply to a human | Do not register it: `opencode run --auto` auto-replies `once` to every card. Only `board.py`'s interactive typed-code path, run by the user in their own terminal, may create an unlock. |
 | `skill.transform` editors expose `add`, and command stubs say “Use the slate-init skill” | Register all seven `SKILL.md` files as `slate-<name>` so names match the `/slate-*` stubs; rewrite `${CLAUDE_PLUGIN_ROOT}` to the copied folder. |
 | Calls hooks on every tool call | Probe the interpreter once at setup (`py -3` first on Windows) and cache `board.py next` for ~30 s. |
-| Sets `OPENCODE=1` in the agent shell; a non-interactive `opencode run` has no approval card | `board.py unlock` names OpenCode’s “Allow once” card and the second-pane typed-code fallback. |
+| Sets `OPENCODE=1` in the agent shell; `opencode run --auto` auto-replies `once` to cards | `board.py unlock` says the card is not used and prints the reason and the command for the user's own terminal; skills tell the agent to ask the user instead of running `unlock`. |
 | A stale background service can hide plugin changes; `opencode run` has no card | Hands-on tests use `opencode --standalone` in tmux; users restart OpenCode (or its background service) after init/upgrade; the guard fails open if the JS/Python bridge breaks, so unrelated tools keep working. |
 | OpenCode-only users have no Claude Code or Copilot install to run init from | `scripts/assemble_opencode.py --root <release>/plugins/slate` (`--project` or `--global`) builds the same folder from a download/clone; tested with OpenCode 2.3.2. |
 
@@ -43,7 +43,8 @@ shared by all three hosts.
   stubs. init/upgrade assemble the project plugin from these plus ROOT's skills, guard, board
   assets, templates, reference, upgrades, CHANGELOG and `plugin.json`, with bash and PowerShell
   copy steps and an actionable error if `index.js` is missing.
-- `hooks/guard_tickets.py`: `--opencode` decision dialect and `--opencode --post` activation.
+- `hooks/guard_tickets.py`: `--opencode` decision dialect (`--opencode --post` remains in the
+  shared guard for other callers; the OpenCode plugin never uses it).
 - `assets/board/board.py`: OpenCode wording for `unlock`; version 0.5.0.
 - `assets/board/index.html`, `templates/SLATE.md`, plugin manifest: version 0.5.0.
 - Skills: init/upgrade copy or refresh the whole OpenCode folder, add command stubs and add
@@ -71,7 +72,8 @@ section.
 - `claude plugin validate --strict .` and `claude plugin validate --strict plugins/slate`: passed.
 - Live in OpenCode 2.3.2 in tmux (`--standalone`): plugin discovered, context line reached the
   model, `/slate-status` registered, a direct edit of `tickets.json` was denied with the
-  `fix:` reason, and **Allow once** activated one edit followed by a block on the second.
+  `fix:` reason, an agent-run `unlock` (plain and chained) was refused, and only the code typed in
+  a second pane activated one edit followed by a block on the second.
 - Live in the user’s project: `opencode plugin list` reports `slate  local` at
   `.opencode/plugins/slate`, the session ID resolves in that project, and the guard denial is
   visible in the TUI.

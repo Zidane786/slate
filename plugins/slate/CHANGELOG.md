@@ -17,7 +17,8 @@ Board schema **3** (unchanged).
   in OpenCode 2.x alongside Claude Code and GitHub Copilot CLI. `/slate:init` copies a local plugin
   into the project, so there is no npm package and nothing to install globally.
 - **The guard holds in OpenCode too.** Direct edits to `kanban/tickets.json` are denied with the
-  actionable `fix:` message; `board.py unlock` shows OpenCode's permission card, and one approval
+  actionable `fix:` message. OpenCode cannot tell a human card click from `--auto`'s automatic
+  reply, so unlocks are approved only by a code the user types in their own terminal; one unlock
   allows exactly one edit.
 
 ### Added
@@ -32,23 +33,21 @@ Board schema **3** (unchanged).
 - `scripts/assemble_opencode.py`: a stand-alone OpenCode install from a release download/clone, with
   `--project` and `--global` paths; no Claude Code, Copilot or npm install is needed.
 - `guard_tickets.py --opencode`: a JSON-in/JSON-out dialect for OpenCode permission decisions.
-- `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the approval card, one unlock =
-  one edit, the second-pane fallback, and the board server.
+- `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the refusal of agent-run
+  unlocks, one unlock = one edit through the second-pane typed code, and the board server.
 
 ### Changed
 
-- `board.py unlock` now names OpenCode's permission card (and the second-tmux-pane fallback) when
-  it runs inside OpenCode; Claude Code and Copilot CLI messages are unchanged.
+- `board.py unlock` now explains the typed-code path in the user's own terminal when it runs inside
+  OpenCode; Claude Code and Copilot CLI messages are unchanged.
 - `CLAUDE.md` / `AGENTS.md` now describe the three hosts and the new plugin folder.
 
 ### Fixed
 
 - Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
   skill" resolves in OpenCode.
-- OpenCode's `unlock` output now prints the reason and explains that "Allow once" approves exactly
-  one direct edit while the card itself shows only the command; the skills say the same.
-- A chained `board.py unlock` (`echo hi && …`) is refused when the permission card is evaluated,
-  with the plain-command fix, instead of looking approved and never activating.
+- OpenCode's `unlock` output now prints the reason and says plainly that the permission card is not
+  used; the skills and the project template tell the agent to ask the user, not run `unlock` itself.
 - OpenCode finds its Python interpreter once at setup (`py -3` first on Windows) and caches the
   board status line for ~30 s, instead of probing and running `board.py next` on every hook call.
 - The OpenCode context line is composed into the existing system text as one part, instead of
@@ -56,6 +55,13 @@ Board schema **3** (unchanged).
 - Init/upgrade now work from a real install, where only `plugins/slate` exists: they assemble the
   OpenCode folder from the installed plugin plus `plugins/slate/opencode/`, and stop with an
   actionable error if the OpenCode files are missing. Windows/PowerShell copy steps are included.
+
+### Security
+
+- An agent in OpenCode could previously approve its own unlock: `opencode run --auto` replies
+  `once` to every permission card, and the post-tool hook activated the unlock. The plugin now
+  refuses every unlock command from the agent (plain, chained or split by OpenCode) and registers
+  no activation hook, so only the code typed by a person in their own terminal can unlock a board.
 
 ### Upgrade notes
 
