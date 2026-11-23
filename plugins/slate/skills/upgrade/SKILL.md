@@ -68,9 +68,9 @@ edit is still needed, explain why, then run exactly
 Manual, Accept edits and Auto mode Claude Code shows its approval card and the user's Yes
 activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses it, and the user
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
-one edit. If the user declines, stop. In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
+one edit. If the user declines, stop. In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin asks on its permission card; a non-interactive run uses the terminal-code fallback.
 
-## Step 2b: team settings (always)
+## Step 2b: team settings and OpenCode plugin (always)
 
 Run `python3 kanban/board.py doctor --json`. If it reports `team-settings-missing`, add Slate to
 the **project's** `.claude/settings.json` (in the repo — never the user's `~/.claude/settings.json`)
@@ -80,6 +80,21 @@ exactly as `/slate:init` does (read
 and tell the user what you added. If doctor's notes include `team-settings-ignored`, don't touch
 `.gitignore`; just tell the user people who clone the repo won't get Slate automatically until
 `.claude/settings.json` is committed.
+
+- [ ] **OpenCode files:** refresh the whole plugin folder from the installed plugin (the same
+      copy `/slate:init` does), so skills, guard and board assets match this version:
+      ```bash
+      OPENCODE_SRC="<ROOT>/../opencode"    # in OpenCode, ROOT itself is the plugin folder
+      [ -d "$OPENCODE_SRC" ] || OPENCODE_SRC="<ROOT>"
+      rm -rf .opencode/plugins/slate
+      mkdir -p .opencode/plugins/slate .opencode/commands
+      cp -R "$OPENCODE_SRC/." .opencode/plugins/slate/
+      rm -f .opencode/commands/slate-*.md
+      cp "$OPENCODE_SRC/commands/"*.md .opencode/commands/
+      ```
+      If `opencode.jsonc` exists, keep its keys and make sure `instructions` contains
+      `"SLATE.md"`; if it is missing, create it with the `$schema` and that one instruction.
+      No `plugins` entry is needed: OpenCode loads `.opencode/plugins/` automatically.
 
 ## Step 3: run each version's upgrade steps
 

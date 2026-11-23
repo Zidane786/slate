@@ -28,10 +28,12 @@ Rules that hold for every command:
   in `board.py --help` yet. A project whose board is older than the plugin may lack newer
   commands (`serve`, `flow`, `workflow`): check `--help`, use the fallback the entry gives, and
   offer `/slate:upgrade`.
-- **Claude Code or GitHub Copilot CLI?** The skills are the same in both. Where a step differs
-  (plugin update commands, `/reload-plugins` vs `/restart`, when the unlock card shows), the step
-  names both; follow the one for the tool you are running in. If unsure, `COPILOT_CLI=1` in the
-  shell's environment means Copilot CLI; otherwise it is Claude Code.
+- **Claude Code, GitHub Copilot CLI or OpenCode V2?** The skills and board commands are the same in
+  all three. Where a step differs (plugin update commands, reload, when the unlock card shows), the
+  step names the host; follow the one for the tool you are running in. If unsure: `COPILOT_CLI=1`
+  means Copilot CLI, `OPENCODE=1` means OpenCode, otherwise it is Claude Code. In OpenCode the
+  skills are named `slate-init`, `slate-plan`, … and the command stubs are `/slate-init`,
+  `/slate-plan`, … (no colon); the rest of this reference still applies unchanged.
 
 ## Read (never changes anything)
 
