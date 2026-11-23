@@ -20,7 +20,7 @@ In OpenCode the plugin registers this skill and rewrites the placeholder to its 
 (`.opencode/plugins/slate/`), where init also puts the board assets, templates, upgrades, CHANGELOG
 and a copy of `plugin.json`, so `ROOT` means the same thing in every host.
 Assets are in `ROOT/assets/board/`, templates in `ROOT/templates/`, the plugin version in
-`ROOT/.claude-plugin/plugin.json` (`version`). The OpenCode-only files live in `<ROOT>/../opencode/`.
+`ROOT/.claude-plugin/plugin.json` (`version`). The OpenCode-only files live in `<ROOT>/opencode/`.
 
 ## Step 0: what state is this repo in?
 
@@ -177,7 +177,7 @@ cp "$SLATE_ROOT/hooks/guard_tickets.py" "$TARGET/hooks/"
 cp "$SLATE_ROOT/.claude-plugin/plugin.json" "$TARGET/.claude-plugin/"
 cp "$SLATE_ROOT/CHANGELOG.md" "$TARGET/"
 cp -R "$SLATE_ROOT/opencode/." "$TARGET/"
-rm -f "$PROJECT/.opencode/commands/slate-*.md"
+rm -f "$PROJECT"/.opencode/commands/slate-*.md
 cp "$SLATE_ROOT/opencode/commands/"*.md "$PROJECT/.opencode/commands/"
 ```
 

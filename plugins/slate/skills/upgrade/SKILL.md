@@ -102,7 +102,7 @@ and tell the user what you added. If doctor's notes include `team-settings-ignor
       cp "$SLATE_ROOT/.claude-plugin/plugin.json" "$TARGET/.claude-plugin/"
       cp "$SLATE_ROOT/CHANGELOG.md" "$TARGET/"
       cp -R "$SLATE_ROOT/opencode/." "$TARGET/"
-      rm -f "$PROJECT/.opencode/commands/slate-*.md"
+      rm -f "$PROJECT"/.opencode/commands/slate-*.md
       cp "$SLATE_ROOT/opencode/commands/"*.md "$PROJECT/.opencode/commands/"
       ```
 
