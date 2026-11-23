@@ -4,7 +4,8 @@
 > This is the project's living context for Slate. Every Slate command reads it first, and
 > `/slate:plan` and `/slate:work` add to it as they learn. CLAUDE.md, AGENTS.md and the docs
 > are still read for anything not written here. Edit it freely; keep it short and true.
-> In OpenCode V2 the same commands are `/slate-init`, `/slate-plan`, … (no colon).
+> In OpenCode V2 the same commands are `/slate-init`, `/slate-plan`, … (no colon). After an upgrade
+> restart OpenCode (or its background service): a stale service hides plugin changes.
 
 ## What this project is
 {{PROJECT_CONTEXT}}

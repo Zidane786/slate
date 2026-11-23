@@ -33,7 +33,8 @@ Rules that hold for every command:
   step names the host; follow the one for the tool you are running in. If unsure: `COPILOT_CLI=1`
   means Copilot CLI, `OPENCODE=1` means OpenCode, otherwise it is Claude Code. In OpenCode the
   skills are named `slate-init`, `slate-plan`, … and the command stubs are `/slate-init`,
-  `/slate-plan`, … (no colon); the rest of this reference still applies unchanged.
+  `/slate-plan`, … (no colon); the rest of this reference still applies unchanged. After an
+  upgrade restart OpenCode (or its background service): a stale service hides plugin changes.
 
 ## Read (never changes anything)
 

@@ -29,6 +29,8 @@ Board schema **3** (unchanged).
   `package.json` and seven command stubs. `/slate:init` assembles those with the installed
   plugin's skills, guard, board assets, templates, upgrades, reference, CHANGELOG and
   `plugin.json` into `.opencode/plugins/slate/`, and adds `SLATE.md` to `opencode.jsonc`.
+- `scripts/assemble_opencode.py`: a stand-alone OpenCode install from a release download/clone, with
+  `--project` and `--global` paths; no Claude Code, Copilot or npm install is needed.
 - `guard_tickets.py --opencode`: a JSON-in/JSON-out dialect for OpenCode permission decisions.
 - `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the approval card, one unlock =
   one edit, the second-pane fallback, and the board server.

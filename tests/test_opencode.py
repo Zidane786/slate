@@ -328,3 +328,82 @@ def test_repo_docs_no_longer_promise_a_duplicated_tree() -> None:
         text = (REPO / name).read_text(encoding="utf-8")
         assert "byte-for-byte" not in text, name
         assert "plugins/opencode/" not in text, name
+
+
+def test_readme_has_an_opencode_only_install_path() -> None:
+    root = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "`/slate:init` (or `/slate-init` inside OpenCode)" in root
+    assert "no Claude Code" in root and "no Copilot" in root and "no npm" in root
+    assert "~/.config/opencode/plugins/slate/" in root
+    assert "$XDG_CONFIG_HOME/opencode/plugins/slate/" in root
+    assert "~/.config/opencode/commands/" in root
+    assert "Commit" in root and ".opencode/plugins/slate/" in root
+    assert "restart OpenCode" in root
+
+
+ASSEMBLE = REPO / "scripts" / "assemble_opencode.py"
+
+
+def _run_assemble(*args: str, **kwargs: Any) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(ASSEMBLE), *args], capture_output=True,
+                          text=True, encoding="utf-8", errors="replace", timeout=30, **kwargs)
+
+
+def test_standalone_assembly_builds_a_project_plugin(tmp_path: Path) -> None:
+    root = _install_shaped_root(tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    r = _run_assemble("--root", str(root), "--project", str(project))
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = project / ".opencode" / "plugins" / "slate"
+    for rel in ASSEMBLED_FILES:
+        assert (target / rel).is_file(), rel
+    for name in ("init", "plan", "work", "review", "status", "sync", "upgrade"):
+        assert (project / ".opencode" / "commands" / f"slate-{name}.md").is_file()
+    assert "restart opencode" in r.stdout.lower()
+
+
+def test_standalone_assembly_supports_the_global_path(tmp_path: Path) -> None:
+    root = _install_shaped_root(tmp_path)
+    xdg = tmp_path / "xdg"
+    env = {**os.environ, "XDG_CONFIG_HOME": str(xdg)}
+    r = _run_assemble("--root", str(root), "--global", env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    base = xdg / "opencode"
+    assert (base / "plugins" / "slate" / "index.js").is_file()
+    assert (base / "commands" / "slate-init.md").is_file()
+    assert str(base / "plugins" / "slate") in r.stdout
+
+
+def test_standalone_assembly_replaces_stale_files(tmp_path: Path) -> None:
+    root = _install_shaped_root(tmp_path)
+    (root / "opencode" / "index.js").write_text("// changed\n", encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    target = project / ".opencode" / "plugins" / "slate"
+    target.mkdir(parents=True)
+    (target / "stale.js").write_text("old", encoding="utf-8")
+    assert _run_assemble("--root", str(root), "--project", str(project)).returncode == 0
+    assert not (target / "stale.js").exists()
+    assert (target / "index.js").read_text(encoding="utf-8") == "// changed\n"
+
+
+def test_standalone_assembly_fails_actionably_without_index_js(tmp_path: Path) -> None:
+    root = _install_shaped_root(tmp_path)
+    (root / "opencode" / "index.js").unlink()
+    project = tmp_path / "project"
+    project.mkdir()
+    r = _run_assemble("--root", str(root), "--project", str(project))
+    assert r.returncode != 0
+    assert "opencode/index.js" in (r.stdout + r.stderr)
+    assert "fix:" in (r.stdout + r.stderr)
+    assert not (project / ".opencode" / "plugins" / "slate").exists()
+
+
+def test_all_opencode_docs_mention_the_restart_after_upgrade() -> None:
+    for rel in ("plugins/slate/README.md", "plugins/slate/assets/board/README.md",
+                "plugins/slate/reference/commands.md", "plugins/slate/templates/SLATE.md",
+                "docs/specs/2026-09-26-slate-design.md",
+                "docs/plans/2026-11-23-opencode-v2-build-plan.md"):
+        text = (REPO / rel).read_text(encoding="utf-8")
+        assert "restart OpenCode" in text.lower() or "restart opencode" in text.lower(), rel

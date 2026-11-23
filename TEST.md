@@ -229,6 +229,11 @@ list. In the pane, try and report:
 
 - [ ] `opencode plugin list` in another terminal from the same folder shows `slate` as a local
       plugin; the TUI starts and shows `Build · … · OpenCode` in the status bar.
+- [ ] **Global / OpenCode-only install:** from a release download with no Claude Code or Copilot
+      installed, `PY scripts/assemble_opencode.py --root <download>/plugins/slate --global` writes
+      `~/.config/opencode/plugins/slate/index.js` (or `$XDG_CONFIG_HOME/opencode/...`) and
+      `~/.config/opencode/commands/slate-init.md`. Restart OpenCode, then `opencode run --standalone
+      "Reply with OK."` in a project with no local plugin still loads Slate, and `/slate-init` works.
 - [ ] Ask "what does the Slate board line say?" (no tools) → it quotes the
       `Slate 0.5.0: …` line from the context hook.
 - [ ] `/slate-status` is listed (OpenCode commands have no colon) and gives a read-only report

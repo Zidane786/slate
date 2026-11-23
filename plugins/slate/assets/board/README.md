@@ -3,7 +3,9 @@
 The project's kanban and build-order board. One file, no build step, no dependencies:
 `index.html` is plain HTML, CSS and JavaScript and reads `tickets.json` from the same folder.
 It was put here by `/slate:init` and is kept current by `/slate:upgrade`. Don't edit
-`index.html`, `board.py` or this README by hand: `/slate:upgrade` replaces them.
+`index.html`, `board.py` or this README by hand: `/slate:upgrade` replaces them. In OpenCode V2
+`/slate-init` / `/slate-upgrade` (no colon) do the same; after an upgrade restart OpenCode (or its
+background service), because a stale service hides plugin changes.
 
 ## Open it
 

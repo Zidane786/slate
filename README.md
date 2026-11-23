@@ -52,14 +52,27 @@ commands). Update with `copilot plugin marketplace update slate` and
 `copilot plugin update slate@slate`, then `/restart`. Windows needs Python (`py -3`, `python` or
 `python3`); the hooks run through PowerShell there.
 
-### OpenCode V2
+### OpenCode V2 (no Claude Code or Copilot needed)
 
-OpenCode 2.x needs no marketplace or npm package. Install the Slate plugin through Claude Code or
-Copilot CLI as above, then run `/slate-init` (or `/slate-init` inside OpenCode) in your project.
-Slate copies a small local plugin into `.opencode/plugins/slate/`, adds command stubs in
-`.opencode/commands/` and adds `SLATE.md` to `opencode.jsonc`. Update with `/slate:upgrade` (or
-`/slate-upgrade`). The commands are `/slate-init`, `/slate-plan`, `/slate-work`, … — OpenCode uses
-no colon. V1 is not supported yet; a team can share one board across all three hosts.
+OpenCode 2.x needs no marketplace, no Claude Code, no Copilot and no npm package. Clone or download
+a Slate release, then assemble the local plugin once from its `plugins/slate` folder:
+
+```
+python3 scripts/assemble_opencode.py --root <download>/plugins/slate --global
+```
+
+This writes the plugin to `~/.config/opencode/plugins/slate/` (or
+`$XDG_CONFIG_HOME/opencode/plugins/slate/` when that variable is set) and the `/slate-*` command
+stubs to `~/.config/opencode/commands/`. It is verified with OpenCode 2.3.2. Restart OpenCode (or
+its background service) so it loads the plugin, then run
+`/slate:init` (or `/slate-init` inside OpenCode) in your project. Slate will write a project-local `.opencode/plugins/slate/` and
+`.opencode/commands/slate-*.md` and add `SLATE.md` to `opencode.jsonc`. To skip the global step,
+run the same script with `--project <your-project>` instead of `--global`, then restart OpenCode.
+
+**Commit `.opencode/plugins/slate/`** in each project: teammates need it to get the guard. Update
+with `/slate:upgrade` (or `/slate-upgrade`), then restart OpenCode — a stale background service
+hides plugin changes. The commands are `/slate-init`, `/slate-plan`, `/slate-work`, … — OpenCode
+uses no colon. V1 is not supported yet; a team can share one board across all three hosts.
 
 ## Update to a new version
 

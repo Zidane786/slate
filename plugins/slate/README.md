@@ -106,11 +106,15 @@ Linux and Windows (`python3`, `python` or `py -3`).
 The commands are the same (`/slate:plan`, `/slate:work`, …); the unlock card shows in every mode,
 even Autopilot with Allow all.
 
-**OpenCode V2:** install Slate with one of the commands above, then run `/slate-init` in your project
-(or the same command inside OpenCode). It copies a local plugin into `.opencode/plugins/slate/` and
-command stubs into `.opencode/commands/`; no npm install or global config is needed. Use
-`/slate-upgrade` to refresh them. Commands have no colon (`/slate-plan`, `/slate-work`, …), the
-status line shows the next ticket, and the unlock card says "Allow once". OpenCode V1 is not
-supported yet.
+**OpenCode V2:** no Claude Code, Copilot or npm is needed. Clone or download a Slate release and
+run `python3 scripts/assemble_opencode.py --root <download>/plugins/slate --global` once (or
+`--project <dir>` for one project). It writes the plugin to `~/.config/opencode/plugins/slate/`
+(or `$XDG_CONFIG_HOME/opencode/plugins/slate/`) and the stubs to `~/.config/opencode/commands/`.
+Restart OpenCode, then run `/slate-init` in your project (or `/slate-init` inside OpenCode). It
+copies a local plugin into `.opencode/plugins/slate/` and command stubs into `.opencode/commands/`;
+commit that folder so teammates get the guard. Use `/slate-upgrade` to refresh it, then restart
+OpenCode again — a stale background service hides plugin changes. Commands have no colon
+(`/slate-plan`, `/slate-work`, …), the status line shows the next ticket, and the unlock card says
+"Allow once". OpenCode V1 is not supported yet.
 
 Full docs, design and source: https://github.com/Zidane786/slate · Changes: [CHANGELOG.md](CHANGELOG.md)
