@@ -48,6 +48,10 @@ copilot plugin install slate@slate
 
 then restart Copilot and run `/slate:init`. To update there: `copilot plugin marketplace update
 slate`, `copilot plugin update slate@slate`, then `/restart`.
+
+**OpenCode V2** needs no marketplace entry. Run `/slate:init` (or `/slate-init`) in your project
+and Slate copies a local plugin into `.opencode/plugins/slate/`; update with `/slate:upgrade`
+(or `/slate-upgrade`).
 """
 
 UPGRADE_HEAD = """### Upgrade (existing projects)

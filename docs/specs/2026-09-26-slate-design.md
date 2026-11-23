@@ -54,9 +54,10 @@ project's repo.
 | 19 | *(v0.2)* **Write lock:** every board write holds `kanban/.slate-write.lock` (O_EXCL, ~10 s wait); `unlock-write` removes only a stale lock. **Repair writes:** a broken board accepts writes that remove errors and add none. | Parallel writers never lose data; a broken board can be fixed with commands. |
 | 20 | *(v0.2)* **`doctor`:** local health checks with a code, a kind (`setup` → `/slate:upgrade`, `tickets` → `/slate:sync`) and fix lines; `--brief` feeds the session-start line. | One place that says what's wrong and which skill fixes it. |
 | 21 | *(v0.2)* **Upgrades explain themselves:** `upgrades/<version>.md` = "What's new" in plain words + idempotent steps; `/slate:upgrade` shows What's new first, runs each version's steps in order, records a line in SLATE.md's `## Slate updates`, runs `doctor` until healthy. `reference/commands.md` lists every command for agents; every skill links it. | Agents learn from the plugin at once; projects learn through a supervised, repeatable upgrade. |
-| 22 | *(v0.2)* **No board action needs a hand edit** (`remove`/`restore`, `unlink`, `usertest … reset`, `note`, bulk `edit`, `set-meta priorities`). The one exception, `unlock`, is approved on the agent tool's own permission card (Manual / Accept edits / Auto) or by a code typed in the user's own terminal (Plan / Bypass / Don't-ask); one unlock = one edit. GitHub Copilot CLI uses the same unlock on its own approval card, in every interactive mode (added in v0.4, decision 24, §8.2). | The guard stays absolute without dead ends. |
+| 22 | *(v0.2)* **No board action needs a hand edit** (`remove`/`restore`, `unlink`, `usertest … reset`, `note`, bulk `edit`, `set-meta priorities`). The one exception, `unlock`, is approved on the agent tool's own permission card (Manual / Accept edits / Auto) or by a code typed in the user's own terminal (Plan / Bypass / Don't-ask); one unlock = one edit. GitHub Copilot CLI uses the same unlock on its own approval card, in every interactive mode (added in v0.4, decision 24, §8.2); OpenCode V2 requires the user to type the code in their own terminal, because an "Allow once" card reply is indistinguishable from `--auto`'s automatic reply (added in v0.5, decision 26, §8.3). | The guard stays absolute without dead ends. |
 | 23 | *(v0.2)* **Human in the loop is unchanged:** one ticket per request, `merge_ready` then stop, done only after the user says the PR is merged, never merge, every board-shape change (states, rules, removals, syncs) asked first. | The additions give the user more control, never less. |
 | 24 | *(v0.4)* **One plugin for Claude Code and GitHub Copilot CLI.** Copilot CLI loads the same `.claude-plugin/` manifest, skills (`/slate:plan` …) and Claude-format `hooks.json`; the hook scripts adapt to Copilot's input and output (§8.2). No second plugin folder. VS Code Copilot Chat: not yet (its local agent ignores matchers and uses other tool names). | One copy to maintain and version; both tools share one board. Verified by hand in Copilot CLI 1.0.94, including Autopilot + Allow all. |
+| 26 | *(v0.5)* **OpenCode V2 is a third host, with a local plugin folder.** OpenCode has no `hooks.json` and no Claude-style payload, so `plugins/slate/opencode/` ships a dependency-free `index.js`, `package.json` and `slate-*.md` command stubs. `/slate:init` assembles those with the installed plugin's skills, guard, board assets, templates, upgrades, reference, CHANGELOG and `plugin.json` into `<project>/.opencode/plugins/slate/`, and adds a `SLATE.md` instruction to `opencode.jsonc`; no npm package, no global config. The same assembly is available stand-alone via `scripts/assemble_opencode.py --root <release>/plugins/slate` (`--project` or `--global`), so OpenCode needs no Claude Code or Copilot install. Hosts share one board and one unlock contract. OpenCode V1 is deliberately out of scope (a dual `main`/`exports` npm entry can be added later, as Plannotator does). | Full parity without a second source of truth for skills, guard rules or board logic; V2 APIs are the only ones tested. |
 | 25 | *(v0.3)* **Cancelled, and behaviours any state can have.** A built-in `cancelled` role (`cancel ID --reason`, `uncancel ID --handoff`): reachable from any state, never counts as done, left out of progress, and it doesn't block dependents (each gets a note). Six per-state flags in `meta.status_flags` (`resolves_deps`, `from_any`, `progress=done|excluded|open`, `terminal`, `notify_dependents`, `folded`); Done and Cancelled are just states with them on, and `add-status X --like cancelled` makes Won't fix, Duplicate and the like. States are set up from the CLI or by the agent after asking, never from the board page. Schema 3 (`migrate` adds Cancelled after Done). | Teams drop work without faking "done" or deleting history, and add their own end states without new code. |
 
 ## 3. The pieces at a glance
@@ -658,6 +659,36 @@ Copilot only knows its own hook events; Claude-only events in a hooks file are i
 three (SessionStart, PreToolUse, PostToolUse), which both tools have. Skills keep their plugin
 prefix in Copilot (`/slate:plan`), so they don't clash with Copilot's own `/plan` and `/review`.
 
+### 8.3 OpenCode V2 (added in v0.5)
+
+OpenCode 2.x has no `hooks.json` and no Claude-style payload. A local plugin is discovered from
+`.opencode/plugins/`; a `package.json` with `"type": "module"` and `"main": "index.js"` marks the
+folder as ESM (no npm install, no `plugins` config entry). Only the OpenCode-only files live in
+`plugins/slate/opencode/`; init/upgrade assemble the rest from the installed `plugins/slate` folder,
+so a real install (which contains only `plugins/slate`) works. Measured with OpenCode 2.3.2:
+
+| OpenCode V2 does | Slate does |
+|---|---|
+| Loads a default-export plugin object `{ id, setup }`; `ctx.location.directory` is the project | `index.js` finds the copied guard/skills relative to its own file. |
+| `session.hook("context")` gets an event with a `system` array | Composes the same `next --brief --against <ROOT>` line Claude/Copilot get at session start into the existing system text as ONE part (several parts break some chat templates). Title generation uses the separate `session.hook("title")`, so it is never touched. |
+| `permission.hook("evaluate")` gets `{ action, resources, effect, message }`; `action` is `edit`, `read`, `shell`, … and `resources` holds paths or shell commands | Calls `guard_tickets.py --opencode`, which answers `allow` / `deny` / `ask`; the reason becomes `event.message`, so a refusal is actionable in the TUI. Every `ask` is turned into a `deny`: a card reply cannot be proven human, so an unlock from the agent is always refused with the typed-code fallback. This also covers chained `&&` commands, which OpenCode splits into several resources. |
+| `tool.hook("execute.after")` exists, but its reply cannot be tied to a human decision | **Not used.** No post-tool hook may activate an unlock: `opencode run --auto` replies `once` to every card by itself. Only `board.py`'s interactive typed-code path (run by the user in their own terminal) can create an unlock. |
+| `skill.transform` editors expose `add`, and a command stub says `Use the slate-init skill` | Registers all seven `SKILL.md` files as `slate-<name>` (name and id match the stubs), rewriting `${CLAUDE_PLUGIN_ROOT}` to the copied folder. |
+| Calls hooks on every tool call | The Python 3.9+ interpreter is found once at setup (`py -3` first on Windows), and the status line is cached for ~30 s instead of running `board.py next` each time. |
+| Sets `OPENCODE=1` in the agent's shell, and a non-interactive `opencode run` auto-replies `once` to permission cards | `board.py unlock` says the card is not used and prints the reason plus the command for the user's own terminal; the plugin's refusal says the same. Skills and the template tell the agent to ask the user rather than run `unlock` itself. |
+
+
+Stand-alone installs need no other host: `scripts/assemble_opencode.py --root <release>/plugins/slate`
+writes the same folder for `--project` or `--global` (`$XDG_CONFIG_HOME/opencode` or
+`~/.config/opencode`). After an upgrade, restart OpenCode or its background service — a stale
+service hides plugin changes. Commit the project's `.opencode/plugins/slate/` so teammates get the
+guard.
+
+`--opencode` is an extra dialect in the same Python guard; Claude Code (exit 2 + stderr) and
+Copilot CLI (`permissionDecision`, `COPILOT_CLI`) are untouched. One unlock = one edit and the
+"change tickets through board.py" rule are shared by all three hosts. V1's function-returning
+hooks and dual npm entry are deliberately not supported yet.
+
 ## 9. Error handling
 
 - `board.py` never writes a board that fails validation; errors say which ticket and field.
@@ -687,5 +718,7 @@ prefix in Copilot (`/slate:plan`), so they don't clash with Copilot's own `/plan
 - Moving Forge onto Slate (later; needs a small migration of its `tickets.json` meta and
   CLAUDE.md §4 into `SLATE.md`).
 - Codex / other agents (later, a folder per agent as Plannotator does; AGENTS.md already
-  can point to `SLATE.md`).
+  can point to `SLATE.md`). OpenCode **V1** remains out of scope after v0.5 (V2 only); a later
+  release can add the dual `main`/`exports` npm entry pattern if there is demand. VS Code
+  Copilot Chat is still unsupported.
 - Jira or any external tracker sync; a hosted board; multi-user live editing.

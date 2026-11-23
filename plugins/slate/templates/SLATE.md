@@ -1,9 +1,11 @@
-<!-- slate v0.4.0 · written by /slate:init, safe to edit values -->
+<!-- slate v0.5.0 · written by /slate:init, safe to edit values -->
 # Slate: how we plan and build in {{PROJECT}}
 
 > This is the project's living context for Slate. Every Slate command reads it first, and
 > `/slate:plan` and `/slate:work` add to it as they learn. CLAUDE.md, AGENTS.md and the docs
 > are still read for anything not written here. Edit it freely; keep it short and true.
+> In OpenCode V2 the same commands are `/slate-init`, `/slate-plan`, … (no colon). After an upgrade
+> restart OpenCode (or its background service): a stale service hides plugin changes.
 
 ## What this project is
 {{PROJECT_CONTEXT}}
@@ -117,7 +119,10 @@ through board.py, with the user's OK, never from the board page; regenerate `## 
   Bypass permissions and Don't-ask mode it is refused, and the user runs `unlock` in their own
   terminal (or tmux pane) and types the 4-letter code it shows. One unlock = one edit;
   if the user declines, stop. Every step is logged in `meta.unlock_log`. In GitHub Copilot CLI the
-  card shows in every mode, even Autopilot with Allow all (a `copilot -p` run refuses it).
+  card shows in every mode, even Autopilot with Allow all (a `copilot -p` run refuses it). In
+  OpenCode V2 the agent cannot approve its own unlock: the plugin refuses unlock commands from the
+  agent, so the user runs the command in their own terminal (a tmux pane works well) and types the
+  4-letter code it shows.
 - Board changes without hand edits: `note ID "…"` (a history note), `unlink ID --commit SHA` /
   `--pr` (wrongly linked code), `usertest ID N reset` (a wrongly recorded result), `remove ID
   --reason "…"` / `restore ID` (archive, ask first), `edit ID1,ID2 key=value` (several at once).

@@ -1,6 +1,6 @@
 # CLAUDE.md — working on the Slate repo
 
-This repo is **Slate**, a Claude Code (and GitHub Copilot CLI) plugin: plan ideas into plain-language tickets on a kanban
+This repo is **Slate**, a Claude Code, GitHub Copilot CLI and OpenCode V2 plugin: plan ideas into plain-language tickets on a kanban
 board inside a project, then build them one ticket at a time with tests, review, the user's own
 check, and the commit/PR recorded on the ticket — always with a human in the loop.
 
@@ -22,7 +22,7 @@ check, and the commit/PR recorded on the ticket — always with a human in the l
 
 ```
 .claude-plugin/marketplace.json      marketplace "slate" → plugins/slate
-plugins/slate/                        the installed plugin (only this folder ships)
+plugins/slate/                        the installed Claude Code / Copilot plugin (only this folder is installed)
   .claude-plugin/plugin.json          name + VERSION (source of truth for the plugin version)
   skills/<name>/SKILL.md              /slate:init plan work review status sync upgrade
   assets/board/                       copied into each project's kanban/ by init/upgrade
@@ -34,6 +34,10 @@ plugins/slate/                        the installed plugin (only this folder shi
   reference/commands.md               shared command reference all skills link
   upgrades/<version>.md               per-release "What's new" + upgrade steps
   CHANGELOG.md  README.md
+  opencode/                           OpenCode V2 files assembled into .opencode/plugins/slate/
+    index.js                          V2 hooks → guard_tickets.py --opencode (Node built-ins only)
+    package.json                      marks the assembled folder as ESM; no dependencies
+    commands/slate-*.md               command stubs for OpenCode's /slate-* commands
 tests/                                pytest suite (+ fixtures/board-demo for the UI)
 .github/workflows/test.yml            CI: Windows/macOS/Linux × Python 3.9/3.13
 .github/workflows/release.yml         publishes vX.Y.Z releases from the CHANGELOG on merge
@@ -64,17 +68,21 @@ SLATE.md                              project context for that board (read by ev
   through `migrate` (bump `SCHEMA_VERSION` only when needed).
 - **Human in the loop, always.** Skills do one ticket per request, ask before choices, never
   merge, never force-push. The unlock needs the user's approval (Claude Code's card in Manual /
-  Accept edits / Auto; Copilot CLI's card in every interactive mode; typed code in a terminal
-  otherwise); one unlock = one edit.
+  Accept edits / Auto; Copilot CLI's card in every interactive mode; in OpenCode V2 only a code
+  typed by the user in their own terminal, because a card reply cannot be told apart from an
+  unattended `--auto` reply); one unlock = one edit.
 - **Tickets are for non-technical readers** (summary, story, picture, "done when", "try it
   yourself"); technical notes stay collapsed.
 - **Product text never mentions other internal projects** (e.g. "Forge"). Slate is generic.
-- **Claude Code and GitHub Copilot CLI, one plugin.** Copilot CLI loads the same `.claude-plugin/`
-  manifest, skills and Claude-format `hooks.json`. Hook code must work for both: Copilot sends
-  apply_patch text for edits, no `permission_mode`, `tool_result` (not `tool_response`), hides
-  exit-2 stderr (refuse with JSON when `COPILOT_CLI` is set) and needs `{"additionalContext"}`
-  at session start. Every hook has a `powershell` command (Windows Copilot). `tests/test_copilot.py`
-  pins all of this. VS Code Copilot Chat isn't supported yet; don't add half-support.
+- **Claude Code and GitHub Copilot CLI, one plugin; OpenCode V2, one copied folder.** Copilot CLI
+  loads the same `.claude-plugin/` manifest, skills and Claude-format `hooks.json`. Hook code must
+  work for both: Copilot sends apply_patch text for edits, no `permission_mode`, `tool_result`
+  (not `tool_response`), hides exit-2 stderr (refuse with JSON when `COPILOT_CLI` is set) and needs
+  `{"additionalContext"}` at session start. Every hook has a `powershell` command (Windows
+  Copilot). OpenCode V2 has no `hooks.json`: `opencode/index.js` calls the same
+  `guard_tickets.py --opencode`, and init/upgrade assemble the project folder from `ROOT` plus
+  `ROOT/opencode`. `tests/test_copilot.py` and `tests/test_opencode.py` pin all of this. OpenCode
+  V1 and VS Code Copilot Chat aren't supported yet; don't add half-support.
 
 ## 4. Develop and test
 
@@ -88,7 +96,9 @@ claude plugin validate --strict plugins/slate
 - Write tests first for every change: happy path + every refusal. UI changes: static checks in
   `tests/test_index_static.py` plus a real-browser check (Playwright) against
   `tests/fixtures/board-demo`, in live (`board.py serve`) and view-only mode.
-- Live-test skills in a throwaway repo: `claude --plugin-dir plugins/slate`.
+- Live-test skills in a throwaway repo: `claude --plugin-dir plugins/slate`. For OpenCode V2,
+  use a project that has run 0.5.0 `/slate:init` and `opencode --standalone` in tmux (a stale
+  background service hides plugin changes); `TEST.md` level 6 is the full matrix.
 - **CI (`.github/workflows/test.yml`)** runs on every PR and push to `main`, but the full suite
   runs only when one of these changed: `plugins/**`, `tests/**`, `scripts/**`,
   `.github/workflows/**`, `.claude-plugin/**`, `.gitattributes`. Docs-only changes (README, TEST.md,

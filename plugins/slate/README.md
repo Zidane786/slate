@@ -2,7 +2,7 @@
 
 Plan ideas into plain-language tickets on a kanban board in your repo, then build them one at
 a time with tests, review, your own check and the commit/PR recorded on the ticket. You stay
-in charge: the agent (Claude Code or GitHub Copilot CLI) builds one ticket per request, parks it
+in charge: the agent (Claude Code, GitHub Copilot CLI or OpenCode V2) builds one ticket per request, parks it
 in **Waiting for merge**, and stops; it moves to Done only after you say the PR is merged.
 
 ## Install
@@ -105,5 +105,17 @@ Linux and Windows (`python3`, `python` or `py -3`).
 `copilot plugin marketplace add Zidane786/slate`, then `copilot plugin install slate@slate`.
 The commands are the same (`/slate:plan`, `/slate:work`, …); the unlock card shows in every mode,
 even Autopilot with Allow all.
+
+**OpenCode V2:** no Claude Code, Copilot or npm is needed. Clone or download a Slate release and
+run `python3 scripts/assemble_opencode.py --root <download>/plugins/slate --global` once (or
+`--project <dir>` for one project). It writes the plugin to `~/.config/opencode/plugins/slate/`
+(or `$XDG_CONFIG_HOME/opencode/plugins/slate/`) and the stubs to `~/.config/opencode/commands/`.
+Restart OpenCode, then run `/slate-init` in your project (or `/slate-init` inside OpenCode). It
+copies a local plugin into `.opencode/plugins/slate/` and command stubs into `.opencode/commands/`;
+commit that folder so teammates get the guard. Use `/slate-upgrade` to refresh it, then restart
+OpenCode again — a stale background service hides plugin changes. Commands have no colon
+(`/slate-plan`, `/slate-work`, …) and the status line shows the next ticket. The agent cannot
+approve its own unlock here: run `board.py unlock` in your own terminal and type the code it shows.
+OpenCode V1 is not supported yet.
 
 Full docs, design and source: https://github.com/Zidane786/slate · Changes: [CHANGELOG.md](CHANGELOG.md)

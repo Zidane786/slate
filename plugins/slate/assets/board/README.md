@@ -3,7 +3,9 @@
 The project's kanban and build-order board. One file, no build step, no dependencies:
 `index.html` is plain HTML, CSS and JavaScript and reads `tickets.json` from the same folder.
 It was put here by `/slate:init` and is kept current by `/slate:upgrade`. Don't edit
-`index.html`, `board.py` or this README by hand: `/slate:upgrade` replaces them.
+`index.html`, `board.py` or this README by hand: `/slate:upgrade` replaces them. In OpenCode V2
+`/slate-init` / `/slate-upgrade` (no colon) do the same; after an upgrade restart OpenCode (or its
+background service), because a stale service hides plugin changes.
 
 ## Open it
 
@@ -45,7 +47,7 @@ port — `ssh -L 8088:localhost:8088 you@host` — and open http://localhost:808
 Opened straight from disk (`file://`), the browser blocks loading `./tickets.json`: the page
 shows a file picker; choose `tickets.json` (and `preview.json` to see a preview).
 
-The footer shows the board's Slate version (`Slate v0.4.0`) and the version recorded in
+The footer shows the board's Slate version (`Slate v0.5.0`) and the version recorded in
 `tickets.json`. The page also has `<meta name="slate-version">` for scripts.
 
 **Live refresh.** When the page is served (not opened with the file picker), it re-reads

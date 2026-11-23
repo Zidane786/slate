@@ -68,9 +68,9 @@ edit is still needed, explain why, then run exactly
 Manual, Accept edits and Auto mode Claude Code shows its approval card and the user's Yes
 activates it; in Plan, Bypass permissions and Don't-ask mode the guard refuses it, and the user
 runs `unlock` in their own terminal (or tmux pane) and types the code it shows. One unlock =
-one edit. If the user declines, stop. In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
+one edit. If the user declines, stop. In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin refuses unlock commands from the agent, because a card reply cannot be told apart from an unattended `--auto` reply: ask the user to run the command in their own terminal (a second tmux pane works well) and type the code it shows.
 
-## Step 2b: team settings (always)
+## Step 2b: team settings and OpenCode plugin (always)
 
 Run `python3 kanban/board.py doctor --json`. If it reports `team-settings-missing`, add Slate to
 the **project's** `.claude/settings.json` (in the repo — never the user's `~/.claude/settings.json`)
@@ -80,6 +80,61 @@ exactly as `/slate:init` does (read
 and tell the user what you added. If doctor's notes include `team-settings-ignored`, don't touch
 `.gitignore`; just tell the user people who clone the repo won't get Slate automatically until
 `.claude/settings.json` is committed.
+
+- [ ] **OpenCode files:** refresh the whole plugin folder from the installed plugin (the same
+      copy `/slate:init` does), so skills, guard and board assets match this version. `ROOT` is
+      the installed `plugins/slate` folder; the OpenCode-only files are in `ROOT/opencode`.
+      <!-- opencode-copy:bash -->
+      ```bash
+      SLATE_ROOT="<ROOT>"
+      PROJECT="$PWD"
+      if [ ! -f "$SLATE_ROOT/opencode/index.js" ]; then
+        echo "error: OpenCode files missing: $SLATE_ROOT/opencode/index.js" >&2
+        echo "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout" >&2
+        exit 1
+      fi
+      TARGET="$PROJECT/.opencode/plugins/slate"
+      rm -rf "$TARGET"
+      mkdir -p "$TARGET/.claude-plugin" "$TARGET/hooks" "$PROJECT/.opencode/commands"
+      cp -R "$SLATE_ROOT/skills" "$SLATE_ROOT/assets" "$SLATE_ROOT/templates" \
+            "$SLATE_ROOT/reference" "$SLATE_ROOT/upgrades" "$TARGET/"
+      cp "$SLATE_ROOT/hooks/guard_tickets.py" "$TARGET/hooks/"
+      cp "$SLATE_ROOT/.claude-plugin/plugin.json" "$TARGET/.claude-plugin/"
+      cp "$SLATE_ROOT/CHANGELOG.md" "$TARGET/"
+      cp -R "$SLATE_ROOT/opencode/." "$TARGET/"
+      rm -f "$PROJECT"/.opencode/commands/slate-*.md
+      cp "$SLATE_ROOT/opencode/commands/"*.md "$PROJECT/.opencode/commands/"
+      ```
+
+      <!-- opencode-copy:powershell -->
+      ```powershell
+      $SlateRoot = "<ROOT>"
+      $Project = (Get-Location).Path
+      $Index = Join-Path (Join-Path $SlateRoot 'opencode') 'index.js'
+      if (-not (Test-Path -LiteralPath $Index -PathType Leaf)) {
+        Write-Error "error: OpenCode files missing: $Index"
+        Write-Error "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout"
+        exit 1
+      }
+      $Target = Join-Path $Project '.opencode/plugins/slate'
+      if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Recurse -Force }
+      $null = New-Item -ItemType Directory -Force -Path (Join-Path $Target '.claude-plugin')
+      $null = New-Item -ItemType Directory -Force -Path (Join-Path $Target 'hooks')
+      $null = New-Item -ItemType Directory -Force -Path (Join-Path $Project '.opencode/commands')
+      foreach ($name in @('skills', 'assets', 'templates', 'reference', 'upgrades')) {
+        Copy-Item -LiteralPath (Join-Path $SlateRoot $name) -Destination $Target -Recurse -Force
+      }
+      Copy-Item -LiteralPath (Join-Path $SlateRoot 'hooks/guard_tickets.py') -Destination (Join-Path $Target 'hooks') -Force
+      Copy-Item -LiteralPath (Join-Path $SlateRoot '.claude-plugin/plugin.json') -Destination (Join-Path $Target '.claude-plugin') -Force
+      Copy-Item -LiteralPath (Join-Path $SlateRoot 'CHANGELOG.md') -Destination $Target -Force
+      Get-ChildItem -LiteralPath (Join-Path $SlateRoot 'opencode') -Force | Copy-Item -Destination $Target -Recurse -Force
+      Get-ChildItem -LiteralPath (Join-Path $Project '.opencode/commands') -Filter 'slate-*.md' -ErrorAction SilentlyContinue | Remove-Item -Force
+      Copy-Item -Path (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
+      ```
+      If `opencode.jsonc` exists, keep its keys and make sure `instructions` contains
+      `"SLATE.md"`; if it is missing, create it with the `$schema` and that one instruction.
+      No `plugins` entry is needed: OpenCode loads `.opencode/plugins/` automatically. Commit
+      the refreshed `.opencode/plugins/slate/` so teammates get the new guard.
 
 ## Step 3: run each version's upgrade steps
 

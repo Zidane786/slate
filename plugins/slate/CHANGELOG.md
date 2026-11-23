@@ -7,6 +7,69 @@ nothing). Merging a version bump into `main` publishes a GitHub Release with tha
 section. Each section lists only what changed since the previous version, and a released
 section is never edited afterwards (CI enforces both).
 
+## 0.5.0 — 2026-11-23
+
+Board schema **3** (unchanged).
+
+### Highlights
+
+- **OpenCode V2 is now a first-class Slate host.** The same skills, board and one-time unlock work
+  in OpenCode 2.x alongside Claude Code and GitHub Copilot CLI. `/slate:init` copies a local plugin
+  into the project, so there is no npm package and nothing to install globally.
+- **The guard holds in OpenCode too.** Direct edits to `kanban/tickets.json` are denied with the
+  actionable `fix:` message. OpenCode cannot tell a human card click from `--auto`'s automatic
+  reply, so unlocks are approved only by a code the user types in their own terminal; one unlock
+  allows exactly one edit.
+
+### Added
+
+- **OpenCode V2 support** for the whole plugin: all seven skills (`/slate-init`, `/slate-plan`,
+  `/slate-work`, `/slate-review`, `/slate-status`, `/slate-sync`, `/slate-upgrade`), the session
+  status line, the write guard and the one-time unlock.
+- OpenCode-only files at `plugins/slate/opencode/` — a dependency-free `index.js`, its
+  `package.json` and seven command stubs. `/slate:init` assembles those with the installed
+  plugin's skills, guard, board assets, templates, upgrades, reference, CHANGELOG and
+  `plugin.json` into `.opencode/plugins/slate/`, and adds `SLATE.md` to `opencode.jsonc`.
+- `scripts/assemble_opencode.py`: a stand-alone OpenCode install from a release download/clone, with
+  `--project` and `--global` paths; no Claude Code, Copilot or npm install is needed.
+- `guard_tickets.py --opencode`: a JSON-in/JSON-out dialect for OpenCode permission decisions.
+- `TEST.md` level 6: an OpenCode-in-tmux hands-on check, including the refusal of agent-run
+  unlocks, one unlock = one edit through the second-pane typed code, and the board server.
+
+### Changed
+
+- `board.py unlock` now explains the typed-code path in the user's own terminal when it runs inside
+  OpenCode; Claude Code and Copilot CLI messages are unchanged.
+- `CLAUDE.md` / `AGENTS.md` now describe the three hosts and the new plugin folder.
+
+### Fixed
+
+- Skill registration uses the same `slate-*` names as the command stubs, so "use the slate-init
+  skill" resolves in OpenCode.
+- OpenCode's `unlock` output now prints the reason and says plainly that the permission card is not
+  used; the skills and the project template tell the agent to ask the user, not run `unlock` itself.
+- OpenCode finds its Python interpreter once at setup (`py -3` first on Windows) and caches the
+  board status line for ~30 s, instead of probing and running `board.py next` on every hook call.
+- The OpenCode context line is composed into the existing system text as one part, instead of
+  adding a part on every model call; title-generation calls are not touched.
+- Init/upgrade now work from a real install, where only `plugins/slate` exists: they assemble the
+  OpenCode folder from the installed plugin plus `plugins/slate/opencode/`, and stop with an
+  actionable error if the OpenCode files are missing. Windows/PowerShell copy steps are included.
+
+### Security
+
+- An agent in OpenCode could previously approve its own unlock: `opencode run --auto` replies
+  `once` to every permission card, and the post-tool hook activated the unlock. The plugin now
+  refuses every unlock command from the agent (plain, chained or split by OpenCode) and registers
+  no activation hook, so only the code typed by a person in their own terminal can unlock a board.
+
+### Upgrade notes
+
+Run `/slate:upgrade` in each project (in OpenCode use `/slate-upgrade`). It refreshes
+`.opencode/plugins/slate/` and `.opencode/commands/slate-*.md`, and adds `"SLATE.md"` to
+`instructions` in `opencode.jsonc` without dropping your other settings. No board migration is
+needed and no global OpenCode config is touched.
+
 ## 0.4.0 — 2026-10-09
 
 Board schema **3** (unchanged).

@@ -16,8 +16,11 @@ flag and "use it when" is in `<ROOT>/reference/commands.md`.
 **Plugin root (`ROOT`):** `${CLAUDE_PLUGIN_ROOT}` (Claude Code and Copilot CLI fill this in for plugin skills).
 If it still reads literally as `${CLAUDE_PLUGIN_ROOT}`, use this skill's base directory
 (printed when the skill loads, `<root>/skills/init`) + `/../..`, resolved to an absolute path.
+In OpenCode the plugin registers this skill and rewrites the placeholder to its own folder
+(`.opencode/plugins/slate/`), where init also puts the board assets, templates, upgrades, CHANGELOG
+and a copy of `plugin.json`, so `ROOT` means the same thing in every host.
 Assets are in `ROOT/assets/board/`, templates in `ROOT/templates/`, the plugin version in
-`ROOT/.claude-plugin/plugin.json` (`version`).
+`ROOT/.claude-plugin/plugin.json` (`version`). The OpenCode-only files live in `<ROOT>/opencode/`.
 
 ## Step 0: what state is this repo in?
 
@@ -151,6 +154,65 @@ python3 kanban/board.py check
 
 If `board.py init` refuses, show its message and stop. Never write `tickets.json` yourself.
 
+Then set up OpenCode V2 support. A real install only contains `plugins/slate`, so build the
+plugin folder from `ROOT` (skills, guard, board assets, templates, reference, upgrades,
+CHANGELOG and `plugin.json`) plus the OpenCode-only files in `ROOT/opencode`. Use the block for
+your shell; both replace the whole folder so an upgrade cannot leave old files behind.
+
+<!-- opencode-copy:bash -->
+```bash
+SLATE_ROOT="<ROOT>"                 # installed plugin folder, e.g. ~/.claude/plugins/cache/slate/slate/0.5.0
+PROJECT="$PWD"
+if [ ! -f "$SLATE_ROOT/opencode/index.js" ]; then
+  echo "error: OpenCode files missing: $SLATE_ROOT/opencode/index.js" >&2
+  echo "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout" >&2
+  exit 1
+fi
+TARGET="$PROJECT/.opencode/plugins/slate"
+rm -rf "$TARGET"
+mkdir -p "$TARGET/.claude-plugin" "$TARGET/hooks" "$PROJECT/.opencode/commands"
+cp -R "$SLATE_ROOT/skills" "$SLATE_ROOT/assets" "$SLATE_ROOT/templates" \
+      "$SLATE_ROOT/reference" "$SLATE_ROOT/upgrades" "$TARGET/"
+cp "$SLATE_ROOT/hooks/guard_tickets.py" "$TARGET/hooks/"
+cp "$SLATE_ROOT/.claude-plugin/plugin.json" "$TARGET/.claude-plugin/"
+cp "$SLATE_ROOT/CHANGELOG.md" "$TARGET/"
+cp -R "$SLATE_ROOT/opencode/." "$TARGET/"
+rm -f "$PROJECT"/.opencode/commands/slate-*.md
+cp "$SLATE_ROOT/opencode/commands/"*.md "$PROJECT/.opencode/commands/"
+```
+
+<!-- opencode-copy:powershell -->
+```powershell
+$SlateRoot = "<ROOT>"
+$Project = (Get-Location).Path
+$Index = Join-Path (Join-Path $SlateRoot 'opencode') 'index.js'
+if (-not (Test-Path -LiteralPath $Index -PathType Leaf)) {
+  Write-Error "error: OpenCode files missing: $Index"
+  Write-Error "fix: reinstall Slate 0.5.0 from the release, or run these steps from the repository checkout"
+  exit 1
+}
+$Target = Join-Path $Project '.opencode/plugins/slate'
+if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Recurse -Force }
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Target '.claude-plugin')
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Target 'hooks')
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $Project '.opencode/commands')
+foreach ($name in @('skills', 'assets', 'templates', 'reference', 'upgrades')) {
+  Copy-Item -LiteralPath (Join-Path $SlateRoot $name) -Destination $Target -Recurse -Force
+}
+Copy-Item -LiteralPath (Join-Path $SlateRoot 'hooks/guard_tickets.py') -Destination (Join-Path $Target 'hooks') -Force
+Copy-Item -LiteralPath (Join-Path $SlateRoot '.claude-plugin/plugin.json') -Destination (Join-Path $Target '.claude-plugin') -Force
+Copy-Item -LiteralPath (Join-Path $SlateRoot 'CHANGELOG.md') -Destination $Target -Force
+Get-ChildItem -LiteralPath (Join-Path $SlateRoot 'opencode') -Force | Copy-Item -Destination $Target -Recurse -Force
+Get-ChildItem -LiteralPath (Join-Path $Project '.opencode/commands') -Filter 'slate-*.md' -ErrorAction SilentlyContinue | Remove-Item -Force
+Copy-Item -Path (Join-Path (Join-Path $SlateRoot 'opencode') 'commands/*.md') -Destination (Join-Path $Project '.opencode/commands') -Force
+```
+
+OpenCode discovers `.opencode/plugins/` itself, so no `plugins` entry is needed in
+`opencode.jsonc`. The copied `slate-*.md` command stubs give `/slate-init`, `/slate-plan`, and so
+on; the plugin registers the skills as `slate-init`, `slate-plan`, … with `ROOT` rewritten to the
+copied folder. Commit `.opencode/plugins/slate/`: teammates need it to get the guard. Do not edit
+the copied files by hand — the next `/slate:upgrade` replaces them.
+
 Then apply the answers from step 3 (in refresh mode too, for anything newly agreed):
 
 ```bash
@@ -185,6 +247,16 @@ python3 kanban/board.py export --json --statuses                # show the resul
       They hold one-time unlocks for hand edits (request, active, used, pending log), the lock
       board.py holds while it writes, and the running board server's address and log; none of
       them belong in git.
+- [ ] **OpenCode project config (always).** Create `opencode.jsonc` in the repo if missing; if it
+      exists, merge (keep every key; add `"SLATE.md"` to `instructions` if it isn't there):
+      ```jsonc
+      {
+        "$schema": "https://opencode.ai/config.json",
+        "instructions": ["SLATE.md"]
+      }
+      ```
+      This makes OpenCode read the project's Slate context. The plugin itself is loaded from
+      `.opencode/plugins/slate/` automatically; do not add a `plugins` entry for it.
 - [ ] **Board server** (unless the user chose off):
       `python3 kanban/board.py serve --ensure --port <port>` and show the URL it prints. If
       `serve` isn't in `python3 kanban/board.py --help` (an older board), skip it.
@@ -283,7 +355,7 @@ has that `SLATE.md` lacks; keep everything else as the project wrote it.
   is ever truly needed, Claude asks for a one-time unlock: in Manual, Accept edits or Auto mode
   Claude Code shows its approval card and your Yes allows exactly one edit; in Plan, Bypass
   permissions or Don't-ask mode you run `python3 kanban/board.py unlock --reason "…"` in your own
-  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
+  terminal (or a tmux pane) and type the code it shows." In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin refuses unlock commands from the agent, because a card reply cannot be told apart from an unattended `--auto` reply: you run the command in your own terminal (or a tmux pane) and type the code it shows.
 - Suggest committing these files, then `/slate:plan "<an idea>"` as the next step.
 
 ## If a hand edit of tickets.json is ever needed
@@ -294,7 +366,7 @@ If a hand edit is still needed (for example git conflict markers from a merge wi
 merge driver), explain why to the user, then run exactly
 `python3 kanban/board.py unlock --reason "<why>" --minutes 5` (no `cd … &&`, no pipes: only the
 plain command can activate an unlock). Claude Code shows its approval card in Manual, Accept edits and Auto mode; in Plan, Bypass and Don't-ask mode the guard refuses it, and the user runs `unlock` in their own terminal and types the code it shows. One unlock = one edit. If the user declines, stop.
-In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal.
+In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow all; a `copilot -p` run refuses it, and the user types the code in their own terminal. In OpenCode V2 the plugin refuses the command from the agent, so ask the user to run it in their own terminal (a second tmux pane works well) and type the code it shows.
 
 ## Checklist before you finish
 
@@ -304,6 +376,8 @@ In GitHub Copilot CLI the card shows in every mode, even Autopilot with Allow al
 - [ ] No ticket was created, edited or deleted
 - [ ] Merge driver installed (git repos) and `.gitignore` has `kanban/.slate-unlock*.json`,
       `kanban/.slate-write.lock`, `kanban/.slate-serve.json`, `kanban/.slate-serve.log`
+- [ ] `.opencode/plugins/slate/` holds `index.js`, the guard, skills and board assets;
+      `.opencode/commands/slate-*.md` exists; `opencode.jsonc` has `instructions: ["SLATE.md"]`
 - [ ] `SLATE.md` has `Python:`, `Board server:`, `Board port:`, a filled `## Workflow` and a
       `## Slate updates` line; `python3 kanban/board.py doctor --against "<ROOT>"` shows no
       `setup` problems

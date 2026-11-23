@@ -1,6 +1,6 @@
 # Slate
 
-Slate is a plugin for Claude Code and GitHub Copilot CLI that gives any project two things:
+Slate is a plugin for Claude Code, GitHub Copilot CLI and OpenCode V2 that gives any project two things:
 
 1. **A way to plan.** You talk an idea through with Claude in plain words, with examples and
    pictures, and it becomes clear, readable tickets on a kanban board that lives in your repo.
@@ -51,6 +51,28 @@ Code (`/slate:plan`, `/slate:work`, …; Copilot's own `/plan` and `/review` are
 commands). Update with `copilot plugin marketplace update slate` and
 `copilot plugin update slate@slate`, then `/restart`. Windows needs Python (`py -3`, `python` or
 `python3`); the hooks run through PowerShell there.
+
+### OpenCode V2 (no Claude Code or Copilot needed)
+
+OpenCode 2.x needs no marketplace, no Claude Code, no Copilot and no npm package. Clone or download
+a Slate release, then assemble the local plugin once from its `plugins/slate` folder:
+
+```
+python3 scripts/assemble_opencode.py --root <download>/plugins/slate --global
+```
+
+This writes the plugin to `~/.config/opencode/plugins/slate/` (or
+`$XDG_CONFIG_HOME/opencode/plugins/slate/` when that variable is set) and the `/slate-*` command
+stubs to `~/.config/opencode/commands/`. It is verified with OpenCode 2.3.2. Restart OpenCode (or
+its background service) so it loads the plugin, then run
+`/slate:init` (or `/slate-init` inside OpenCode) in your project. Slate will write a project-local `.opencode/plugins/slate/` and
+`.opencode/commands/slate-*.md` and add `SLATE.md` to `opencode.jsonc`. To skip the global step,
+run the same script with `--project <your-project>` instead of `--global`, then restart OpenCode.
+
+**Commit `.opencode/plugins/slate/`** in each project: teammates need it to get the guard. Update
+with `/slate:upgrade` (or `/slate-upgrade`), then restart OpenCode — a stale background service
+hides plugin changes. The commands are `/slate-init`, `/slate-plan`, `/slate-work`, … — OpenCode
+uses no colon. V1 is not supported yet; a team can share one board across all three hosts.
 
 ## Update to a new version
 
@@ -326,15 +348,19 @@ hand edit is truly needed (say, repairing a messy merge), Claude explains why an
   (a tmux pane or second SSH session is fine) and type the 4-letter code it shows.
 
 In **GitHub Copilot CLI** the card ("Hook permission request") shows in every mode, even
-Autopilot with Allow all; only a non-interactive `copilot -p` run refuses it.
+Autopilot with Allow all; only a non-interactive `copilot -p` run refuses it. In **OpenCode V2**
+there is no way to tell a human's card click from an unattended `--auto` reply, so the plugin
+refuses unlock commands from the agent: you run the command in your own terminal (a second tmux
+pane works well), type the code it shows, and the agent then makes the one edit. In all three hosts
+one unlock = one edit.
 
 One unlock = one edit, expiring after a few minutes if unused, all logged. Git operations on the
 file (checkout, restore, merge, rebase, stash) are never blocked.
 
 **Does Slate work with other agent tools?** The board and `board.py` work anywhere Python runs
 (macOS, Linux, Windows; `python3`, `python` or `py -3`). The plugin (skills and hooks) works in
-**Claude Code** and **GitHub Copilot CLI**: it's the same plugin, so a team can use both on one
-board. VS Code's Copilot Chat isn't supported yet.
+**Claude Code**, **GitHub Copilot CLI** and **OpenCode V2**: it's the same board, so a team can use
+all three on one project. OpenCode V1 is not supported yet, and neither is VS Code's Copilot Chat.
 
 **Do I need the plugin to see the board?** No. The board is a single HTML file plus a Python
 script (standard library only) in your repo: `python3 kanban/board.py serve` gives the live
